@@ -20,7 +20,10 @@ import com.kevin.hrtracker.ble.ConnectionState
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ScanScreen(viewModel: ScanViewModel = hiltViewModel()) {
+fun ScanScreen(
+    viewModel: ScanViewModel = hiltViewModel(),
+    onSessionStarted: (label: String) -> Unit = {}
+) {
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
@@ -54,7 +57,10 @@ fun ScanScreen(viewModel: ScanViewModel = hiltViewModel()) {
                 Divider()
                 if (activeSessionId == null) {
                     Button(
-                        onClick = { viewModel.startSession() },
+                        onClick = {
+                            viewModel.startSession()
+                            onSessionStarted("Training")
+                        },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Session starten")

@@ -1,7 +1,7 @@
 [versions]
 agp = "8.7.0"
-kotlin = "2.1.0"
-ksp = "2.1.0-1.0.29"
+kotlin = "2.0.20"
+ksp = "2.0.20-1.0.25"
 compose-bom = "2024.11.00"
 activity-compose = "1.9.3"
 hilt = "2.52"
@@ -10,6 +10,8 @@ lifecycle = "2.8.7"
 coroutines = "1.9.0"
 accompanist = "0.36.0"
 room = "2.6.1"
+vico = "2.0.1"
+navigation = "2.8.5"
 
 [libraries]
 compose-bom                  = { group = "androidx.compose",            name = "compose-bom",                  version.ref = "compose-bom" }
@@ -28,6 +30,9 @@ accompanist-permissions      = { group = "com.google.accompanist",        name =
 room-runtime                 = { group = "androidx.room",                  name = "room-runtime",                 version.ref = "room" }
 room-ktx                     = { group = "androidx.room",                  name = "room-ktx",                     version.ref = "room" }
 room-compiler                = { group = "androidx.room",                  name = "room-compiler",                version.ref = "room" }
+vico-compose                 = { group = "com.patrykandpatrick.vico",       name = "compose",                      version.ref = "vico" }
+vico-compose-m3              = { group = "com.patrykandpatrick.vico",       name = "compose-m3",                   version.ref = "vico" }
+navigation-compose           = { group = "androidx.navigation",              name = "navigation-compose",            version.ref = "navigation" }
 
 [plugins]
 android-application = { id = "com.android.application",                version.ref = "agp" }
