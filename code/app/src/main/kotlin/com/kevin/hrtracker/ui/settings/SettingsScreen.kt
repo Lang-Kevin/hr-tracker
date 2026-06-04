@@ -19,6 +19,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val savedDeviceAddress by viewModel.savedDeviceAddress.collectAsStateWithLifecycle()
 
     var ageText by remember(settings.age) { mutableStateOf(settings.age.toString()) }
     var manualMaxHrText by remember(settings.manualMaxHr) {
@@ -42,6 +43,23 @@ fun SettingsScreen(
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Zurück") }
             Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Gespeichertes Gerät", style = MaterialTheme.typography.titleMedium)
+                if (savedDeviceAddress != null) {
+                    Text(savedDeviceAddress!!, style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { viewModel.clearSavedDevice() }) {
+                        Text("Verbindung löschen")
+                    }
+                } else {
+                    Text("Kein Gerät gespeichert", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
         }
 
         Card(modifier = Modifier.fillMaxWidth()) {

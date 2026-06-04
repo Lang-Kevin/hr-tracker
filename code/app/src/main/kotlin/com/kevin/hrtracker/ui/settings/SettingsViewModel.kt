@@ -19,6 +19,11 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<UserSettings> = settingsRepository.userSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserSettings())
 
+    val savedDeviceAddress: StateFlow<String?> = settingsRepository.savedDeviceAddress
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
+
     fun setAge(age: Int) = viewModelScope.launch { settingsRepository.setAge(age) }
 
     fun setManualMaxHr(maxHr: Int?) = viewModelScope.launch {
