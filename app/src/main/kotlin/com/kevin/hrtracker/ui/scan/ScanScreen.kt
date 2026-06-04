@@ -22,7 +22,8 @@ import com.kevin.hrtracker.ble.ConnectionState
 @Composable
 fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
-    onSessionStarted: (label: String) -> Unit = {}
+    onSessionStarted: (label: String) -> Unit = {},
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -45,7 +46,14 @@ fun ScanScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("HR Tracker", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text("HR Tracker", style = MaterialTheme.typography.headlineMedium)
+            TextButton(onClick = onNavigateToHistory) { Text("Verlauf") }
+        }
         Text("Status: ${connectionState::class.simpleName}", style = MaterialTheme.typography.bodyMedium)
 
         if (!permissionState.allPermissionsGranted) {
