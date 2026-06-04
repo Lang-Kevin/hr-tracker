@@ -1,5 +1,6 @@
 package com.kevin.hrtracker.ui.detail
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -7,9 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
@@ -27,6 +30,8 @@ fun DetailScreen(
     onBack: () -> Unit,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val session by viewModel.session.collectAsStateWithLifecycle()
     val samples by viewModel.samples.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
@@ -128,9 +133,16 @@ fun DetailScreen(
             }
         }
 
-        // Export placeholder (M6)
-        OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Text("Exportieren (kommt in M6)")
+        Button(
+            onClick = {
+                scope.launch {
+                    val intent = viewModel.export(context) ?: return@launch
+                    context.startActivity(Intent.createChooser(intent, "Session exportieren"))
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Als JSON exportieren")
         }
     }
 }

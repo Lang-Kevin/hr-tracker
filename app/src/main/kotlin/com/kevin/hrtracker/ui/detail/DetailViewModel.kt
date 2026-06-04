@@ -3,10 +3,13 @@ package com.kevin.hrtracker.ui.detail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import android.content.Intent
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.export.SessionExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
@@ -14,7 +17,8 @@ import javax.inject.Inject
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val db: HrDatabase
+    private val db: HrDatabase,
+    private val exporter: SessionExporter
 ) : ViewModel() {
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
@@ -39,6 +43,8 @@ class DetailViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // zone → seconds (each sample ≈ 1 s at ~1 Hz)
+    suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)
+
     val zoneDistribution: StateFlow<Map<Int, Int>> = combine(session, samples) { sess, list ->
         if (sess == null || list.isEmpty()) emptyMap()
         else {

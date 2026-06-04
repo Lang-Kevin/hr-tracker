@@ -14,4 +14,7 @@ interface HrSampleDao {
 
     @Query("SELECT COUNT(*) FROM HrSample WHERE sessionId = :sessionId")
     fun getSampleCount(sessionId: Long): Flow<Int>
+
+    @Query("SELECT * FROM HrSample WHERE sessionId = :sessionId ORDER BY timestampMs ASC")
+    suspend fun getSamplesOnce(sessionId: Long): List<HrSample>
 }
