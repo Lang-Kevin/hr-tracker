@@ -101,6 +101,11 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
+        // Close any existing GATT before opening a new one —
+        // leaving it open causes duplicate onCharacteristicChanged callbacks.
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
         lastDevice = device
         reconnectEnabled = true
         reconnectJob?.cancel()
