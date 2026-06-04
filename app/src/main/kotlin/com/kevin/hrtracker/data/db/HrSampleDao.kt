@@ -1,0 +1,17 @@
+package com.kevin.hrtracker.data.db
+
+import androidx.room.*
+import com.kevin.hrtracker.data.entity.HrSample
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface HrSampleDao {
+    @Insert
+    suspend fun insert(sample: HrSample): Long
+
+    @Query("SELECT * FROM HrSample WHERE sessionId = :sessionId ORDER BY timestampMs ASC")
+    fun getSamplesForSession(sessionId: Long): Flow<List<HrSample>>
+
+    @Query("SELECT COUNT(*) FROM HrSample WHERE sessionId = :sessionId")
+    fun getSampleCount(sessionId: Long): Flow<Int>
+}

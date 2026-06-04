@@ -23,6 +23,7 @@ import com.kevin.hrtracker.ble.ConnectionState
 fun ScanScreen(viewModel: ScanViewModel = hiltViewModel()) {
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
+    val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
 
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
@@ -38,23 +39,39 @@ fun ScanScreen(viewModel: ScanViewModel = hiltViewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text("HR Tracker", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            "Status: ${connectionState::class.simpleName}",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(Modifier.height(16.dp))
+        Text("Status: ${connectionState::class.simpleName}", style = MaterialTheme.typography.bodyMedium)
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
                 Text("Bluetooth-Berechtigung gewähren")
             }
         } else {
+            if (connectionState is ConnectionState.Ready) {
+                Divider()
+                if (activeSessionId == null) {
+                    Button(
+                        onClick = { viewModel.startSession() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Session starten")
+                    }
+                } else {
+                    Button(
+                        onClick = { viewModel.stopSession() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Session stoppen  (ID: $activeSessionId)")
+                    }
+                }
+                Divider()
+            }
+
             Text("HR-Geräte (0x180D):", style = MaterialTheme.typography.titleSmall)
-            Spacer(Modifier.height(8.dp))
             if (scanResults.isEmpty()) {
                 Text("Scan läuft…", style = MaterialTheme.typography.bodySmall)
             }
