@@ -30,6 +30,7 @@ fun DetailScreen(
     val session by viewModel.session.collectAsStateWithLifecycle()
     val samples by viewModel.samples.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
+    val zoneDistrib by viewModel.zoneDistribution.collectAsStateWithLifecycle()
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
@@ -98,7 +99,36 @@ fun DetailScreen(
             }
         }
 
-        // Placeholder buttons for M5/M6
+        if (zoneDistrib.isNotEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text("Zeit pro Zone", style = MaterialTheme.typography.titleSmall)
+                    HorizontalDivider()
+                    val totalSec = zoneDistrib.values.sum().coerceAtLeast(1)
+                    for (z in 1..5) {
+                        val sec = zoneDistrib[z] ?: 0
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Z$z", modifier = Modifier.width(28.dp))
+                            LinearProgressIndicator(
+                                progress = { sec / totalSec.toFloat() },
+                                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                            )
+                            Text("%02d:%02d".format(sec / 60, sec % 60),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Export placeholder (M6)
         OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
             Text("Exportieren (kommt in M6)")
         }

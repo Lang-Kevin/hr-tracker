@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.kevin.hrtracker.service.HrRecordingService
 import com.kevin.hrtracker.ui.detail.DetailScreen
 import com.kevin.hrtracker.ui.history.HistoryScreen
+import com.kevin.hrtracker.ui.settings.SettingsScreen
 import com.kevin.hrtracker.ui.live.LiveScreen
 import com.kevin.hrtracker.ui.scan.ScanScreen
 import com.kevin.hrtracker.ui.scan.ScanViewModel
@@ -26,10 +27,11 @@ import com.kevin.hrtracker.ui.theme.HRTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 private object Route {
-    const val SCAN    = "scan"
-    const val LIVE    = "live"
-    const val HISTORY = "history"
-    const val DETAIL  = "detail/{sessionId}"
+    const val SCAN     = "scan"
+    const val LIVE     = "live"
+    const val HISTORY  = "history"
+    const val DETAIL   = "detail/{sessionId}"
+    const val SETTINGS = "settings"
     fun detail(id: Long) = "detail/$id"
 }
 
@@ -65,7 +67,8 @@ class MainActivity : ComponentActivity() {
                 ScanScreen(
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
-                    onNavigateToHistory = { navController.navigate(Route.HISTORY) }
+                    onNavigateToHistory = { navController.navigate(Route.HISTORY) },
+                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
                 )
             }
 
@@ -89,6 +92,10 @@ class MainActivity : ComponentActivity() {
                 arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
             ) {
                 DetailScreen(onBack = { navController.popBackStack() })
+            }
+
+            composable(Route.SETTINGS) {
+                SettingsScreen(onBack = { navController.popBackStack() })
             }
         }
     }

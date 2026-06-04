@@ -13,6 +13,7 @@ import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ class HrRecordingService : Service() {
 
     @Inject lateinit var bleManager: HrBleManager
     @Inject lateinit var sessionRepository: SessionRepository
+    @Inject lateinit var settingsRepository: com.kevin.hrtracker.data.repository.SettingsRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var notificationJob: Job? = null
@@ -71,7 +73,8 @@ class HrRecordingService : Service() {
 
     private fun startSession(label: String) {
         scope.launch {
-            sessionRepository.startSession(label, maxHrUsed = 187, restingHr = null)
+            val s = settingsRepository.userSettings.first()
+            sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr)
             var lastBpm = "–"
             val startMs = System.currentTimeMillis()
             notificationJob = launch {

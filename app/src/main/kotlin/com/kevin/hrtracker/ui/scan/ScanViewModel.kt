@@ -8,15 +8,18 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ScanViewModel @Inject constructor(
     private val bleManager: HrBleManager,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val scanResults: StateFlow<List<ScanResult>> = bleManager.scanResults
@@ -34,14 +37,12 @@ class ScanViewModel @Inject constructor(
         bleManager.connect(device)
     }
 
-    // Placeholder values for M2 — real settings in M5
-    fun startSession() = viewModelScope.launch {
-        sessionRepository.startSession(label = "Training", maxHrUsed = 187, restingHr = null)
+    fun startSession(label: String = "Training") = viewModelScope.launch {
+        val s = settingsRepository.userSettings.first()
+        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr)
     }
 
-    fun stopSession() = viewModelScope.launch {
-        sessionRepository.stopSession()
-    }
+    fun stopSession() = viewModelScope.launch { sessionRepository.stopSession() }
 
     override fun onCleared() {
         super.onCleared()

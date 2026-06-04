@@ -23,7 +23,8 @@ import com.kevin.hrtracker.ble.ConnectionState
 fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
     onSessionStarted: (label: String) -> Unit = {},
-    onNavigateToHistory: () -> Unit = {}
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -53,6 +54,7 @@ fun ScanScreen(
         ) {
             Text("HR Tracker", style = MaterialTheme.typography.headlineMedium)
             TextButton(onClick = onNavigateToHistory) { Text("Verlauf") }
+            TextButton(onClick = onNavigateToSettings) { Text("⚙") }
         }
         Text("Status: ${connectionState::class.simpleName}", style = MaterialTheme.typography.bodyMedium)
 

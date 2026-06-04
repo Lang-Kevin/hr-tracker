@@ -16,6 +16,14 @@ import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private val zoneColors = listOf(
+    androidx.compose.ui.graphics.Color(0xFF4CAF50), // Z1 green
+    androidx.compose.ui.graphics.Color(0xFF8BC34A), // Z2 light-green
+    androidx.compose.ui.graphics.Color(0xFFFF9800), // Z3 orange
+    androidx.compose.ui.graphics.Color(0xFFFF5722), // Z4 deep-orange
+    androidx.compose.ui.graphics.Color(0xFFF44336)  // Z5 red
+)
+
 @Composable
 fun LiveScreen(
     onStopSession: () -> Unit,
@@ -24,16 +32,14 @@ fun LiveScreen(
     val currentBpm by viewModel.currentBpm.collectAsStateWithLifecycle()
     val bpmHistory by viewModel.bpmHistory.collectAsStateWithLifecycle()
     val elapsed by viewModel.elapsedSeconds.collectAsStateWithLifecycle()
-    val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
+    val currentZone by viewModel.currentZone.collectAsStateWithLifecycle()
 
     val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(bpmHistory) {
-        if (bpmHistory.isNotEmpty()) {
+        if (bpmHistory.size >= 2) {
             withContext(Dispatchers.Default) {
-                modelProducer.runTransaction {
-                    lineSeries { series(bpmHistory) }
-                }
+                modelProducer.runTransaction { lineSeries { series(bpmHistory) } }
             }
         }
     }
@@ -43,13 +49,23 @@ fun LiveScreen(
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Live Session", style = MaterialTheme.typography.headlineMedium)
-
         val mm = elapsed / 60
         val ss = elapsed % 60
         Text("%02d:%02d".format(mm, ss), style = MaterialTheme.typography.displaySmall)
+
+        currentZone?.let { zone ->
+            val color = zoneColors.getOrElse(zone - 1) { MaterialTheme.colorScheme.primary }
+            Surface(color = color, shape = MaterialTheme.shapes.small) {
+                Text(
+                    "Zone $zone",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = androidx.compose.ui.graphics.Color.White
+                )
+            }
+        }
 
         Text(
             text = currentBpm?.let { "$it BPM" } ?: "Warte auf Daten…",
@@ -62,7 +78,7 @@ fun LiveScreen(
                 modelProducer = modelProducer,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(160.dp)
             )
         }
 

@@ -5,20 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.HrZoneCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
@@ -30,11 +29,21 @@ class LiveViewModel @Inject constructor(
     private val _bpmHistory = MutableStateFlow<List<Int>>(emptyList())
     val bpmHistory: StateFlow<List<Int>> = _bpmHistory.asStateFlow()
 
-    // elapsed seconds since session start
     private val _elapsedSeconds = MutableStateFlow(0L)
     val elapsedSeconds: StateFlow<Long> = _elapsedSeconds.asStateFlow()
 
-    private var sessionStartMs: Long = 0L
+    val currentZone: StateFlow<Int?> = combine(
+        _currentBpm,
+        settingsRepository.userSettings
+    ) { bpm, settings ->
+        if (bpm == null) null
+        else {
+            val zones = HrZoneCalculator.calculateZones(settings.maxHrUsed, settings.restingHr)
+            HrZoneCalculator.zoneFor(bpm, zones)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private var sessionStartMs = 0L
 
     init {
         viewModelScope.launch {
