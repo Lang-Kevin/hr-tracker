@@ -70,9 +70,9 @@ class HrBleManager @Inject constructor(
             Log.e(TAG, "BLE scanner not available — Bluetooth off?")
             return
         }
-        val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(HR_SERVICE_UUID))
-            .build()
+        // No service UUID filter: many devices (incl. moofit HR8) only include 0x180D
+        // in the scan response, not the primary advertisement — a filter would miss them.
+        // We accept all BLE devices and let the user pick; onServicesDiscovered validates.
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
@@ -88,8 +88,8 @@ class HrBleManager @Inject constructor(
             }
         }
         scanCallback = cb
-        scanner.startScan(listOf(filter), settings, cb)
-        Log.d(TAG, "BLE scan started (filter 0x180D)")
+        scanner.startScan(emptyList(), settings, cb)
+        Log.d(TAG, "BLE scan started (no filter — showing all devices)")
     }
 
     @SuppressLint("MissingPermission")
@@ -187,6 +187,8 @@ class HrBleManager @Inject constructor(
                 Log.e(TAG, "Service discovery failed: $status")
                 return
             }
+            val allServices = gatt.services.map { it.uuid.toString().uppercase().take(8) }
+            Log.d(TAG, "Services discovered: $allServices")
             val hrChar = gatt.getService(HR_SERVICE_UUID)
                 ?.getCharacteristic(HR_MEASUREMENT_UUID)
             if (hrChar == null) {

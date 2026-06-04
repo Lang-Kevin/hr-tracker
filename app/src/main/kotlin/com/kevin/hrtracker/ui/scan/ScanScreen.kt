@@ -72,10 +72,7 @@ fun ScanScreen(
                 Divider()
                 if (activeSessionId == null) {
                     Button(
-                        onClick = {
-                            viewModel.startSession()
-                            onSessionStarted("Training")
-                        },
+                        onClick = { onSessionStarted("Training") },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Session starten")

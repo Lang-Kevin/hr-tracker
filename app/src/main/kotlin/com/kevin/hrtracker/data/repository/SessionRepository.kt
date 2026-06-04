@@ -29,10 +29,13 @@ class SessionRepository @Inject constructor(
     private var sampleJob: Job? = null
 
     init {
-        // Close sessions that were left open by a crash or app-kill (older than 5 min)
+        // On startup SessionRepository has no active session — close any DB sessions
+        // left open by a previous crash, kill, or the double-start bug.
         scope.launch {
-            val cutoff = System.currentTimeMillis() - 5 * 60 * 1000L
-            db.sessionDao().closeOrphanedSessions(cutoff, System.currentTimeMillis())
+            db.sessionDao().closeOrphanedSessions(
+                cutoff = System.currentTimeMillis(), // all open sessions
+                endedAt = System.currentTimeMillis()
+            )
             Log.d("HRTracker", "Orphaned sessions cleaned up")
         }
     }
