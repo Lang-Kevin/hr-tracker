@@ -1,0 +1,194 @@
+package com.kevin.hrtracker.ble
+
+import android.annotation.SuppressLint
+import android.bluetooth.*
+import android.bluetooth.le.*
+import android.content.Context
+import android.os.Build
+import android.os.ParcelUuid
+import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+
+sealed class ConnectionState {
+    object Disconnected : ConnectionState()
+    object Connecting : ConnectionState()
+    object Connected : ConnectionState()
+    object Ready : ConnectionState()
+}
+
+@Singleton
+class HrBleManager @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    companion object {
+        private const val TAG = "HRTracker"
+        val HR_SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
+        val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
+        val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val _scanResults = MutableStateFlow<List<ScanResult>>(emptyList())
+    val scanResults: StateFlow<List<ScanResult>> = _scanResults.asStateFlow()
+
+    private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _hrSamples = MutableSharedFlow<ParsedHr>(replay = 0, extraBufferCapacity = 64)
+    val hrSamples: SharedFlow<ParsedHr> = _hrSamples.asSharedFlow()
+
+    private var bluetoothGatt: BluetoothGatt? = null
+    private var scanCallback: ScanCallback? = null
+
+    @SuppressLint("MissingPermission")
+    fun startScan() {
+        _scanResults.value = emptyList()
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        val scanner = adapter.bluetoothLeScanner ?: run {
+            Log.e(TAG, "BLE scanner not available — Bluetooth off?")
+            return
+        }
+        val filter = ScanFilter.Builder()
+            .setServiceUuid(ParcelUuid(HR_SERVICE_UUID))
+            .build()
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            .build()
+        val cb = object : ScanCallback() {
+            override fun onScanResult(callbackType: Int, result: ScanResult) {
+                val current = _scanResults.value
+                if (current.none { it.device.address == result.device.address }) {
+                    _scanResults.value = current + result
+                }
+            }
+            override fun onScanFailed(errorCode: Int) {
+                Log.e(TAG, "Scan failed: errorCode=$errorCode")
+            }
+        }
+        scanCallback = cb
+        scanner.startScan(listOf(filter), settings, cb)
+        Log.d(TAG, "BLE scan started (filter 0x180D)")
+    }
+
+    @SuppressLint("MissingPermission")
+    fun stopScan() {
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        scanCallback?.let { adapter.bluetoothLeScanner?.stopScan(it) }
+        scanCallback = null
+    }
+
+    @SuppressLint("MissingPermission")
+    fun connect(device: BluetoothDevice) {
+        _connectionState.value = ConnectionState.Connecting
+        bluetoothGatt = device.connectGatt(
+            context, false, gattCallback, BluetoothDevice.TRANSPORT_LE
+        )
+        Log.d(TAG, "Connecting to ${device.address}")
+    }
+
+    @SuppressLint("MissingPermission")
+    fun disconnect() {
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
+        _connectionState.value = ConnectionState.Disconnected
+    }
+
+    @SuppressLint("MissingPermission")
+    private val gattCallback = object : BluetoothGattCallback() {
+
+        override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            when (newState) {
+                BluetoothProfile.STATE_CONNECTED -> {
+                    Log.d(TAG, "GATT connected — discovering services")
+                    _connectionState.value = ConnectionState.Connected
+                    gatt.discoverServices()
+                }
+                BluetoothProfile.STATE_DISCONNECTED -> {
+                    Log.d(TAG, "GATT disconnected (status=$status)")
+                    _connectionState.value = ConnectionState.Disconnected
+                    gatt.close()
+                    bluetoothGatt = null
+                }
+            }
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.e(TAG, "Service discovery failed: $status")
+                return
+            }
+            val hrChar = gatt.getService(HR_SERVICE_UUID)
+                ?.getCharacteristic(HR_MEASUREMENT_UUID)
+            if (hrChar == null) {
+                Log.e(TAG, "HR Measurement characteristic (0x2A37) not found")
+                return
+            }
+            gatt.setCharacteristicNotification(hrChar, true)
+
+            val cccd = hrChar.getDescriptor(CCCD_UUID)
+            if (cccd == null) {
+                Log.e(TAG, "CCCD descriptor (0x2902) not found")
+                return
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+            } else {
+                @Suppress("DEPRECATION")
+                cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                @Suppress("DEPRECATION")
+                gatt.writeDescriptor(cccd)
+            }
+            Log.d(TAG, "CCCD written — HR notifications enabled")
+            _connectionState.value = ConnectionState.Ready
+        }
+
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
+        ) {
+            Log.d(TAG, "Descriptor write ${descriptor.uuid} status=$status")
+        }
+
+        // API 33+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            if (characteristic.uuid == HR_MEASUREMENT_UUID) handleHrData(value)
+        }
+
+        // API < 33
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                && characteristic.uuid == HR_MEASUREMENT_UUID
+            ) {
+                handleHrData(characteristic.value ?: return)
+            }
+        }
+    }
+
+    private fun handleHrData(value: ByteArray) {
+        val parsed = HeartRateParser.parse(value) ?: return
+        Log.d(TAG, "BPM=${parsed.bpm}  RR=${parsed.rrIntervalsMs}")
+        scope.launch { _hrSamples.emit(parsed) }
+    }
+}
