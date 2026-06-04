@@ -100,6 +100,12 @@ class HrBleManager @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
+    fun connectToAddress(address: String) {
+        val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
+        connect(adapter.getRemoteDevice(address))
+    }
+
+    @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
         // Close any existing GATT before opening a new one —
         // leaving it open causes duplicate onCharacteristicChanged callbacks.

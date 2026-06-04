@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.kevin.hrtracker.domain.UserSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,9 +16,10 @@ class SettingsRepository @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) {
     private object Keys {
-        val AGE           = intPreferencesKey("age")
-        val MANUAL_MAX_HR = intPreferencesKey("manual_max_hr")
-        val RESTING_HR    = intPreferencesKey("resting_hr")
+        val AGE              = intPreferencesKey("age")
+        val MANUAL_MAX_HR    = intPreferencesKey("manual_max_hr")
+        val RESTING_HR       = intPreferencesKey("resting_hr")
+        val SAVED_DEVICE_MAC = stringPreferencesKey("saved_device_mac")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -42,5 +44,15 @@ class SettingsRepository @Inject constructor(
         dataStore.edit {
             if (restingHr != null) it[Keys.RESTING_HR] = restingHr else it.remove(Keys.RESTING_HR)
         }
+    }
+
+    val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }
+
+    suspend fun saveDeviceAddress(address: String) {
+        dataStore.edit { it[Keys.SAVED_DEVICE_MAC] = address }
+    }
+
+    suspend fun clearSavedDevice() {
+        dataStore.edit { it.remove(Keys.SAVED_DEVICE_MAC) }
     }
 }

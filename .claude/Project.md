@@ -1,0 +1,371 @@
+# HR-Tracker App Plan
+
+## Ziel
+
+Native Android-App zur Aufzeichnung, Speicherung, Visualisierung und zum Export von Herzfrequenzdaten eines BLE-Brustgurts.
+
+Hardware:
+
+* moofit HR8
+* Standard BLE Heart Rate Service (`0x180D`)
+* Heart Rate Measurement (`0x2A37`)
+* RR-Intervalle verfügbar
+* ANT+ ignorieren
+
+---
+
+## Tech Stack
+
+| Bereich       | Technologie           |
+| ------------- | --------------------- |
+| Sprache       | Kotlin                |
+| UI            | Jetpack Compose       |
+| Min SDK       | 26                    |
+| Target SDK    | 35                    |
+| Async         | Coroutines + Flow     |
+| Datenbank     | Room                  |
+| BLE           | Nordic Kotlin BLE     |
+| Charts        | Vico                  |
+| DI            | Hilt                  |
+| Serialization | kotlinx.serialization |
+
+---
+
+## Architektur
+
+```text
+com.kevin.hrtracker
+├── ble/
+├── service/
+├── data/
+│   ├── db/
+│   ├── entity/
+│   └── repository/
+├── domain/
+├── export/
+└── ui/
+    ├── scan/
+    ├── live/
+    ├── history/
+    ├── detail/
+    └── settings/
+```
+
+MVVM.
+
+---
+
+## Datenmodell
+
+### Session
+
+```kotlin
+Session(
+    id,
+    label,
+    startedAt,
+    endedAt,
+    maxHrUsed,
+    restingHr,
+    note
+)
+```
+
+### HrSample
+
+```kotlin
+HrSample(
+    id,
+    sessionId,
+    timestampMs,
+    bpm,
+    rrIntervalsMs
+)
+```
+
+### SportLabel
+
+```kotlin
+SportLabel(
+    id,
+    name,
+    isPredefined
+)
+```
+
+Vordefinierte Labels:
+
+* Volleyball
+* Beach
+* Krafttraining
+* Cardio
+
+Eigene Labels ergänzbar.
+
+---
+
+## BLE
+
+### Heart Rate Measurement
+
+UUID:
+
+* Service: `0x180D`
+* Characteristic: `0x2A37`
+* CCCD: `0x2902`
+
+Flags:
+
+```text
+bit0 = HR uint8/uint16
+bit3 = Energy Expended vorhanden
+bit4 = RR-Intervalle vorhanden
+```
+
+RR Umrechnung:
+
+```kotlin
+rr_ms = raw * 1000 / 1024
+```
+
+### Verbindungsablauf
+
+1. Scan mit Filter `0x180D`
+2. Connect
+3. Service Discovery
+4. Notifications aktivieren (CCCD)
+5. Notifications parsen
+6. Flow<HrSample> emittieren
+
+### Anforderungen
+
+Pflicht:
+
+* CCCD korrekt aktivieren
+* RR-Intervalle speichern
+* Auto-Reconnect
+* Inkrementelles Speichern
+* Crash-resistent
+* Kein Sample-Verlust
+
+---
+
+## Foreground Service
+
+Pflicht während aktiver Session.
+
+Aufgaben:
+
+* BLE-Verbindung halten
+* Samples speichern
+* BPM anzeigen
+* Laufzeit anzeigen
+
+Foreground Service Type:
+
+```text
+connectedDevice
+```
+
+---
+
+## Herzfrequenz-Zonen
+
+### HRmax
+
+Default:
+
+```text
+HRmax = 208 - 0.7 * Alter
+```
+
+Optional:
+
+```text
+Manual Override
+```
+
+### Zonenmodell
+
+Default:
+
+```text
+Karvonen
+```
+
+Fallback:
+
+```text
+%HRmax
+```
+
+### Snapshot pro Session
+
+Speichern:
+
+* maxHrUsed
+* restingHr
+* zoneModel
+
+---
+
+## Screens
+
+### Scan
+
+* Geräteliste
+* Verbindungsstatus
+* Auto-Reconnect
+
+### Live
+
+* BPM
+* Zone
+* Timer
+* Live Chart
+* Label Auswahl
+
+### History
+
+* Sessionliste
+
+### Detail
+
+* BPM Chart
+* Zonen-Banding
+* Zonen-Verteilung
+* Statistiken
+* Export
+
+### Settings
+
+* Alter
+* HRmax Override
+* Ruhepuls
+* Zonenmodell
+* Labels
+* Gerät
+
+---
+
+## Visualisierung
+
+### Live
+
+* BPM Linie
+
+### Detail
+
+* BPM Linie
+* Zonen-Banding
+* Zonen-Verteilung
+
+### Statistiken
+
+* Durchschnitt
+* Maximum
+* Minimum
+* Dauer
+* Zeit pro Zone
+
+---
+
+## Export
+
+V1:
+
+```text
+JSON
+```
+
+Export enthält:
+
+### session
+
+* Metadaten
+* HRmax
+* Ruhepuls
+* ZoneModel
+* Zonengrenzen
+
+### summary
+
+* avg_bpm
+* max_bpm
+* min_bpm
+* time_in_zone
+
+### samples
+
+* timestamp
+* elapsed
+* bpm
+* rr_ms
+* zone
+
+CSV ist V2.
+
+---
+
+## Permissions
+
+Android 12+:
+
+* BLUETOOTH_SCAN
+* BLUETOOTH_CONNECT
+
+Android <12:
+
+* BLUETOOTH
+* BLUETOOTH_ADMIN
+* ACCESS_FINE_LOCATION
+
+Zusätzlich:
+
+* FOREGROUND_SERVICE
+* FOREGROUND_SERVICE_CONNECTED_DEVICE
+* POST_NOTIFICATIONS
+
+---
+
+## Milestones
+
+### M1
+
+BLE Scan + Connect + BPM
+
+### M2
+
+Room + Persistenz
+
+### M3
+
+Foreground Service + Live Screen
+
+### M4
+
+History + Detail
+
+### M5
+
+Zonen + Settings
+
+### M6
+
+JSON Export
+
+### M7
+
+Robustheit + Reconnect
+
+---
+
+## Entscheidungen
+
+1. HRmax = Tanaka + optional Override
+2. Karvonen Default, %HRmax Fallback
+3. Vordefinierte Labels + eigene Labels
+4. JSON-only für V1
+5. Ein gespeicherter Brustgurt
+6. Auto-Reconnect
+7. RR-Intervalle verpflichtend speichern
