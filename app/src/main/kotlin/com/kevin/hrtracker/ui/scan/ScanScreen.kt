@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.hrtracker.ble.ConnectionState
+import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -56,7 +57,11 @@ fun ScanScreen(
             TextButton(onClick = onNavigateToHistory) { Text("Verlauf") }
             TextButton(onClick = onNavigateToSettings) { Text("⚙") }
         }
-        Text("Status: ${connectionState::class.simpleName}", style = MaterialTheme.typography.bodyMedium)
+        val statusText = when (connectionState) {
+            is Reconnecting -> "Verbindung verloren — reconnecting…"
+            else -> connectionState::class.simpleName ?: ""
+        }
+        Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium)
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {

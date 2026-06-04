@@ -10,7 +10,9 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -27,6 +29,7 @@ sealed class ConnectionState {
     object Connecting : ConnectionState()
     object Connected : ConnectionState()
     object Ready : ConnectionState()
+    object Reconnecting : ConnectionState()
 }
 
 @Singleton
@@ -38,6 +41,8 @@ class HrBleManager @Inject constructor(
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
         val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
+        // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s
+        private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -53,6 +58,9 @@ class HrBleManager @Inject constructor(
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var scanCallback: ScanCallback? = null
+    private var lastDevice: BluetoothDevice? = null
+    private var reconnectEnabled = false
+    private var reconnectJob: Job? = null
 
     @SuppressLint("MissingPermission")
     fun startScan() {
@@ -93,6 +101,9 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
+        lastDevice = device
+        reconnectEnabled = true
+        reconnectJob?.cancel()
         _connectionState.value = ConnectionState.Connecting
         bluetoothGatt = device.connectGatt(
             context, false, gattCallback, BluetoothDevice.TRANSPORT_LE
@@ -102,10 +113,49 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
+        reconnectEnabled = false
+        reconnectJob?.cancel()
+        reconnectJob = null
         bluetoothGatt?.disconnect()
         bluetoothGatt?.close()
         bluetoothGatt = null
         _connectionState.value = ConnectionState.Disconnected
+        Log.d(TAG, "Disconnected (user-initiated)")
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun scheduleReconnect() {
+        val device = lastDevice ?: return
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch {
+            for ((attempt, delayMs) in RECONNECT_DELAYS_MS.withIndex()) {
+                if (!reconnectEnabled) break
+                Log.d(TAG, "Reconnect attempt ${attempt + 1}/${RECONNECT_DELAYS_MS.size} in ${delayMs}ms")
+                _connectionState.value = ConnectionState.Reconnecting
+                delay(delayMs)
+                if (!reconnectEnabled) break
+                bluetoothGatt?.close()
+                bluetoothGatt = device.connectGatt(
+                    context, false, gattCallback, BluetoothDevice.TRANSPORT_LE
+                )
+                // Wait up to 8s for the connection to succeed before trying again
+                var waited = 0
+                while (waited < 8_000 && reconnectEnabled &&
+                    _connectionState.value is ConnectionState.Reconnecting
+                ) {
+                    delay(500)
+                    waited += 500
+                }
+                if (_connectionState.value is ConnectionState.Ready) {
+                    Log.d(TAG, "Reconnected successfully after attempt ${attempt + 1}")
+                    return@launch
+                }
+            }
+            if (_connectionState.value !is ConnectionState.Ready) {
+                Log.w(TAG, "Reconnect failed after all attempts — giving up")
+                _connectionState.value = ConnectionState.Disconnected
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -120,9 +170,14 @@ class HrBleManager @Inject constructor(
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     Log.d(TAG, "GATT disconnected (status=$status)")
-                    _connectionState.value = ConnectionState.Disconnected
                     gatt.close()
                     bluetoothGatt = null
+                    if (reconnectEnabled) {
+                        Log.d(TAG, "Unexpected disconnect — scheduling reconnect")
+                        scheduleReconnect()
+                    } else {
+                        _connectionState.value = ConnectionState.Disconnected
+                    }
                 }
             }
         }

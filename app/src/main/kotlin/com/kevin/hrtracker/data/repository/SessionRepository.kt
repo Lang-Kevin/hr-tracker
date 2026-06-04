@@ -28,6 +28,15 @@ class SessionRepository @Inject constructor(
 
     private var sampleJob: Job? = null
 
+    init {
+        // Close sessions that were left open by a crash or app-kill (older than 5 min)
+        scope.launch {
+            val cutoff = System.currentTimeMillis() - 5 * 60 * 1000L
+            db.sessionDao().closeOrphanedSessions(cutoff, System.currentTimeMillis())
+            Log.d("HRTracker", "Orphaned sessions cleaned up")
+        }
+    }
+
     suspend fun startSession(label: String, maxHrUsed: Int, restingHr: Int?): Long {
         val id = db.sessionDao().insert(
             Session(
