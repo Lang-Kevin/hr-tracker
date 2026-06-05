@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
@@ -16,17 +17,10 @@ import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private val zoneColors = listOf(
-    androidx.compose.ui.graphics.Color(0xFF4CAF50), // Z1 green
-    androidx.compose.ui.graphics.Color(0xFF8BC34A), // Z2 light-green
-    androidx.compose.ui.graphics.Color(0xFFFF9800), // Z3 orange
-    androidx.compose.ui.graphics.Color(0xFFFF5722), // Z4 deep-orange
-    androidx.compose.ui.graphics.Color(0xFFF44336)  // Z5 red
-)
-
 @Composable
 fun LiveScreen(
     onStopSession: () -> Unit,
+    onAbortSession: () -> Unit = onStopSession,
     viewModel: LiveViewModel = hiltViewModel()
 ) {
     val currentBpm by viewModel.currentBpm.collectAsStateWithLifecycle()
@@ -53,10 +47,11 @@ fun LiveScreen(
     ) {
         val mm = elapsed / 60
         val ss = elapsed % 60
+        Text("Gesamtzeit", style = MaterialTheme.typography.bodySmall)
         Text("%02d:%02d".format(mm, ss), style = MaterialTheme.typography.displaySmall)
 
         currentZone?.let { zone ->
-            val color = zoneColors.getOrElse(zone - 1) { MaterialTheme.colorScheme.primary }
+            val color = ZoneColors.getOrElse(zone - 1) { MaterialTheme.colorScheme.primary }
             Surface(color = color, shape = MaterialTheme.shapes.small) {
                 Text(
                     "Zone $zone",
@@ -84,12 +79,28 @@ fun LiveScreen(
 
         Spacer(Modifier.weight(1f))
 
-        Button(
-            onClick = onStopSession,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Session beenden")
+            OutlinedButton(
+                onClick = onAbortSession,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp, MaterialTheme.colorScheme.error
+                )
+            ) {
+                Text("Abbrechen")
+            }
+            Button(
+                onClick = onStopSession,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Abschließen")
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,13 +29,17 @@ fun HistoryScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Zurück") }
             Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
         }
         Spacer(Modifier.height(8.dp))
         if (sessions.isEmpty()) {
             Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
+                style = MaterialTheme.typography.bodySmall
+            )
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(sessions, key = { it.id }) { session ->

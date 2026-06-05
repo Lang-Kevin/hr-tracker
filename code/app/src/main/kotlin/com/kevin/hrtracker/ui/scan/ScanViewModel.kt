@@ -2,18 +2,19 @@ package com.kevin.hrtracker.ui.scan
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.le.ScanResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.DiscoveredDevice
 import com.kevin.hrtracker.domain.SavedDevice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,7 +26,12 @@ class ScanViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    val scanResults: StateFlow<List<ScanResult>> = bleManager.scanResults
+    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = bleManager.scanResults
+        .map { results ->
+            listOf(DiscoveredDevice.Fake) + results.map { DiscoveredDevice.Real(it) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(DiscoveredDevice.Fake))
+
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
 
@@ -71,10 +77,27 @@ class ScanViewModel @Inject constructor(
         bleManager.connect(device)
     }
 
+    fun connectToDiscovered(device: DiscoveredDevice) {
+        bleManager.stopScan()
+        when (device) {
+            is DiscoveredDevice.Fake -> {
+                pendingDeviceInfo = device.address to device.displayName
+                bleManager.connectFake()
+            }
+            is DiscoveredDevice.Real -> connect(device.scanResult.device)
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun connectToSaved(device: SavedDevice) {
         bleManager.stopScan()
         bleManager.connectToAddress(device.address)
+    }
+
+    fun disconnect() = bleManager.disconnect()
+
+    fun forgetDevice(device: SavedDevice) = viewModelScope.launch {
+        settingsRepository.removeSavedDevice(device.address)
     }
 
     fun toggleAutoConnect() = viewModelScope.launch {

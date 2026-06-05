@@ -43,6 +43,10 @@ class HrBleManager @Inject constructor(
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
         // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
+        // Fake device — valid MAC format so it survives getRemoteDevice() if ever reached,
+        // but intercepted before BLE API calls in connectToAddress().
+        const val FAKE_DEVICE_ADDRESS = "FA:CE:00:00:00:01"
+        const val FAKE_DEVICE_NAME = "Pseudo-Sensor [Test]"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -61,6 +65,9 @@ class HrBleManager @Inject constructor(
     private var lastDevice: BluetoothDevice? = null
     private var reconnectEnabled = false
     private var reconnectJob: Job? = null
+
+    @Volatile private var isFakeActive = false
+    private var fakeJob: Job? = null
 
     @SuppressLint("MissingPermission")
     fun startScan() {
@@ -104,8 +111,39 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connectToAddress(address: String) {
+        if (address == FAKE_DEVICE_ADDRESS) {
+            connectFake()
+            return
+        }
         val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
         connect(adapter.getRemoteDevice(address))
+    }
+
+    fun connectFake() {
+        reconnectEnabled = false
+        reconnectJob?.cancel()
+        reconnectJob = null
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
+        isFakeActive = false
+        fakeJob?.cancel()
+        isFakeActive = true
+        _connectionState.value = ConnectionState.Ready
+        startFakeEmission()
+        Log.d(TAG, "Fake HR device connected")
+    }
+
+    private fun startFakeEmission() {
+        fakeJob = scope.launch {
+            var bpm = 70
+            while (isFakeActive) {
+                bpm = (bpm + (-3..3).random()).coerceIn(55, 180)
+                val rrMs = (60_000.0 / bpm).toInt()
+                _hrSamples.emit(ParsedHr(bpm, listOf(rrMs + (-20..20).random())))
+                delay(1_000L)
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -127,6 +165,9 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
+        isFakeActive = false
+        fakeJob?.cancel()
+        fakeJob = null
         reconnectEnabled = false
         reconnectJob?.cancel()
         reconnectJob = null

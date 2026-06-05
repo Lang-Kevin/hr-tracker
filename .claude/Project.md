@@ -369,3 +369,39 @@ Robustheit + Reconnect
 5. Ein gespeicherter Brustgurt
 6. Auto-Reconnect
 7. RR-Intervalle verpflichtend speichern
+
+---
+
+## Design-System (M-D1, 2026-06-05)
+
+Status: **ABGESCHLOSSEN** — Build SUCCESSFUL
+
+Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen HTML-Mockups)
+
+### Farbpalette
+
+| Token         | Hex         | Verwendung              |
+| ------------- | ----------- | ----------------------- |
+| PrimaryPurple | `#B6A6F2`   | Primary, Buttons        |
+| SecondaryBlue | `#5BA9E6`   | Zone 1, Secondary       |
+| TertiaryPink  | `#F4738E`   | Zone 5, Tertiary        |
+| ErrorRed      | `#EF4444`   | Abbrechen, Error        |
+| BackgroundDark| `#1D1B20`   | App-Hintergrund         |
+| SurfaceDark   | `#252330`   | Cards, Surfaces         |
+| LightPurple   | `#CBBCFF`   | Zone 3, onSurface       |
+
+Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink
+
+### Geänderte Dateien
+
+* `ui/theme/Color.kt` — neu erstellt
+* `ui/theme/Theme.kt` — custom darkColorScheme
+* `ui/scan/ScanScreen.kt` — "Training starten" (war: "Session starten")
+* `ui/live/LiveScreen.kt` — neue Zonenfarben, "Gesamtzeit"-Label, zwei Buttons (Abbrechen / Abschließen)
+* `ui/history/HistoryScreen.kt` — erweiterter Empty-State-Text
+* `ui/settings/SettingsScreen.kt` — farbige Zone-Badges in Vorschau
+
+### Offen / Nächste Schritte
+
+* **Font Space Grotesk**: TTF-Dateien unter `res/font/` ablegen + `Type.kt` erstellen (aktuell: Material3 Default)
+* **Abbrechen vs. Abschließen**: Funktionale Unterscheidung (Session verwerfen vs. speichern) erfordert ViewModel-Erweiterung in `LiveViewModel`

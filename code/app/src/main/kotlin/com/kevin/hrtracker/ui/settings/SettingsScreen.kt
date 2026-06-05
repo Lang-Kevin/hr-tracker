@@ -6,12 +6,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.ui.theme.ZoneColors
 
 @Composable
 fun SettingsScreen(
@@ -40,7 +42,7 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("← Zurück") }
             Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
         }
@@ -113,9 +115,21 @@ fun SettingsScreen(
                 zones.forEach { z ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val zoneColor = ZoneColors.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
+                            Surface(
+                                color = zoneColor,
+                                shape = MaterialTheme.shapes.extraSmall,
+                                modifier = Modifier.size(12.dp)
+                            ) {}
+                            Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                        }
                         Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
                     }
                 }

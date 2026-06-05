@@ -78,6 +78,15 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun removeSavedDevice(address: String) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.SAVED_DEVICES]?.let {
+                runCatching { Json.decodeFromString<List<SavedDevice>>(it) }.getOrDefault(emptyList())
+            } ?: emptyList()
+            prefs[Keys.SAVED_DEVICES] = Json.encodeToString(current.filter { it.address != address })
+        }
+    }
+
     val autoConnect: Flow<Boolean> = dataStore.data.map { it[Keys.AUTO_CONNECT] ?: false }
 
     suspend fun setAutoConnect(enabled: Boolean) {

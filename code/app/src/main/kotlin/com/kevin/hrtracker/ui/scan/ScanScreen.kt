@@ -1,8 +1,6 @@
 package com.kevin.hrtracker.ui.scan
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.bluetooth.le.ScanResult
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,6 +17,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
+import com.kevin.hrtracker.domain.DiscoveredDevice
 import com.kevin.hrtracker.domain.SavedDevice
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -29,7 +28,7 @@ fun ScanScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {}
 ) {
-    val scanResults by viewModel.scanResults.collectAsStateWithLifecycle()
+    val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val savedDevices by viewModel.savedDevices.collectAsStateWithLifecycle()
@@ -71,7 +70,13 @@ fun ScanScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium)
+                if (connectionState !is ConnectionState.Disconnected) {
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = { viewModel.disconnect() }) { Text("Trennen") }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Auto-Connect", style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.width(4.dp))
@@ -94,7 +99,7 @@ fun ScanScreen(
                         onClick = { onSessionStarted("Training") },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Session starten")
+                        Text("Training starten")
                     }
                 } else {
                     Button(
@@ -111,18 +116,22 @@ fun ScanScreen(
             if (savedDevices.isNotEmpty()) {
                 Text("Gemerkte Geräte", style = MaterialTheme.typography.titleSmall)
                 savedDevices.forEach { device ->
-                    SavedDeviceItem(device = device) { viewModel.connectToSaved(device) }
+                    SavedDeviceItem(
+                        device = device,
+                        onClick = { viewModel.connectToSaved(device) },
+                        onForget = { viewModel.forgetDevice(device) }
+                    )
                 }
                 HorizontalDivider()
             }
 
-            Text("HR-Geräte (0x180D):", style = MaterialTheme.typography.titleSmall)
-            if (scanResults.isEmpty()) {
+            Text("Verfügbare HR-Geräte:", style = MaterialTheme.typography.titleSmall)
+            if (discoveredDevices.none { it is DiscoveredDevice.Real }) {
                 Text("Scan läuft…", style = MaterialTheme.typography.bodySmall)
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items(scanResults, key = { it.device.address }) { result ->
-                    DeviceItem(result = result) { viewModel.connect(result.device) }
+                items(discoveredDevices, key = { it.address }) { device ->
+                    DeviceItem(device = device) { viewModel.connectToDiscovered(device) }
                 }
             }
         }
@@ -130,25 +139,30 @@ fun ScanScreen(
 }
 
 @Composable
-private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(device.name, style = MaterialTheme.typography.bodyLarge)
-            Text(device.address, style = MaterialTheme.typography.bodySmall)
+private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit, onForget: () -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
+                Text(device.name, style = MaterialTheme.typography.bodyLarge)
+                Text(device.address, style = MaterialTheme.typography.bodySmall)
+            }
+            TextButton(onClick = onForget) { Text("Vergessen") }
         }
     }
 }
 
-@SuppressLint("MissingPermission")
 @Composable
-private fun DeviceItem(result: ScanResult, onClick: () -> Unit) {
+private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(modifier = Modifier.padding(12.dp)) {
+            Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(
-                result.device.name ?: "Unbekanntes Gerät",
-                style = MaterialTheme.typography.bodyLarge
+                if (device is DiscoveredDevice.Fake) "Simuliertes Testgerät" else device.address,
+                style = MaterialTheme.typography.bodySmall
             )
-            Text(result.device.address, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
