@@ -23,6 +23,7 @@ class SettingsRepository @Inject constructor(
         val AGE              = intPreferencesKey("age")
         val MANUAL_MAX_HR    = intPreferencesKey("manual_max_hr")
         val RESTING_HR       = intPreferencesKey("resting_hr")
+        val TARGET_ZONE      = intPreferencesKey("target_zone")
         val SAVED_DEVICE_MAC = stringPreferencesKey("saved_device_mac")
         val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
         val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
@@ -32,7 +33,8 @@ class SettingsRepository @Inject constructor(
         UserSettings(
             age          = prefs[Keys.AGE] ?: 30,
             manualMaxHr  = prefs[Keys.MANUAL_MAX_HR],
-            restingHr    = prefs[Keys.RESTING_HR]
+            restingHr    = prefs[Keys.RESTING_HR],
+            targetZone   = prefs[Keys.TARGET_ZONE] ?: 2
         )
     }
 
@@ -50,6 +52,10 @@ class SettingsRepository @Inject constructor(
         dataStore.edit {
             if (restingHr != null) it[Keys.RESTING_HR] = restingHr else it.remove(Keys.RESTING_HR)
         }
+    }
+
+    suspend fun setTargetZone(zone: Int) {
+        dataStore.edit { it[Keys.TARGET_ZONE] = zone.coerceIn(1, 5) }
     }
 
     val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }

@@ -7,6 +7,7 @@ import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.ZoneBounds
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -23,14 +24,25 @@ class LiveViewModel @Inject constructor(
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
 
+    val sessionLabel: StateFlow<String?> = sessionRepository.activeSession
+        .map { it?.label }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     private val _currentBpm = MutableStateFlow<Int?>(null)
     val currentBpm: StateFlow<Int?> = _currentBpm.asStateFlow()
 
     private val _bpmHistory = MutableStateFlow<List<Int>>(emptyList())
     val bpmHistory: StateFlow<List<Int>> = _bpmHistory.asStateFlow()
 
+    val averageBpm: StateFlow<Int?> = _bpmHistory.map { history ->
+        if (history.isEmpty()) null else history.average().toInt()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     private val _elapsedSeconds = MutableStateFlow(0L)
     val elapsedSeconds: StateFlow<Long> = _elapsedSeconds.asStateFlow()
+
+    private val _timeInZone = MutableStateFlow<Map<Int, Long>>(emptyMap())
+    val timeInZone: StateFlow<Map<Int, Long>> = _timeInZone.asStateFlow()
 
     val currentZone: StateFlow<Int?> = combine(
         _currentBpm,
@@ -42,6 +54,20 @@ class LiveViewModel @Inject constructor(
             HrZoneCalculator.zoneFor(bpm, zones)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val targetZone: StateFlow<Int> = settingsRepository.userSettings
+        .map { it.targetZone }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 2)
+
+    val percentInTargetZone: StateFlow<Float?> = combine(
+        _timeInZone, targetZone, _elapsedSeconds
+    ) { tiz, tz, elapsed ->
+        if (elapsed == 0L) null else (tiz[tz] ?: 0L).toFloat() / elapsed.toFloat()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val zoneBounds: StateFlow<List<ZoneBounds>> = settingsRepository.userSettings.map { settings ->
+        HrZoneCalculator.calculateZones(settings.maxHrUsed, settings.restingHr)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private var sessionStartMs = 0L
 
@@ -56,6 +82,9 @@ class LiveViewModel @Inject constructor(
             while (true) {
                 if (activeSessionId.value != null && sessionStartMs > 0) {
                     _elapsedSeconds.value = (System.currentTimeMillis() - sessionStartMs) / 1000
+                    currentZone.value?.let { z ->
+                        _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
+                    }
                 }
                 delay(1_000)
             }
@@ -63,7 +92,11 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             activeSessionId.collect { id ->
                 if (id != null && sessionStartMs == 0L) sessionStartMs = System.currentTimeMillis()
-                if (id == null) { sessionStartMs = 0L; _elapsedSeconds.value = 0 }
+                if (id == null) {
+                    sessionStartMs = 0L
+                    _elapsedSeconds.value = 0
+                    _timeInZone.value = emptyMap()
+                }
             }
         }
     }

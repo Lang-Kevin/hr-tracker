@@ -82,6 +82,24 @@ fun SettingsScreen(
                     }
                 )
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
+
+                HorizontalDivider()
+                Text("Ziel-Zone", style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    (1..5).forEach { z ->
+                        val selected = settings.targetZone == z
+                        val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
+                        FilterChip(
+                            selected = selected,
+                            onClick = { viewModel.setTargetZone(z) },
+                            label = { Text("Z$z") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = zoneColor,
+                                selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                            )
+                        )
+                    }
+                }
             }
         }
 

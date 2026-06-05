@@ -12,6 +12,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +27,10 @@ class SessionRepository @Inject constructor(
 
     private val _activeSessionId = MutableStateFlow<Long?>(null)
     val activeSessionId: StateFlow<Long?> = _activeSessionId.asStateFlow()
+
+    val activeSession = activeSessionId.flatMapLatest { id ->
+        if (id == null) flowOf(null) else db.sessionDao().getByIdFlow(id)
+    }
 
     private var sampleJob: Job? = null
 

@@ -33,4 +33,6 @@ class SettingsViewModel @Inject constructor(
     fun setRestingHr(restingHr: Int?) = viewModelScope.launch {
         settingsRepository.setRestingHr(restingHr)
     }
+
+    fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 }
