@@ -405,3 +405,22 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink
 
 * **Font Space Grotesk**: TTF-Dateien unter `res/font/` ablegen + `Type.kt` erstellen (aktuell: Material3 Default)
 * **Abbrechen vs. Abschließen**: Funktionale Unterscheidung (Session verwerfen vs. speichern) erfordert ViewModel-Erweiterung in `LiveViewModel`
+
+---
+
+## Live-Training Erweiterung (2026-06-05)
+
+Status: **ABGESCHLOSSEN** — Build SUCCESSFUL
+
+Quelle: `.claude/designs/Live-Training.html`
+
+### Hinzugefügt
+
+* `domain/UserSettings.kt` — `targetZone: Int = 2`
+* `data/repository/SettingsRepository.kt` — `TARGET_ZONE` DataStore-Key + `setTargetZone()`
+* `data/db/SessionDao.kt` — `getByIdFlow(id)` für reaktives Session-Label
+* `data/repository/SessionRepository.kt` — `activeSession: Flow<Session?>`
+* `ui/live/LiveViewModel.kt` — `sessionLabel`, `averageBpm`, `targetZone`, `timeInZone`, `percentInTargetZone`, `zoneBounds`; Ticker trackt Zeit pro Zone
+* `ui/live/LiveScreen.kt` — Sport-Label im Header, BPM Ø, Ziel-Zone-Card (Zeit + Fortschrittsbalken + %), Zeit-in-Zone-Tabelle (alle 5 Zonen mit BPM-Grenzen)
+* `ui/settings/SettingsScreen.kt` — Ziel-Zonen-Auswahl Z1–Z5 (FilterChips)
+* `ui/settings/SettingsViewModel.kt` — `setTargetZone()`
