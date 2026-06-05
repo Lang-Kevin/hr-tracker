@@ -85,4 +85,6 @@ class SessionRepository @Inject constructor(
     }
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
+
+    suspend fun deleteSessionsByIds(ids: List<Long>) = db.sessionDao().deleteByIds(ids)
 }
