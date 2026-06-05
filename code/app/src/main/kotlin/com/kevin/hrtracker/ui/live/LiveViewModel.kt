@@ -13,9 +13,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.math.abs
-
-private const val BPM_CHART_THRESHOLD = 2
 
 @HiltViewModel
 class LiveViewModel @Inject constructor(
@@ -36,9 +33,6 @@ class LiveViewModel @Inject constructor(
 
     private val _bpmHistory = MutableStateFlow<List<Int>>(emptyList())
     val bpmHistory: StateFlow<List<Int>> = _bpmHistory.asStateFlow()
-
-    private val _maxBpm = MutableStateFlow<Int?>(null)
-    val maxBpm: StateFlow<Int?> = _maxBpm.asStateFlow()
 
     val averageBpm: StateFlow<Int?> = _bpmHistory.map { history ->
         if (history.isEmpty()) null else history.average().toInt()
@@ -83,11 +77,7 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             bleManager.hrSamples.collect { parsed ->
                 _currentBpm.value = parsed.bpm
-                if (parsed.bpm > (_maxBpm.value ?: 0)) _maxBpm.value = parsed.bpm
-                val lastChartBpm = _bpmHistory.value.lastOrNull()
-                if (lastChartBpm == null || abs(parsed.bpm - lastChartBpm) >= BPM_CHART_THRESHOLD) {
-                    _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
-                }
+                _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
             }
         }
         viewModelScope.launch {
@@ -108,8 +98,6 @@ class LiveViewModel @Inject constructor(
                     sessionStartMs = 0L
                     _elapsedSeconds.value = 0
                     _timeInZone.value = emptyMap()
-                    _maxBpm.value = null
-                    _bpmHistory.value = emptyList()
                 }
             }
         }
