@@ -70,14 +70,17 @@ class HrBleManager @Inject constructor(
             Log.e(TAG, "BLE scanner not available — Bluetooth off?")
             return
         }
-        // No service UUID filter: many devices (incl. moofit HR8) only include 0x180D
-        // in the scan response, not the primary advertisement — a filter would miss them.
-        // We accept all BLE devices and let the user pick; onServicesDiscovered validates.
+        // No BLE-API filter: moofit HR8 only includes 0x180D in the scan response,
+        // not the primary advertisement — an API-level filter would miss it.
+        // We filter client-side via scanRecord, which combines both advertisement frames.
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
         val cb = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
+                val hasHrService = result.scanRecord?.serviceUuids
+                    ?.any { it.uuid == HR_SERVICE_UUID } == true
+                if (!hasHrService) return
                 val current = _scanResults.value
                 if (current.none { it.device.address == result.device.address }) {
                     _scanResults.value = current + result
@@ -89,7 +92,7 @@ class HrBleManager @Inject constructor(
         }
         scanCallback = cb
         scanner.startScan(emptyList(), settings, cb)
-        Log.d(TAG, "BLE scan started (no filter — showing all devices)")
+        Log.d(TAG, "BLE scan started (client-side HR-Service 0x180D filter)")
     }
 
     @SuppressLint("MissingPermission")

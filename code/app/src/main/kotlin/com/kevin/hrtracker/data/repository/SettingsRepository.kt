@@ -2,12 +2,16 @@ package com.kevin.hrtracker.data.repository
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.kevin.hrtracker.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,6 +24,8 @@ class SettingsRepository @Inject constructor(
         val MANUAL_MAX_HR    = intPreferencesKey("manual_max_hr")
         val RESTING_HR       = intPreferencesKey("resting_hr")
         val SAVED_DEVICE_MAC = stringPreferencesKey("saved_device_mac")
+        val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
+        val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -54,5 +60,27 @@ class SettingsRepository @Inject constructor(
 
     suspend fun clearSavedDevice() {
         dataStore.edit { it.remove(Keys.SAVED_DEVICE_MAC) }
+    }
+
+    val savedDevices: Flow<List<SavedDevice>> = dataStore.data.map { prefs ->
+        prefs[Keys.SAVED_DEVICES]?.let { json ->
+            runCatching { Json.decodeFromString<List<SavedDevice>>(json) }.getOrDefault(emptyList())
+        } ?: emptyList()
+    }
+
+    suspend fun addSavedDevice(device: SavedDevice) {
+        dataStore.edit { prefs ->
+            val current = prefs[Keys.SAVED_DEVICES]?.let {
+                runCatching { Json.decodeFromString<List<SavedDevice>>(it) }.getOrDefault(emptyList())
+            } ?: emptyList()
+            val updated = listOf(device) + current.filter { it.address != device.address }
+            prefs[Keys.SAVED_DEVICES] = Json.encodeToString(updated)
+        }
+    }
+
+    val autoConnect: Flow<Boolean> = dataStore.data.map { it[Keys.AUTO_CONNECT] ?: false }
+
+    suspend fun setAutoConnect(enabled: Boolean) {
+        dataStore.edit { it[Keys.AUTO_CONNECT] = enabled }
     }
 }
