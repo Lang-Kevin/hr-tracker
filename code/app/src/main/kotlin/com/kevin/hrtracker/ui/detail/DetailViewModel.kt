@@ -82,5 +82,9 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }
 
+    fun updateNote(note: String) {
+        viewModelScope.launch { db.sessionDao().updateNote(sessionId, note) }
+    }
+
     suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)
 }

@@ -436,3 +436,54 @@ Status: **ABGESCHLOSSEN** — Build SUCCESSFUL
   * **Abbrechen**: "Training abbrechen?" → Bestätigen verwirft Daten, "Weiter messen" schließt Dialog
   * **Abschließen**: "Training abschließen?" → Bestätigen speichert Daten, "Weiter messen" schließt Dialog
   * Neuer privater Composable `ConfirmDialog` (wiederverwendbar, kein ViewModel-Eingriff)
+
+---
+
+## Detail-Screen: Live-Layout + Trainingstyp editieren (2026-06-05)
+
+Status: **ABGESCHLOSSEN** — Build SUCCESSFUL
+
+### Änderungen
+
+* `data/db/SessionDao.kt` — `updateLabel()`, `deleteByIds()` hinzugefügt
+* `ui/shared/TrainingUi.kt` — neu; enthält `BpmZoneChart`, `ZeitInZoneSection`, `StatItem` (shared zwischen Live + Detail)
+* `ui/detail/DetailViewModel.kt` — reaktiv umgeschrieben (StateFlow statt one-shot); `timeInZone`, `dominantZone`, `percentInTargetZone`, `zoneBounds`, `updateLabel()`
+* `ui/detail/DetailScreen.kt` — komplett neu: Live-Layout, tappable Label, `EditTrainingTypeDialog` mit RadioButtons (Allgemeines Training / Beachvolleyball / Trainingbike / Volleyball, alphabetisch)
+
+---
+
+## App-Review & Verbesserungsplan (2026-06-05)
+
+Status: **IN ARBEIT**
+
+Siehe vollständigen Plan: `.claude/plans/werde-kreativ-und-review-dreamy-breeze.md`
+
+### Batch 1 — Bugfixes & Quick Wins ✅ (commit 0e79de1)
+- [x] #2 BPM-Clamp (HeartRateParser: 30–220)
+- [x] #12 Settings Validierungsfeedback (Inline-Fehlermeldungen)
+- [x] #17 Zeit-in-Zone Bug Fix (Timestamps statt Sample-Count)
+
+### Batch 2 — UX-Erweiterungen I (commit TBD)
+- [x] #14 Notiz-Feld in DetailScreen (SessionDao.updateNote, DetailViewModel.updateNote, EditNoteDialog)
+- [ ] #6 Label-Dialog beim Training starten → offen
+- [ ] #1 Double-Start Race Condition → offen
+
+### Batch 3 — UX-Erweiterungen II
+- [ ] #4 CCCD-Fehler sichtbar machen
+- [ ] #11 Zonen-Erklärung in Settings
+- [ ] #25 Font Space Grotesk
+
+### Batch 4 — History & Visuals
+- [ ] #9 Swipe-to-Delete in History
+- [ ] #27 Puls-Animation Live-Screen
+- [ ] #8 History Summary Card
+
+### Batch 5 — Analytics
+- [ ] #15 RMSSD/HRV in DetailScreen
+- [ ] #16 TRIMP-Score
+- [ ] #21 Zonengrenzen-Snapshot (DB-Migration)
+
+### Batch 6 — Statistik & Export
+- [ ] #19 Statistik-Tab in History
+- [ ] #23 CSV-Export
+- [ ] #28 Onboarding-Flow

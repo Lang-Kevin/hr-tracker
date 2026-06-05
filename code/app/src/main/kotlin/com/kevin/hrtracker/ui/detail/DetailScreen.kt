@@ -1,29 +1,36 @@
 package com.kevin.hrtracker.ui.detail
 
 import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
-import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.kevin.hrtracker.ui.shared.BpmZoneChart
+import com.kevin.hrtracker.ui.shared.StatItem
+import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
+import com.kevin.hrtracker.ui.theme.BackgroundDark
+import com.kevin.hrtracker.ui.theme.OnPrimary
+import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.hrtracker.ui.history.durationString
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.kevin.hrtracker.ui.history.durationString
+
+private val TRAINING_TYPES = listOf(
+    "Allgemeines Training",
+    "Beachvolleyball",
+    "Trainingbike",
+    "Volleyball"
+)
 
 @Composable
 fun DetailScreen(
@@ -33,127 +40,233 @@ fun DetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val session by viewModel.session.collectAsStateWithLifecycle()
-    val samples by viewModel.samples.collectAsStateWithLifecycle()
+    val bpmHistory by viewModel.bpmHistory.collectAsStateWithLifecycle()
     val stats by viewModel.stats.collectAsStateWithLifecycle()
-    val zoneDistrib by viewModel.zoneDistribution.collectAsStateWithLifecycle()
+    val zoneBounds by viewModel.zoneBounds.collectAsStateWithLifecycle()
+    val timeInZone by viewModel.timeInZone.collectAsStateWithLifecycle()
+    val dominantZone by viewModel.dominantZone.collectAsStateWithLifecycle()
+    val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
 
-    val modelProducer = remember { CartesianChartModelProducer() }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(samples) {
-        if (samples.size >= 2) {
-            withContext(Dispatchers.Default) {
-                modelProducer.runTransaction { lineSeries { series(samples.map { it.bpm }) } }
-            }
-        }
+    if (showEditDialog) {
+        EditTrainingTypeDialog(
+            current = session?.label ?: TRAINING_TYPES[0],
+            onSave = { label ->
+                viewModel.updateLabel(label)
+                showEditDialog = false
+            },
+            onDismiss = { showEditDialog = false }
+        )
+    }
+
+    if (showNoteDialog) {
+        EditNoteDialog(
+            current = session?.note ?: "",
+            onSave = { note ->
+                viewModel.updateNote(note)
+                showNoteDialog = false
+            },
+            onDismiss = { showNoteDialog = false }
+        )
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(BackgroundDark)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Zurück") }
-            Text(
-                session?.label ?: "Session",
-                style = MaterialTheme.typography.headlineMedium
-            )
-        }
-
-        session?.let { s ->
-            Text(
-                SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(s.startedAt)),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            s.endedAt?.let { end ->
+        // Header: tappable label + date
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.clickable { showEditDialog = true }) {
                 Text(
-                    "Dauer: ${durationString((end - s.startedAt) / 1000)}",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = session?.label?.uppercase() ?: "TRAINING",
+                    color = PrimaryPurple,
+                    style = MaterialTheme.typography.titleLarge
                 )
             }
-        }
-
-        if (samples.size >= 2) {
-            Text("BPM-Verlauf", style = MaterialTheme.typography.titleSmall)
-            CartesianChartHost(
-                chart = rememberCartesianChart(rememberLineCartesianLayer()),
-                modelProducer = modelProducer,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            )
-        } else if (samples.isEmpty()) {
-            Text("Keine Samples aufgezeichnet.", style = MaterialTheme.typography.bodySmall)
-        }
-
-        stats?.let { st ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("Statistik", style = MaterialTheme.typography.titleSmall)
-                    HorizontalDivider()
-                    StatRow("Ø BPM", "${st.avgBpm}")
-                    StatRow("Max BPM", "${st.maxBpm}")
-                    StatRow("Min BPM", "${st.minBpm}")
-                    StatRow("Samples", "${st.sampleCount}")
-                }
-            }
-        }
-
-        if (zoneDistrib.isNotEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text("Zeit pro Zone", style = MaterialTheme.typography.titleSmall)
-                    HorizontalDivider()
-                    val totalSec = zoneDistrib.values.sum().coerceAtLeast(1)
-                    for (z in 1..5) {
-                        val sec = zoneDistrib[z] ?: 0
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Z$z", modifier = Modifier.width(28.dp))
-                            LinearProgressIndicator(
-                                progress = { sec / totalSec.toFloat() },
-                                modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                            )
-                            Text("%02d:%02d".format(sec / 60, sec % 60),
-                                style = MaterialTheme.typography.bodySmall)
-                        }
+            session?.let { s ->
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        SimpleDateFormat("dd.MM.yy", Locale.getDefault()).format(Date(s.startedAt)),
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    s.endedAt?.let { end ->
+                        Text(
+                            durationString((end - s.startedAt) / 1000),
+                            color = Color.White.copy(alpha = 0.6f),
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
         }
 
-        Button(
-            onClick = {
-                scope.launch {
-                    val intent = viewModel.export(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, "Session exportieren"))
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
+        Spacer(Modifier.height(8.dp))
+
+        // BPM Zone Chart
+        BpmZoneChart(
+            bpmHistory = bpmHistory,
+            currentBpm = bpmHistory.lastOrNull(),
+            zoneBounds = zoneBounds,
+            targetZone = dominantZone,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Zeit in Zone
+        ZeitInZoneSection(
+            timeInZone = timeInZone,
+            percentInTargetZone = percentInTargetZone,
+            targetZone = dominantZone
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Stats Row
+        Row(modifier = Modifier.fillMaxWidth()) {
+            StatItem("BPM Ø", stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
+            StatItem(
+                "DAUER",
+                session?.endedAt?.let { end ->
+                    durationString((end - (session?.startedAt ?: end)) / 1000)
+                } ?: "—",
+                Modifier.weight(1f)
+            )
+            StatItem("MAX BPM", stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Note field
+        val noteText = session?.note
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showNoteDialog = true }
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Als JSON exportieren")
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Notiz",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+                Text(
+                    text = if (noteText.isNullOrBlank()) "Notiz hinzufügen…" else noteText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (noteText.isNullOrBlank()) Color.White.copy(alpha = 0.35f) else Color.White
+                )
+            }
+            Text(
+                "✎",
+                style = MaterialTheme.typography.bodyMedium,
+                color = PrimaryPurple
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Action buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.weight(1f)
+            ) { Text("← Zurück") }
+            Button(
+                onClick = {
+                    scope.launch {
+                        val intent = viewModel.export(context) ?: return@launch
+                        context.startActivity(Intent.createChooser(intent, "Session exportieren"))
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryPurple,
+                    contentColor = OnPrimary
+                )
+            ) { Text("Exportieren") }
         }
     }
 }
 
 @Composable
-private fun StatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
-        Text(value, style = MaterialTheme.typography.bodyMedium)
-    }
+private fun EditNoteDialog(
+    current: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Notiz") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("z.B. Beine sehr müde, neues PB…") },
+                maxLines = 4
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(text.trim()) }) { Text("Speichern") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        }
+    )
+}
+
+@Composable
+private fun EditTrainingTypeDialog(
+    current: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Trainingstyp ändern") },
+        text = {
+            Column {
+                TRAINING_TYPES.forEach { type ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selected = type }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected == type,
+                            onClick = { selected = type }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(type, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(selected) }) { Text("Speichern") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        }
+    )
 }

@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.PI
+import kotlin.math.sin
 
 sealed class ConnectionState {
     object Disconnected : ConnectionState()
@@ -136,12 +138,15 @@ class HrBleManager @Inject constructor(
 
     private fun startFakeEmission() {
         fakeJob = scope.launch {
-            var bpm = 70
+            // Sine wave: period 120s, center 130 BPM, amplitude 40 → sweeps Z1(~90) to Z5(~170)
+            var t = 0
             while (isFakeActive) {
-                bpm = (bpm + (-3..3).random()).coerceIn(55, 180)
+                val base = (130 + 40 * sin(t * 2 * PI / 120)).toInt()
+                val bpm = (base + (-2..2).random()).coerceIn(55, 185)
                 val rrMs = (60_000.0 / bpm).toInt()
                 _hrSamples.emit(ParsedHr(bpm, listOf(rrMs + (-20..20).random())))
                 delay(1_000L)
+                t++
             }
         }
     }

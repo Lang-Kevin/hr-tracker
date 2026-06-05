@@ -25,6 +25,12 @@ interface SessionDao {
     @Query("UPDATE Session SET endedAt = :endedAt WHERE endedAt IS NULL AND startedAt < :cutoff")
     suspend fun closeOrphanedSessions(cutoff: Long, endedAt: Long)
 
+    @Query("UPDATE Session SET label = :label WHERE id = :id")
+    suspend fun updateLabel(id: Long, label: String)
+
+    @Query("UPDATE Session SET note = :note WHERE id = :id")
+    suspend fun updateNote(id: Long, note: String)
+
     @Query("DELETE FROM Session WHERE id IN (:ids)")
     suspend fun deleteByIds(ids: List<Long>)
 }
