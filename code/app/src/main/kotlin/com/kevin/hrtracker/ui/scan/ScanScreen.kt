@@ -20,6 +20,13 @@ import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
 import com.kevin.hrtracker.domain.DiscoveredDevice
 import com.kevin.hrtracker.domain.SavedDevice
 
+private val TRAINING_TYPES = listOf(
+    "Allgemeines Training",
+    "Beachvolleyball",
+    "Trainingbike",
+    "Volleyball"
+)
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ScanScreen(
@@ -33,6 +40,22 @@ fun ScanScreen(
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val savedDevices by viewModel.savedDevices.collectAsStateWithLifecycle()
     val autoConnect by viewModel.autoConnect.collectAsStateWithLifecycle()
+
+    var showStartDialog by remember { mutableStateOf(false) }
+    var isStarting by remember { mutableStateOf(false) }
+    // Reset isStarting once session is confirmed active
+    LaunchedEffect(activeSessionId) { if (activeSessionId != null) isStarting = false }
+
+    if (showStartDialog) {
+        StartTrainingDialog(
+            onStart = { label ->
+                showStartDialog = false
+                isStarting = true
+                onSessionStarted(label)
+            },
+            onDismiss = { showStartDialog = false }
+        )
+    }
 
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
@@ -96,10 +119,11 @@ fun ScanScreen(
                 HorizontalDivider()
                 if (activeSessionId == null) {
                     Button(
-                        onClick = { onSessionStarted("Training") },
+                        onClick = { if (!isStarting) showStartDialog = true },
+                        enabled = !isStarting,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Training starten")
+                        Text(if (isStarting) "Starte…" else "Training starten")
                     }
                 } else {
                     Button(
@@ -165,4 +189,36 @@ private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
             )
         }
     }
+}
+
+@Composable
+private fun StartTrainingDialog(onStart: (String) -> Unit, onDismiss: () -> Unit) {
+    var selected by remember { mutableStateOf(TRAINING_TYPES[0]) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Trainingstyp wählen") },
+        text = {
+            Column {
+                TRAINING_TYPES.forEach { type ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selected = type }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = selected == type, onClick = { selected = type })
+                        Spacer(Modifier.width(8.dp))
+                        Text(type, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onStart(selected) }) { Text("Starten") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        }
+    )
 }
