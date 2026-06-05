@@ -1,5 +1,7 @@
 package com.kevin.hrtracker.ui.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -143,6 +145,62 @@ fun SettingsScreen(
                             Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
                         }
                         Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+
+        ZoneErklarungCard()
+    }
+}
+
+private val ZONE_DESCRIPTIONS = listOf(
+    1 to "Regeneration — sehr leichte Belastung, aktive Erholung",
+    2 to "Fettverbrennung — lockeres Tempo, aerobe Basis",
+    3 to "Aerob — moderates Training, Ausdaueraufbau",
+    4 to "Anaerob — intensive Belastung, Laktatschwelle",
+    5 to "VO₂max — maximale Intensität, kurze Intervalle"
+)
+
+@Composable
+private fun ZoneErklarungCard() {
+    var expanded by remember { mutableStateOf(false) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Was bedeuten die Zonen?", style = MaterialTheme.typography.titleMedium)
+                Text(if (expanded) "▲" else "▼", style = MaterialTheme.typography.bodySmall)
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HorizontalDivider()
+                    ZONE_DESCRIPTIONS.forEach { (z, desc) ->
+                        val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                color = zoneColor,
+                                shape = MaterialTheme.shapes.extraSmall,
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "Z$z",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = androidx.compose.ui.graphics.Color.White
+                                    )
+                                }
+                            }
+                            Text(desc, style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
             }

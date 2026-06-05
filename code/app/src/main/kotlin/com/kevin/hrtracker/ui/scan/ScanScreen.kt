@@ -86,15 +86,20 @@ fun ScanScreen(
 
         val statusText = when (connectionState) {
             is Reconnecting -> "Verbindung verloren — reconnecting…"
+            is ConnectionState.Error -> "Fehler: ${(connectionState as ConnectionState.Error).reason}"
             else -> connectionState::class.simpleName ?: ""
         }
+        val statusColor = if (connectionState is ConnectionState.Error)
+            MaterialTheme.colorScheme.error
+        else
+            MaterialTheme.colorScheme.onSurface
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium)
+                Text("Status: $statusText", style = MaterialTheme.typography.bodyMedium, color = statusColor)
                 if (connectionState !is ConnectionState.Disconnected) {
                     Spacer(Modifier.width(8.dp))
                     TextButton(onClick = { viewModel.disconnect() }) { Text("Trennen") }

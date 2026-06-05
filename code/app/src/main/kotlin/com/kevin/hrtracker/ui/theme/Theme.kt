@@ -19,6 +19,7 @@ private val HrTrackerColorScheme = darkColorScheme(
 fun HRTrackerTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = HrTrackerColorScheme,
+        typography = HrTrackerTypography,
         content = content
     )
 }

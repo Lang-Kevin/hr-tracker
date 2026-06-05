@@ -32,6 +32,7 @@ sealed class ConnectionState {
     object Connected : ConnectionState()
     object Ready : ConnectionState()
     object Reconnecting : ConnectionState()
+    data class Error(val reason: String) : ConnectionState()
 }
 
 @Singleton
@@ -270,14 +271,20 @@ class HrBleManager @Inject constructor(
                 @Suppress("DEPRECATION")
                 gatt.writeDescriptor(cccd)
             }
-            Log.d(TAG, "CCCD written — HR notifications enabled")
-            _connectionState.value = ConnectionState.Ready
+            Log.d(TAG, "CCCD write requested — awaiting onDescriptorWrite confirmation")
         }
 
         override fun onDescriptorWrite(
             gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
         ) {
-            Log.d(TAG, "Descriptor write ${descriptor.uuid} status=$status")
+            if (descriptor.uuid != CCCD_UUID) return
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.d(TAG, "CCCD write confirmed — HR notifications active")
+                _connectionState.value = ConnectionState.Ready
+            } else {
+                Log.e(TAG, "CCCD write failed: status=$status")
+                _connectionState.value = ConnectionState.Error("HR-Benachrichtigungen konnten nicht aktiviert werden (CCCD-Fehler $status)")
+            }
         }
 
         // API 33+
