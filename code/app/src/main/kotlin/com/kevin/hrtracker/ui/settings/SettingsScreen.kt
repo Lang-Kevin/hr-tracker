@@ -30,6 +30,12 @@ fun SettingsScreen(
         mutableStateOf(settings.restingHr?.toString() ?: "")
     }
 
+    val ageError = ageText.toIntOrNull()?.let { it !in 10..99 } ?: ageText.isNotEmpty()
+    val maxHrError = manualMaxHrText.isNotEmpty() &&
+        (manualMaxHrText.toIntOrNull()?.let { it !in 100..250 } ?: true)
+    val restingHrError = restingHrText.isNotEmpty() &&
+        (restingHrText.toIntOrNull()?.let { it !in 20..100 } ?: true)
+
     val tanakaMaxHr = HrZoneCalculator.tanakaMaxHr(settings.age)
     val effectiveMaxHr = settings.maxHrUsed
     val model = if (settings.restingHr != null) "Karvonen (HRR)" else "%HRmax"
@@ -57,7 +63,9 @@ fun SettingsScreen(
                     label = "Alter",
                     value = ageText,
                     onValueChange = { ageText = it },
-                    onDone = { it.toIntOrNull()?.let { v -> if (v in 10..99) viewModel.setAge(v) } }
+                    onDone = { it.toIntOrNull()?.let { v -> if (v in 10..99) viewModel.setAge(v) } },
+                    isError = ageError,
+                    supportingText = if (ageError) "Alter muss zwischen 10 und 99 liegen" else null
                 )
                 Text(
                     "Tanaka HRmax: $tanakaMaxHr  •  Aktiv: $effectiveMaxHr BPM",
@@ -70,7 +78,9 @@ fun SettingsScreen(
                     onValueChange = { manualMaxHrText = it },
                     onDone = {
                         viewModel.setManualMaxHr(it.toIntOrNull()?.takeIf { v -> v in 100..250 })
-                    }
+                    },
+                    isError = maxHrError,
+                    supportingText = if (maxHrError) "HRmax muss zwischen 100 und 250 liegen" else null
                 )
 
                 NumberField(
@@ -79,7 +89,9 @@ fun SettingsScreen(
                     onValueChange = { restingHrText = it },
                     onDone = {
                         viewModel.setRestingHr(it.toIntOrNull()?.takeIf { v -> v in 20..100 })
-                    }
+                    },
+                    isError = restingHrError,
+                    supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
 
@@ -143,7 +155,9 @@ private fun NumberField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    onDone: (String) -> Unit
+    onDone: (String) -> Unit,
+    isError: Boolean = false,
+    supportingText: String? = null
 ) {
     OutlinedTextField(
         value = value,
@@ -152,6 +166,8 @@ private fun NumberField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
+        isError = isError,
+        supportingText = supportingText?.let { msg -> { Text(msg, color = MaterialTheme.colorScheme.error) } },
         trailingIcon = {
             TextButton(onClick = { onDone(value) }) { Text("OK") }
         }

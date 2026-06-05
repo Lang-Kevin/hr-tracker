@@ -29,6 +29,6 @@ object HeartRateParser {
             }
         }
 
-        return ParsedHr(bpm, rr)
+        return ParsedHr(bpm.coerceIn(30, 220), rr)
     }
 }

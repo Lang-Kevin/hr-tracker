@@ -39,8 +39,18 @@ class SessionExporter @Inject constructor(
         val zoneModel = if (session.restingHr != null) "karvonen" else "percent_hrmax"
         val durationS = session.endedAt?.let { (it - session.startedAt) / 1000 } ?: 0L
         val bpms = samples.map { it.bpm }
-        val timeInZone = samples.groupBy { HrZoneCalculator.zoneFor(it.bpm, zones) }
-            .mapValues { (_, s) -> s.size }
+        val sorted = samples.sortedBy { it.timestampMs }
+        val timeInZone = mutableMapOf<Int, Int>()
+        for (i in 0 until sorted.size - 1) {
+            val zone = HrZoneCalculator.zoneFor(sorted[i].bpm, zones)
+            val durS = ((sorted[i + 1].timestampMs - sorted[i].timestampMs) / 1000L)
+                .coerceAtLeast(0L).toInt()
+            timeInZone[zone] = (timeInZone[zone] ?: 0) + durS
+        }
+        if (sorted.isNotEmpty()) {
+            val lastZone = HrZoneCalculator.zoneFor(sorted.last().bpm, zones)
+            timeInZone[lastZone] = (timeInZone[lastZone] ?: 0) + 1
+        }
 
         val root = buildJsonObject {
             putJsonObject("session") {
