@@ -17,4 +17,7 @@ interface HrSampleDao {
 
     @Query("SELECT * FROM HrSample WHERE sessionId = :sessionId ORDER BY timestampMs ASC")
     suspend fun getSamplesOnce(sessionId: Long): List<HrSample>
+
+    @Query("SELECT CAST(AVG(bpm) AS INTEGER) FROM HrSample")
+    fun getGlobalAvgBpm(): Flow<Int?>
 }

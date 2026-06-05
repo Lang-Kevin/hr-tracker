@@ -28,6 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
@@ -51,6 +56,16 @@ fun LiveScreen(
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
     val zoneBounds by viewModel.zoneBounds.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
+    val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
+
+    val pulseScale = remember { Animatable(1f) }
+    LaunchedEffect(lastRrMs) {
+        if (lastRrMs != null) {
+            pulseScale.snapTo(1f)
+            pulseScale.animateTo(1.4f, animationSpec = tween(80))
+            pulseScale.animateTo(1f, animationSpec = tween(200))
+        }
+    }
 
     var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
@@ -99,10 +114,13 @@ fun LiveScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Box(
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = null,
+                    tint = TertiaryPink,
                     modifier = Modifier
-                        .size(8.dp)
-                        .background(TertiaryPink, CircleShape)
+                        .size(14.dp)
+                        .scale(pulseScale.value)
                 )
                 Text(
                     text = "%02d:%02d".format(mm, ss),

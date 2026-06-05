@@ -463,15 +463,15 @@ Siehe vollständigen Plan: `.claude/plans/werde-kreativ-und-review-dreamy-breeze
 - [x] #12 Settings Validierungsfeedback (Inline-Fehlermeldungen)
 - [x] #17 Zeit-in-Zone Bug Fix (Timestamps statt Sample-Count)
 
-### Batch 2 — UX-Erweiterungen I (commit TBD)
+### Batch 2 — UX-Erweiterungen I ✅ (commit 5f80d54 + Batch-3-Commit)
 - [x] #14 Notiz-Feld in DetailScreen (SessionDao.updateNote, DetailViewModel.updateNote, EditNoteDialog)
-- [ ] #6 Label-Dialog beim Training starten → offen
-- [ ] #1 Double-Start Race Condition → offen
+- [x] #6 Label-Dialog beim Training starten (StartTrainingDialog, TRAINING_TYPES, RadioButtons)
+- [x] #1 Double-Start Race Condition (isStarting-Flag, enabled=!isStarting, LaunchedEffect)
 
-### Batch 3 — UX-Erweiterungen II
-- [ ] #4 CCCD-Fehler sichtbar machen
-- [ ] #11 Zonen-Erklärung in Settings
-- [ ] #25 Font Space Grotesk
+### Batch 3 — UX-Erweiterungen II ✅ (commit 845efe5)
+- [x] #4 CCCD-Fehler sichtbar machen (ConnectionState.Error, onDescriptorWrite, rote Statusfarbe)
+- [x] #11 Zonen-Erklärung in Settings (ZoneErklarungCard, AnimatedVisibility, Z1–Z5)
+- [x] #25 Font Space Grotesk (ui-text-google-fonts, Type.kt, HrTrackerTypography, Theme.kt)
 
 ### Batch 4 — History & Visuals
 - [ ] #9 Swipe-to-Delete in History

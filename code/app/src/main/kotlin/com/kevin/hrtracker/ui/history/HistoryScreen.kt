@@ -1,6 +1,7 @@
 package com.kevin.hrtracker.ui.history
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -20,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
@@ -29,6 +33,7 @@ fun HistoryScreen(
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
+    val summaryStats by viewModel.summaryStats.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
@@ -80,6 +85,10 @@ fun HistoryScreen(
             }
         }
         Spacer(Modifier.height(8.dp))
+        if (sessions.isNotEmpty()) {
+            SummaryCard(summaryStats)
+            Spacer(Modifier.height(8.dp))
+        }
         if (sessions.isEmpty()) {
             Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -89,18 +98,75 @@ fun HistoryScreen(
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(sessions, key = { it.id }) { session ->
-                SessionListItem(
-                    session = session,
-                    isSelected = session.id in selectedIds,
-                    isSelectionMode = isSelectionMode,
-                    onClick = {
-                        if (isSelectionMode) viewModel.toggleSelection(session.id)
-                        else onSessionClick(session.id)
-                    },
-                    onLongClick = { viewModel.startSelection(session.id) }
+                val dismissState = rememberSwipeToDismissBoxState(
+                    confirmValueChange = { value ->
+                        if (!isSelectionMode && value == SwipeToDismissBoxValue.EndToStart) {
+                            viewModel.deleteSingle(session.id)
+                            true
+                        } else false
+                    }
                 )
+                SwipeToDismissBox(
+                    state = dismissState,
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.error)
+                                .padding(end = 16.dp),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    enableDismissFromStartToEnd = false
+                ) {
+                    SessionListItem(
+                        session = session,
+                        isSelected = session.id in selectedIds,
+                        isSelectionMode = isSelectionMode,
+                        onClick = {
+                            if (isSelectionMode) viewModel.toggleSelection(session.id)
+                            else onSessionClick(session.id)
+                        },
+                        onLongClick = { viewModel.startSelection(session.id) }
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryCard(stats: HistoryViewModel.SummaryStats) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            SummaryItem("TRAININGS", stats.sessionCount.toString())
+            SummaryItem("GESAMTDAUER", durationString(stats.totalDurationS))
+            SummaryItem("Ø BPM", stats.avgBpm?.toString() ?: "—")
+            SummaryItem("LÄNGSTE", durationString(stats.longestDurationS))
+        }
+    }
+}
+
+@Composable
+private fun SummaryItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

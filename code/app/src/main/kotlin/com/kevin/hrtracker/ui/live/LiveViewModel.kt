@@ -31,6 +31,9 @@ class LiveViewModel @Inject constructor(
     private val _currentBpm = MutableStateFlow<Int?>(null)
     val currentBpm: StateFlow<Int?> = _currentBpm.asStateFlow()
 
+    private val _lastRrMs = MutableStateFlow<Int?>(null)
+    val lastRrMs: StateFlow<Int?> = _lastRrMs.asStateFlow()
+
     private val _bpmHistory = MutableStateFlow<List<Int>>(emptyList())
     val bpmHistory: StateFlow<List<Int>> = _bpmHistory.asStateFlow()
 
@@ -77,6 +80,7 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             bleManager.hrSamples.collect { parsed ->
                 _currentBpm.value = parsed.bpm
+                _lastRrMs.value = parsed.rrIntervalsMs.lastOrNull()
                 _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
             }
         }
