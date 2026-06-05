@@ -404,7 +404,6 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink
 ### Offen / Nächste Schritte
 
 * **Font Space Grotesk**: TTF-Dateien unter `res/font/` ablegen + `Type.kt` erstellen (aktuell: Material3 Default)
-* **Abbrechen vs. Abschließen**: Funktionale Unterscheidung (Session verwerfen vs. speichern) erfordert ViewModel-Erweiterung in `LiveViewModel`
 
 ---
 
@@ -424,3 +423,16 @@ Quelle: `.claude/designs/Live-Training.html`
 * `ui/live/LiveScreen.kt` — Sport-Label im Header, BPM Ø, Ziel-Zone-Card (Zeit + Fortschrittsbalken + %), Zeit-in-Zone-Tabelle (alle 5 Zonen mit BPM-Grenzen)
 * `ui/settings/SettingsScreen.kt` — Ziel-Zonen-Auswahl Z1–Z5 (FilterChips)
 * `ui/settings/SettingsViewModel.kt` — `setTargetZone()`
+
+---
+
+## Bestätigungsdialoge Live-Screen (2026-06-05)
+
+Status: **ABGESCHLOSSEN** — Build SUCCESSFUL
+
+### Änderungen
+
+* `ui/live/LiveScreen.kt` — Beide Buttons (Abbrechen / Abschließen) öffnen jetzt einen `AlertDialog` bevor die Aktion ausgeführt wird
+  * **Abbrechen**: "Training abbrechen?" → Bestätigen verwirft Daten, "Weiter messen" schließt Dialog
+  * **Abschließen**: "Training abschließen?" → Bestätigen speichert Daten, "Weiter messen" schließt Dialog
+  * Neuer privater Composable `ConfirmDialog` (wiederverwendbar, kein ViewModel-Eingriff)
