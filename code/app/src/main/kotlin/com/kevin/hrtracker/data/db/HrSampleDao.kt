@@ -4,6 +4,8 @@ import androidx.room.*
 import com.kevin.hrtracker.data.entity.HrSample
 import kotlinx.coroutines.flow.Flow
 
+data class SessionAvgBpm(val sessionId: Long, val avgBpm: Int)
+
 @Dao
 interface HrSampleDao {
     @Insert
@@ -20,4 +22,7 @@ interface HrSampleDao {
 
     @Query("SELECT CAST(AVG(bpm) AS INTEGER) FROM HrSample")
     fun getGlobalAvgBpm(): Flow<Int?>
+
+    @Query("SELECT sessionId, CAST(AVG(bpm) AS INTEGER) AS avgBpm FROM HrSample GROUP BY sessionId")
+    fun getSessionAvgBpms(): Flow<List<SessionAvgBpm>>
 }

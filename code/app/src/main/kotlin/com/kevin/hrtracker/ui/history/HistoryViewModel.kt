@@ -14,7 +14,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.exp
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -52,6 +57,66 @@ class HistoryViewModel @Inject constructor(
             avgBpm = avgBpm
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryStats(0, 0L, 0L, null))
+
+    data class WeekStats(
+        val weekLabel: String,
+        val sessionCount: Int,
+        val totalDurationMin: Long,
+        val avgBpm: Int?
+    )
+
+    data class SessionTrimpEntry(
+        val sessionId: Long,
+        val label: String,
+        val startedAt: Long,
+        val trimp: Int
+    )
+
+    private val sessionAvgBpms = db.hrSampleDao().getSessionAvgBpms()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val weeklyData: StateFlow<List<WeekStats>> = combine(sessions, sessionAvgBpms) { sessionList, bpmStats ->
+        val bpmMap = bpmStats.associateBy { it.sessionId }
+        val cal = Calendar.getInstance()
+        (5 downTo 0).map { weeksAgo ->
+            cal.timeInMillis = System.currentTimeMillis()
+            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            cal.add(Calendar.WEEK_OF_YEAR, -weeksAgo)
+            cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+            val weekStart = cal.timeInMillis
+            val weekEnd = weekStart + 7L * 24 * 60 * 60 * 1000
+            val weekSessions = sessionList.filter {
+                it.startedAt >= weekStart && it.startedAt < weekEnd && it.endedAt != null
+            }
+            val durations = weekSessions.map { (it.endedAt!! - it.startedAt) / 60000L }
+            val bpms = weekSessions.mapNotNull { bpmMap[it.id]?.avgBpm }
+            WeekStats(
+                weekLabel = SimpleDateFormat("dd.MM", Locale.getDefault()).format(Date(weekStart)),
+                sessionCount = weekSessions.size,
+                totalDurationMin = durations.sum(),
+                avgBpm = if (bpms.isEmpty()) null else bpms.average().toInt()
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val trimpHistory: StateFlow<List<SessionTrimpEntry>> = combine(sessions, sessionAvgBpms) { sessionList, bpmStats ->
+        val bpmMap = bpmStats.associateBy { it.sessionId }
+        sessionList.filter { it.endedAt != null }.take(15).mapNotNull { sess ->
+            val avgBpm = bpmMap[sess.id]?.avgBpm ?: return@mapNotNull null
+            val durationMin = (sess.endedAt!! - sess.startedAt) / 60000.0
+            if (durationMin <= 0) return@mapNotNull null
+            val trimp = if (sess.restingHr != null) {
+                val hrr = (sess.maxHrUsed - sess.restingHr).toDouble().coerceAtLeast(1.0)
+                val hrRatio = ((avgBpm - sess.restingHr) / hrr).coerceIn(0.0, 1.0)
+                (durationMin * hrRatio * exp(1.92 * hrRatio)).toInt().coerceAtLeast(0)
+            } else {
+                val hrRatio = (avgBpm.toDouble() / sess.maxHrUsed).coerceIn(0.0, 1.0)
+                (durationMin * hrRatio * 100).toInt()
+            }
+            SessionTrimpEntry(sess.id, sess.label, sess.startedAt, trimp)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun startSelection(id: Long) {
         _selectedIds.value = setOf(id)

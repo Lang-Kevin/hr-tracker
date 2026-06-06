@@ -1,6 +1,7 @@
 package com.kevin.hrtracker.ui.detail
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -202,7 +203,7 @@ fun DetailScreen(
                 onClick = {
                     scope.launch {
                         val intent = viewModel.export(context) ?: return@launch
-                        context.startActivity(Intent.createChooser(intent, "Session exportieren"))
+                        context.startActivity(Intent.createChooser(intent, "JSON exportieren"))
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -210,8 +211,20 @@ fun DetailScreen(
                     containerColor = PrimaryPurple,
                     contentColor = OnPrimary
                 )
-            ) { Text("Exportieren") }
+            ) { Text("JSON") }
         }
+        Spacer(Modifier.height(6.dp))
+        OutlinedButton(
+            onClick = {
+                scope.launch {
+                    val intent = viewModel.exportCsv(context) ?: return@launch
+                    context.startActivity(Intent.createChooser(intent, "CSV exportieren"))
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, PrimaryPurple),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+        ) { Text("CSV Export") }
     }
 }
 

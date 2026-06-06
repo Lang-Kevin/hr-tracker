@@ -19,6 +19,8 @@ import androidx.navigation.navArgument
 import com.kevin.hrtracker.service.HrRecordingService
 import com.kevin.hrtracker.ui.detail.DetailScreen
 import com.kevin.hrtracker.ui.history.HistoryScreen
+import com.kevin.hrtracker.ui.onboarding.OnboardingScreen
+import com.kevin.hrtracker.ui.onboarding.OnboardingViewModel
 import com.kevin.hrtracker.ui.settings.SettingsScreen
 import com.kevin.hrtracker.ui.live.LiveScreen
 import com.kevin.hrtracker.ui.scan.ScanScreen
@@ -27,6 +29,7 @@ import com.kevin.hrtracker.ui.theme.HRTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 private object Route {
+    const val ONBOARDING = "onboarding"
     const val SCAN     = "scan"
     const val LIVE     = "live"
     const val HISTORY  = "history"
@@ -53,7 +56,9 @@ class MainActivity : ComponentActivity() {
     private fun HrTrackerNav() {
         val navController = rememberNavController()
         val scanViewModel: ScanViewModel = hiltViewModel()
+        val onboardingViewModel: OnboardingViewModel = hiltViewModel()
         val activeSessionId by scanViewModel.activeSessionId.collectAsStateWithLifecycle()
+        val onboardingDone by onboardingViewModel.onboardingDone.collectAsStateWithLifecycle()
 
         LaunchedEffect(activeSessionId) {
             if (activeSessionId != null) {
@@ -61,7 +66,23 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        LaunchedEffect(onboardingDone) {
+            if (!onboardingDone) {
+                navController.navigate(Route.ONBOARDING) { launchSingleTop = true }
+            }
+        }
+
         NavHost(navController = navController, startDestination = Route.SCAN) {
+
+            composable(Route.ONBOARDING) {
+                OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(Route.SCAN) {
+                            popUpTo(Route.ONBOARDING) { inclusive = true }
+                        }
+                    }
+                )
+            }
 
             composable(Route.SCAN) {
                 ScanScreen(

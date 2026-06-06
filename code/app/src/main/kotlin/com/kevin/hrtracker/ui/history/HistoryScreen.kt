@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -34,7 +35,10 @@ fun HistoryScreen(
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
     val summaryStats by viewModel.summaryStats.collectAsStateWithLifecycle()
+    val weeklyData by viewModel.weeklyData.collectAsStateWithLifecycle()
+    val trimpHistory by viewModel.trimpHistory.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -56,8 +60,9 @@ fun HistoryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
+        Spacer(Modifier.height(16.dp))
         if (isSelectionMode) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -84,59 +89,76 @@ fun HistoryScreen(
                 Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
             }
         }
-        Spacer(Modifier.height(8.dp))
-        if (sessions.isNotEmpty()) {
-            SummaryCard(summaryStats)
-            Spacer(Modifier.height(8.dp))
-        }
-        if (sessions.isEmpty()) {
-            Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(sessions, key = { it.id }) { session ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { value ->
-                        if (!isSelectionMode && value == SwipeToDismissBoxValue.EndToStart) {
-                            viewModel.deleteSingle(session.id)
-                            true
-                        } else false
-                    }
+
+        TabRow(selectedTabIndex = selectedTab) {
+            listOf("Verlauf", "Statistik").forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    text = { Text(title) }
                 )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    backgroundContent = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.error)
-                                .padding(end = 16.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null,
-                                tint = Color.White
-                            )
-                        }
-                    },
-                    enableDismissFromStartToEnd = false
-                ) {
-                    SessionListItem(
-                        session = session,
-                        isSelected = session.id in selectedIds,
-                        isSelectionMode = isSelectionMode,
-                        onClick = {
-                            if (isSelectionMode) viewModel.toggleSelection(session.id)
-                            else onSessionClick(session.id)
-                        },
-                        onLongClick = { viewModel.startSelection(session.id) }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        when (selectedTab) {
+            0 -> {
+                if (sessions.isNotEmpty()) {
+                    SummaryCard(summaryStats)
+                    Spacer(Modifier.height(8.dp))
+                }
+                if (sessions.isEmpty()) {
+                    Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(sessions, key = { it.id }) { session ->
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { value ->
+                                if (!isSelectionMode && value == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.deleteSingle(session.id)
+                                    true
+                                } else false
+                            }
+                        )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.error)
+                                        .padding(end = 16.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                }
+                            },
+                            enableDismissFromStartToEnd = false
+                        ) {
+                            SessionListItem(
+                                session = session,
+                                isSelected = session.id in selectedIds,
+                                isSelectionMode = isSelectionMode,
+                                onClick = {
+                                    if (isSelectionMode) viewModel.toggleSelection(session.id)
+                                    else onSessionClick(session.id)
+                                },
+                                onLongClick = { viewModel.startSelection(session.id) }
+                            )
+                        }
+                    }
+                }
             }
+            1 -> StatistikTab(weeklyData, trimpHistory)
         }
     }
 }
@@ -215,6 +237,106 @@ private fun SessionListItem(
                 } ?: Text("läuft noch…", style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+}
+
+@Composable
+private fun StatistikTab(
+    weeklyData: List<HistoryViewModel.WeekStats>,
+    trimpHistory: List<HistoryViewModel.SessionTrimpEntry>
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Text(
+                "Letzte 6 Wochen",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("WOCHE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
+                        Text("EINH.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
+                        Text("MIN", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
+                        Text("Ø BPM", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
+                    }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    weeklyData.forEach { week ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(week.weekLabel, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.2f))
+                            Text(
+                                if (week.sessionCount > 0) "${week.sessionCount}" else "—",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(0.7f),
+                                color = if (week.sessionCount > 0) PrimaryPurple else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                if (week.totalDurationMin > 0) "${week.totalDurationMin}" else "—",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(0.8f)
+                            )
+                            Text(
+                                week.avgBpm?.toString() ?: "—",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(0.9f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (trimpHistory.isNotEmpty()) {
+            item {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "TRIMP-Verlauf",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            items(trimpHistory, key = { it.sessionId }) { entry ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(entry.label, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                entry.startedAt.toDateString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            "TRIMP ${entry.trimp}",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = PrimaryPurple,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        } else {
+            item {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Noch keine TRIMP-Daten verfügbar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 

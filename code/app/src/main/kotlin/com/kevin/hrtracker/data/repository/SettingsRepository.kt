@@ -27,6 +27,7 @@ class SettingsRepository @Inject constructor(
         val SAVED_DEVICE_MAC = stringPreferencesKey("saved_device_mac")
         val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
         val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
+        val ONBOARDING_DONE  = booleanPreferencesKey("onboarding_done")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -97,5 +98,11 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setAutoConnect(enabled: Boolean) {
         dataStore.edit { it[Keys.AUTO_CONNECT] = enabled }
+    }
+
+    val onboardingDone: Flow<Boolean> = dataStore.data.map { it[Keys.ONBOARDING_DONE] ?: false }
+
+    suspend fun setOnboardingDone(done: Boolean) {
+        dataStore.edit { it[Keys.ONBOARDING_DONE] = done }
     }
 }

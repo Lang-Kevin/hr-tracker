@@ -94,6 +94,27 @@ class SessionExporter @Inject constructor(
         return Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), root)
     }
 
+    suspend fun buildCsvShareIntent(context: Context, sessionId: Long): Intent? =
+        withContext(Dispatchers.IO) {
+            val session = db.sessionDao().getById(sessionId) ?: return@withContext null
+            val samples = db.hrSampleDao().getSamplesOnce(sessionId)
+            val csv = buildCsv(session, samples)
+            val file = writeCsvToCache(context, sessionId, csv)
+            csvShareIntent(context, file)
+        }
+
+    private fun buildCsv(session: Session, samples: List<HrSample>): String {
+        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+        val sb = StringBuilder("timestamp,elapsed_s,bpm,rr_ms,zone\n")
+        samples.forEach { s ->
+            val elapsed = (s.timestampMs - session.startedAt) / 1000
+            val rr = s.rrIntervalsMs?.replace(",", ";") ?: ""
+            val zone = HrZoneCalculator.zoneFor(s.bpm, zones)
+            sb.append("${ts(s.timestampMs)},$elapsed,${s.bpm},\"$rr\",$zone\n")
+        }
+        return sb.toString()
+    }
+
     private fun ts(epochMs: Long): String =
         formatter.format(Instant.ofEpochMilli(epochMs))
 
@@ -102,12 +123,28 @@ class SessionExporter @Inject constructor(
         return File(dir, "session_$sessionId.json").also { it.writeText(json) }
     }
 
+    private fun writeCsvToCache(context: Context, sessionId: Long, csv: String): File {
+        val dir = File(context.cacheDir, "exports").also { it.mkdirs() }
+        return File(dir, "session_$sessionId.csv").also { it.writeText(csv) }
+    }
+
     private fun shareIntent(context: Context, file: File): Intent {
         val uri: Uri = FileProvider.getUriForFile(
             context, "${context.packageName}.provider", file
         )
         return Intent(Intent.ACTION_SEND).apply {
             type = "application/json"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    private fun csvShareIntent(context: Context, file: File): Intent {
+        val uri: Uri = FileProvider.getUriForFile(
+            context, "${context.packageName}.provider", file
+        )
+        return Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
