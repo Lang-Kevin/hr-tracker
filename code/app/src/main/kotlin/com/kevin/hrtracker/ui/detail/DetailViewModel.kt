@@ -14,7 +14,11 @@ import com.kevin.hrtracker.export.SessionExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 import javax.inject.Inject
+import kotlin.math.exp
+import kotlin.math.sqrt
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -49,8 +53,38 @@ class DetailViewModel @Inject constructor(
 
     val zoneBounds: StateFlow<List<ZoneBounds>> = session.map { sess ->
         if (sess == null) emptyList()
-        else HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
+        else sess.zoneSnapshotJson
+            ?.let { runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull() }
+            ?: HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val rmssd: StateFlow<Int?> = samples.map { list ->
+        val allRrs = list.flatMap { sample ->
+            sample.rrIntervalsMs?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
+        }
+        if (allRrs.size < 2) null
+        else {
+            val diffs = allRrs.zipWithNext { a, b -> (b - a).toDouble() }
+            sqrt(diffs.sumOf { it * it } / diffs.size).toInt()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val trimp: StateFlow<Int?> = combine(session, stats) { sess, st ->
+        if (sess == null || st == null || sess.endedAt == null) null
+        else {
+            val durationMin = (sess.endedAt - sess.startedAt) / 60000.0
+            if (durationMin <= 0) null
+            else if (sess.restingHr != null) {
+                val hrr = (sess.maxHrUsed - sess.restingHr).toDouble().coerceAtLeast(1.0)
+                val hrRatio = ((st.avgBpm - sess.restingHr) / hrr).coerceIn(0.0, 1.0)
+                (durationMin * hrRatio * exp(1.92 * hrRatio)).toInt().coerceAtLeast(0)
+            } else {
+                val hrRatio = (st.avgBpm.toDouble() / sess.maxHrUsed).coerceIn(0.0, 1.0)
+                (durationMin * hrRatio * 100).toInt()
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val timeInZone: StateFlow<Map<Int, Long>> = combine(session, samples) { sess, list ->
         if (sess == null || list.isEmpty()) emptyMap()

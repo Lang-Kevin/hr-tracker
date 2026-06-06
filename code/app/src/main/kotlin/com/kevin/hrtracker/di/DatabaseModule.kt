@@ -2,6 +2,7 @@ package com.kevin.hrtracker.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.kevin.hrtracker.data.db.HrDatabase
 import dagger.Module
@@ -15,6 +16,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE Session ADD COLUMN zoneSnapshotJson TEXT")
+        }
+    }
+
     private val predefinedLabels = listOf(
         "Volleyball", "Beach-Volleyball", "Krafttraining",
         "Cardio", "Laufen", "Radfahren", "Schwimmen", "Yoga"
@@ -24,6 +31,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HrDatabase =
         Room.databaseBuilder(context, HrDatabase::class.java, "hr_tracker.db")
+            .addMigrations(MIGRATION_1_2)
             .addCallback(object : androidx.room.RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     predefinedLabels.forEach { name ->

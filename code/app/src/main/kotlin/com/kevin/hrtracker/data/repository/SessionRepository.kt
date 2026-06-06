@@ -5,6 +5,10 @@ import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.ZoneBounds
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,13 +51,16 @@ class SessionRepository @Inject constructor(
     }
 
     suspend fun startSession(label: String, maxHrUsed: Int, restingHr: Int?): Long {
+        val zones = HrZoneCalculator.calculateZones(maxHrUsed, restingHr)
+        val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
         val id = db.sessionDao().insert(
             Session(
                 label = label,
                 startedAt = System.currentTimeMillis(),
                 endedAt = null,
                 maxHrUsed = maxHrUsed,
-                restingHr = restingHr
+                restingHr = restingHr,
+                zoneSnapshotJson = zoneJson
             )
         )
         _activeSessionId.value = id

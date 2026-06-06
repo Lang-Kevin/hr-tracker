@@ -46,6 +46,8 @@ fun DetailScreen(
     val timeInZone by viewModel.timeInZone.collectAsStateWithLifecycle()
     val dominantZone by viewModel.dominantZone.collectAsStateWithLifecycle()
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
+    val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
+    val trimp by viewModel.trimp.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -144,6 +146,15 @@ fun DetailScreen(
                 Modifier.weight(1f)
             )
             StatItem("MAX BPM", stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Analytics Row
+        Row(modifier = Modifier.fillMaxWidth()) {
+            StatItem("RMSSD", rmssd?.let { "${it}ms" } ?: "—", Modifier.weight(1f))
+            StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
+            StatItem("MIN BPM", stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(12.dp))

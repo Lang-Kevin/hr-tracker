@@ -1,5 +1,8 @@
 package com.kevin.hrtracker.domain
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ZoneBounds(val zone: Int, val lo: Int, val hi: Int) {
     val label: String get() = "Z$zone"
 }
