@@ -123,7 +123,7 @@ fun LiveScreen(
                         .scale(pulseScale.value)
                 )
                 Text(
-                    text = "%02d:%02d".format(mm, ss),
+                    text = currentBpm?.let { "$it BPM" } ?: "— BPM",
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White
                 )

@@ -17,7 +17,14 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Watch
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.font.FontWeight
 import com.kevin.hrtracker.domain.DiscoveredDevice
+import com.kevin.hrtracker.domain.DeviceType
 import com.kevin.hrtracker.domain.SavedDevice
 
 private val TRAINING_TYPES = listOf(
@@ -42,6 +49,7 @@ fun ScanScreen(
     val autoConnect by viewModel.autoConnect.collectAsStateWithLifecycle()
 
     var showStartDialog by remember { mutableStateOf(false) }
+    var showSmartWatchHelp by remember { mutableStateOf(false) }
     var isStarting by remember { mutableStateOf(false) }
     // Reset isStarting once session is confirmed active
     LaunchedEffect(activeSessionId) { if (activeSessionId != null) isStarting = false }
@@ -55,6 +63,9 @@ fun ScanScreen(
             },
             onDismiss = { showStartDialog = false }
         )
+    }
+    if (showSmartWatchHelp) {
+        SmartWatchHelpDialog(onDismiss = { showSmartWatchHelp = false })
     }
 
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -154,7 +165,16 @@ fun ScanScreen(
                 HorizontalDivider()
             }
 
-            Text("Verfügbare HR-Geräte:", style = MaterialTheme.typography.titleSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Verfügbare HR-Geräte:", style = MaterialTheme.typography.titleSmall)
+                TextButton(onClick = { showSmartWatchHelp = true }) {
+                    Text("Smartwatch verbinden ?", style = MaterialTheme.typography.labelSmall)
+                }
+            }
             if (discoveredDevices.none { it is DiscoveredDevice.Real }) {
                 Text("Scan läuft…", style = MaterialTheme.typography.bodySmall)
             }
@@ -185,13 +205,23 @@ private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit, onForget: 
 
 @Composable
 private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
+    val (icon, subtitle) = when {
+        device is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
+        device.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
+        device.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
+        else -> Icons.Default.Bluetooth to device.address
+    }
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                if (device is DiscoveredDevice.Fake) "Simuliertes Testgerät" else device.address,
-                style = MaterialTheme.typography.bodySmall
-            )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(icon, contentDescription = null)
+            Column {
+                Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -226,4 +256,35 @@ private fun StartTrainingDialog(onStart: (String) -> Unit, onDismiss: () -> Unit
             TextButton(onClick = onDismiss) { Text("Abbrechen") }
         }
     )
+}
+
+@Composable
+private fun SmartWatchHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Smartwatch verbinden") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Aktiviere den HR-Broadcast-Modus auf deiner Uhr, dann erscheint sie in der Geräteliste:",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                BrandHint("Garmin", "Einstellungen → Herzfrequenz → HR-Broadcast einschalten")
+                BrandHint("Polar", "Polar Flow App → Gerät → HR-Broadcast aktivieren")
+                BrandHint("Samsung Galaxy Watch", "Samsung Health → Training → HR-Monitor → Externe Messung")
+                BrandHint("Suunto", "SuuntoLink → Einstellungen → Herzfrequenz-Übertragung")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("OK") }
+        }
+    )
+}
+
+@Composable
+private fun BrandHint(brand: String, hint: String) {
+    Column {
+        Text(brand, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+        Text(hint, style = MaterialTheme.typography.bodySmall)
+    }
 }

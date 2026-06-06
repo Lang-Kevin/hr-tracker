@@ -14,6 +14,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.HeartRateRecord
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.ui.theme.ZoneColors
 
@@ -23,6 +27,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val healthImportStatus by viewModel.healthImportStatus.collectAsStateWithLifecycle()
+    val hcPermissions = remember { setOf(HealthPermission.getReadPermission(HeartRateRecord::class)) }
+    val requestHcPermissions = rememberLauncherForActivityResult(
+        PermissionController.createRequestPermissionResultContract()
+    ) { granted ->
+        if (granted.containsAll(hcPermissions)) viewModel.importRestingHrFromHealthConnect()
+    }
 
     var ageText by remember(settings.age) { mutableStateOf(settings.age.toString()) }
     var manualMaxHrText by remember(settings.manualMaxHr) {
@@ -95,6 +106,26 @@ fun SettingsScreen(
                     isError = restingHrError,
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
+                if (viewModel.isHealthConnectAvailable) {
+                    OutlinedButton(
+                        onClick = { requestHcPermissions.launch(hcPermissions) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = healthImportStatus != HealthImportStatus.LOADING
+                    ) {
+                        if (healthImportStatus == HealthImportStatus.LOADING) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text("Von Smartwatch importieren")
+                    }
+                    if (healthImportStatus == HealthImportStatus.NO_DATA) {
+                        Text(
+                            "Kein Ruhepuls in Health Connect gefunden",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
 
                 HorizontalDivider()

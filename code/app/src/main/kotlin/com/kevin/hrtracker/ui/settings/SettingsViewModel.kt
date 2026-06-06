@@ -4,16 +4,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.UserSettings
+import com.kevin.hrtracker.health.HealthConnectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class HealthImportStatus { IDLE, LOADING, SUCCESS, NO_DATA }
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val healthConnectManager: HealthConnectManager
 ) : ViewModel() {
 
     val settings: StateFlow<UserSettings> = settingsRepository.userSettings
@@ -21,6 +27,11 @@ class SettingsViewModel @Inject constructor(
 
     val savedDeviceAddress: StateFlow<String?> = settingsRepository.savedDeviceAddress
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private val _healthImportStatus = MutableStateFlow(HealthImportStatus.IDLE)
+    val healthImportStatus: StateFlow<HealthImportStatus> = _healthImportStatus.asStateFlow()
+
+    val isHealthConnectAvailable: Boolean = healthConnectManager.isAvailable
 
     fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
 
@@ -35,4 +46,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
+
+    fun importRestingHrFromHealthConnect() = viewModelScope.launch {
+        _healthImportStatus.value = HealthImportStatus.LOADING
+        val hr = healthConnectManager.readLatestRestingHr()
+        if (hr != null) {
+            settingsRepository.setRestingHr(hr)
+            _healthImportStatus.value = HealthImportStatus.SUCCESS
+        } else {
+            _healthImportStatus.value = HealthImportStatus.NO_DATA
+        }
+    }
 }

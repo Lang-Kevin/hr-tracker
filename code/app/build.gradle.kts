@@ -64,6 +64,8 @@ dependencies {
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
     implementation(libs.navigation.compose)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.health.connect.client)
 
     debugImplementation(libs.compose.ui.tooling)
 }
