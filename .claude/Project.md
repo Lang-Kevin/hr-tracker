@@ -473,17 +473,68 @@ Siehe vollständigen Plan: `.claude/plans/werde-kreativ-und-review-dreamy-breeze
 - [x] #11 Zonen-Erklärung in Settings (ZoneErklarungCard, AnimatedVisibility, Z1–Z5)
 - [x] #25 Font Space Grotesk (ui-text-google-fonts, Type.kt, HrTrackerTypography, Theme.kt)
 
-### Batch 4 — History & Visuals
-- [ ] #9 Swipe-to-Delete in History
-- [ ] #27 Puls-Animation Live-Screen
-- [ ] #8 History Summary Card
+### Batch 4 — History & Visuals ✅ (commit 0d7a469)
+- [x] #9 Swipe-to-Delete in History (SwipeToDismissBox EndToStart, deleteSingle in HistoryViewModel)
+- [x] #27 Puls-Animation Live-Screen (Animatable Herz-Icon, lastRrMs StateFlow, LaunchedEffect)
+- [x] #8 History Summary Card (SummaryCard, getGlobalAvgBpm DAO-Query, HistoryViewModel.SummaryStats)
 
-### Batch 5 — Analytics
-- [ ] #15 RMSSD/HRV in DetailScreen
-- [ ] #16 TRIMP-Score
-- [ ] #21 Zonengrenzen-Snapshot (DB-Migration)
+### Batch 5 — Analytics ✅ (commit 21cc3c4)
+- [x] #15 RMSSD/HRV in DetailScreen (RR-CSV → RMSSD-Formel, Analytics-Row)
+- [x] #16 TRIMP-Score (Bannister Karvonen-Ratio, Fallback %HRmax×Dauer, DetailScreen)
+- [x] #21 Zonengrenzen-Snapshot (Session.zoneSnapshotJson, DB v2, Migration 1→2, DetailViewModel Snapshot-Prio)
 
-### Batch 6 — Statistik & Export
-- [ ] #19 Statistik-Tab in History
-- [ ] #23 CSV-Export
-- [ ] #28 Onboarding-Flow
+### Batch 6 — Statistik & Export ✅ (commit baa5fed)
+- [x] #19 Statistik-Tab in History
+- [x] #23 CSV-Export
+- [x] #28 Onboarding-Flow
+
+Status: **ABGESCHLOSSEN** — alle 6 Batches fertiggestellt
+
+---
+
+## Smartwatch Companion App (2026-06-06)
+
+Status: **IN ARBEIT**
+
+Ziel: Neues `:wear`-Modul (Wear OS 3+) für Samsung Galaxy Watch D227, das Herzfrequenzdaten live an die Haupt-App überträgt.
+
+Vollständiger Plan: `.claude/plans/read-the-project-md-from-glittery-dawn.md`
+
+### Architektur
+
+```
+Watch (:wear)                        Phone (:app)
+─────────────────────────────────    ───────────────────────────────────
+SensorManager (TYPE_HEART_RATE)  →   WearHrListenerService
+HrSensorManager (Flow<ParsedHr>) →   WearableHrSource (SharedFlow<ParsedHr>)
+PhoneMessenger (MessageClient)   →   HrRecordingService (wählt HR-Quelle)
+WatchCommandListener ←────────── ←  Session-State-Signal (/session_state)
+HomeScreen (BPM, Status)
+```
+
+IPC: Wearable Data Layer API (`MessageClient`), Pfad `/hr_sample`, ~1 Hz.
+
+### Neue Dateien (:wear)
+- `wear/build.gradle.kts` — minSdk 30 (Wear OS 3), Wear Compose, wearable
+- `wear/AndroidManifest.xml` — BODY_SENSORS, WearableListenerService
+- `wear/WearApplication.kt`, `wear/MainActivity.kt`
+- `wear/ui/HomeScreen.kt` — BPM-Anzeige, Herz-Animation, Verbindungsstatus
+- `wear/sensor/HrSensorManager.kt` — SensorManager → `Flow<ParsedHr>`
+- `wear/comms/PhoneMessenger.kt` — sendet HR via MessageClient
+- `wear/comms/WatchCommandListener.kt` — empfängt Session-Status vom Telefon
+
+### Neue Dateien (:app)
+- `app/.../wearable/WearableHrSource.kt` — `@Singleton` SharedFlow<ParsedHr>
+- `app/.../wearable/WearHrListenerService.kt` — WearableListenerService, emittiert in WearableHrSource
+
+### Geänderte Dateien (:app)
+- `settings.gradle.kts` — `:wear` include
+- `libs.versions.toml` — play-services-wearable 18.2.0, wear-compose 1.3.1
+- `app/build.gradle.kts` — play-services-wearable dependency
+- `AndroidManifest.xml` — WearHrListenerService registrieren
+- `SettingsRepository.kt` + `UserSettings.kt` — `HrSource` enum (BLE/WATCH), DataStore-Key
+- `HrRecordingService.kt` — WearableHrSource injizieren, HR-Flow nach Quelle wählen
+- `SettingsScreen.kt` + `SettingsViewModel.kt` — HR-Quelle FilterChips (BLE / Galaxy Watch)
+
+### Hinweis RR-Intervalle
+Samsung Galaxy Watch stellt keine RR-Intervalle über SensorManager bereit. Watch-Sitzungen haben leere `rrIntervalsMs` → RMSSD/HRV zeigt "–".

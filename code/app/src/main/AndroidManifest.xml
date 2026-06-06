@@ -35,7 +35,8 @@
     <application
         android:name=".HrTrackerApplication"
         android:label="@string/app_name"
-        android:theme="@style/Theme.HRTracker">
+        android:theme="@style/Theme.HRTracker"
+        android:icon="@mipmap/ic_launcher">
 
         <activity
             android:name=".MainActivity"
