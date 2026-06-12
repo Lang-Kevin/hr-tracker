@@ -9,10 +9,14 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.google.android.gms.wearable.Wearable
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.wearable.WearableHrSource
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -29,9 +33,11 @@ class HrRecordingService : Service() {
     @Inject lateinit var bleManager: HrBleManager
     @Inject lateinit var sessionRepository: SessionRepository
     @Inject lateinit var settingsRepository: com.kevin.hrtracker.data.repository.SettingsRepository
+    @Inject lateinit var wearableHrSource: WearableHrSource
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var notificationJob: Job? = null
+    private var currentHrSource: HrSource = HrSource.BLE
 
     companion object {
         private const val CHANNEL_ID = "hr_recording"
@@ -74,11 +80,15 @@ class HrRecordingService : Service() {
     private fun startSession(label: String) {
         scope.launch {
             val s = settingsRepository.userSettings.first()
-            sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr)
+            currentHrSource = s.hrSource
+            val hrFlow: Flow<ParsedHr> = if (s.hrSource == HrSource.WATCH) wearableHrSource.hrSamples
+                                         else bleManager.hrSamples
+            sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, hrSamples = hrFlow)
+            if (currentHrSource == HrSource.WATCH) notifyWatch(true)
             var lastBpm = "–"
             val startMs = System.currentTimeMillis()
             notificationJob = launch {
-                bleManager.hrSamples.collect { parsed: ParsedHr ->
+                hrFlow.collect { parsed: ParsedHr ->
                     lastBpm = parsed.bpm.toString()
                     val elapsed = (System.currentTimeMillis() - startMs) / 1000
                     val mm = elapsed / 60
@@ -91,7 +101,17 @@ class HrRecordingService : Service() {
 
     private fun stopSession() {
         notificationJob?.cancel()
+        if (currentHrSource == HrSource.WATCH) notifyWatch(false)
         scope.launch { sessionRepository.stopSession() }
+    }
+
+    private fun notifyWatch(isRecording: Boolean) {
+        val data = byteArrayOf(if (isRecording) 1.toByte() else 0.toByte())
+        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
+            nodes.forEach { node ->
+                Wearable.getMessageClient(this).sendMessage(node.id, "/session_state", data)
+            }
+        }
     }
 
     private fun updateNotification(bpm: String, elapsed: String) {

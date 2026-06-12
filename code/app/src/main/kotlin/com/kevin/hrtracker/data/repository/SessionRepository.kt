@@ -2,6 +2,7 @@ package com.kevin.hrtracker.data.repository
 
 import android.util.Log
 import com.kevin.hrtracker.ble.HrBleManager
+import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,7 +52,12 @@ class SessionRepository @Inject constructor(
         }
     }
 
-    suspend fun startSession(label: String, maxHrUsed: Int, restingHr: Int?): Long {
+    suspend fun startSession(
+        label: String,
+        maxHrUsed: Int,
+        restingHr: Int?,
+        hrSamples: Flow<ParsedHr> = bleManager.hrSamples
+    ): Long {
         val zones = HrZoneCalculator.calculateZones(maxHrUsed, restingHr)
         val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
         val id = db.sessionDao().insert(
@@ -65,7 +72,7 @@ class SessionRepository @Inject constructor(
         )
         _activeSessionId.value = id
         sampleJob = scope.launch {
-            bleManager.hrSamples.collect { parsed ->
+            hrSamples.collect { parsed ->
                 db.hrSampleDao().insert(
                     HrSample(
                         sessionId = id,

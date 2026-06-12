@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +29,7 @@ class SettingsRepository @Inject constructor(
         val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
         val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
         val ONBOARDING_DONE  = booleanPreferencesKey("onboarding_done")
+        val HR_SOURCE        = stringPreferencesKey("hr_source")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -35,7 +37,10 @@ class SettingsRepository @Inject constructor(
             age          = prefs[Keys.AGE] ?: 30,
             manualMaxHr  = prefs[Keys.MANUAL_MAX_HR],
             restingHr    = prefs[Keys.RESTING_HR],
-            targetZone   = prefs[Keys.TARGET_ZONE] ?: 2
+            targetZone   = prefs[Keys.TARGET_ZONE] ?: 2,
+            hrSource     = prefs[Keys.HR_SOURCE]?.let {
+                runCatching { HrSource.valueOf(it) }.getOrDefault(HrSource.BLE)
+            } ?: HrSource.BLE
         )
     }
 
@@ -104,5 +109,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setOnboardingDone(done: Boolean) {
         dataStore.edit { it[Keys.ONBOARDING_DONE] = done }
+    }
+
+    suspend fun setHrSource(source: HrSource) {
+        dataStore.edit { it[Keys.HR_SOURCE] = source.name }
     }
 }

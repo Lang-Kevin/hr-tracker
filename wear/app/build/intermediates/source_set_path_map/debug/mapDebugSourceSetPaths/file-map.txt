@@ -1,0 +1,49 @@
+com.kevin.hrtracker.wear.app-pngs-0 C:\Code\Android\Projekt_TrackerApp\wear\app\build\generated\res\pngs\debug
+com.kevin.hrtracker.wear.app-resValues-1 C:\Code\Android\Projekt_TrackerApp\wear\app\build\generated\res\resValues\debug
+com.kevin.hrtracker.wear.app-updated_navigation_xml-2 C:\Code\Android\Projekt_TrackerApp\wear\app\build\generated\updated_navigation_xml\debug
+com.kevin.hrtracker.wear.app-packageDebugResources-3 C:\Code\Android\Projekt_TrackerApp\wear\app\build\intermediates\incremental\debug\packageDebugResources\merged.dir
+com.kevin.hrtracker.wear.app-packageDebugResources-4 C:\Code\Android\Projekt_TrackerApp\wear\app\build\intermediates\incremental\debug\packageDebugResources\stripped.dir
+com.kevin.hrtracker.wear.app-debug-5 C:\Code\Android\Projekt_TrackerApp\wear\app\build\intermediates\merged_res\debug\mergeDebugResources
+com.kevin.hrtracker.wear.app-debug-6 C:\Code\Android\Projekt_TrackerApp\wear\app\src\debug\res
+com.kevin.hrtracker.wear.app-main-7 C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\res
+com.kevin.hrtracker.wear.app-lifecycle-runtime-release-8 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\014e31138990c8ed158c0df4dce429c3\transformed\lifecycle-runtime-release\res
+com.kevin.hrtracker.wear.app-material-ripple-release-9 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0252059daa1b24c8e246231446d10e82\transformed\material-ripple-release\res
+com.kevin.hrtracker.wear.app-core-1.13.0-10 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\res
+com.kevin.hrtracker.wear.app-play-services-base-18.5.0-11 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\res
+com.kevin.hrtracker.wear.app-lifecycle-viewmodel-release-12 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0837b2a99f79f5d7972156a4f862ae22\transformed\lifecycle-viewmodel-release\res
+com.kevin.hrtracker.wear.app-customview-poolingcontainer-1.0.0-13 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0d4266630c2024df7605e86fcc0cc9af\transformed\customview-poolingcontainer-1.0.0\res
+com.kevin.hrtracker.wear.app-ui-unit-release-14 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\17c29b4fc06fa892bf6d5d8d7e1ebdd3\transformed\ui-unit-release\res
+com.kevin.hrtracker.wear.app-emoji2-1.3.0-15 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\res
+com.kevin.hrtracker.wear.app-lifecycle-livedata-core-ktx-2.8.7-16 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1e2ff9edb0ebf58213af9f5df3755eec\transformed\lifecycle-livedata-core-ktx-2.8.7\res
+com.kevin.hrtracker.wear.app-compose-material-core-1.3.1-17 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\2b78067d548dca8d1a528189852601cb\transformed\compose-material-core-1.3.1\res
+com.kevin.hrtracker.wear.app-startup-runtime-1.1.1-18 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\res
+com.kevin.hrtracker.wear.app-lifecycle-viewmodel-ktx-2.8.7-19 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4c6f94bebfa234014fe579a0ee6963bf\transformed\lifecycle-viewmodel-ktx-2.8.7\res
+com.kevin.hrtracker.wear.app-ui-release-20 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4e09c4cb80dd6d4fc2eb332f8a9329fd\transformed\ui-release\res
+com.kevin.hrtracker.wear.app-lifecycle-livedata-2.8.7-21 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\533e0f28f8583b41b5e0517cc48c8e3f\transformed\lifecycle-livedata-2.8.7\res
+com.kevin.hrtracker.wear.app-profileinstaller-1.3.1-22 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\res
+com.kevin.hrtracker.wear.app-animation-release-23 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5ad0ed8d5400de1d9e896e4680d8874b\transformed\animation-release\res
+com.kevin.hrtracker.wear.app-material-icons-core-release-24 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6af6a94d4f57c8fd614aecc42bbe99cf\transformed\material-icons-core-release\res
+com.kevin.hrtracker.wear.app-lifecycle-process-2.8.7-25 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\res
+com.kevin.hrtracker.wear.app-ui-text-release-26 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6c1a70ce288ec1002c400e5e5a4e4de5\transformed\ui-text-release\res
+com.kevin.hrtracker.wear.app-animation-core-release-27 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\79480a43babafc1c28a588db85d6007c\transformed\animation-core-release\res
+com.kevin.hrtracker.wear.app-runtime-saveable-release-28 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7b1b173c2dd24df8b769a3fde8bbd423\transformed\runtime-saveable-release\res
+com.kevin.hrtracker.wear.app-ui-util-release-29 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7e46d552522ef8e8e61561306390cdfb\transformed\ui-util-release\res
+com.kevin.hrtracker.wear.app-core-ktx-1.13.0-30 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\8447c919a57017e193afaaf5a4f50ef0\transformed\core-ktx-1.13.0\res
+com.kevin.hrtracker.wear.app-foundation-layout-release-31 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9238760ba0c1f1cbe4427e08909c0885\transformed\foundation-layout-release\res
+com.kevin.hrtracker.wear.app-lifecycle-viewmodel-savedstate-2.8.7-32 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\94d1eba70e0df8b22fc33c8ee4252771\transformed\lifecycle-viewmodel-savedstate-2.8.7\res
+com.kevin.hrtracker.wear.app-runtime-release-33 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9f0abcad825dc90f13fddab71c42614a\transformed\runtime-release\res
+com.kevin.hrtracker.wear.app-lifecycle-livedata-core-2.8.7-34 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\a4a36c22f37360ef7eab18e8ea0d4bcb\transformed\lifecycle-livedata-core-2.8.7\res
+com.kevin.hrtracker.wear.app-lifecycle-runtime-ktx-release-35 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ad2241d0e56fb66e85bb0c41cbfc8101\transformed\lifecycle-runtime-ktx-release\res
+com.kevin.hrtracker.wear.app-activity-ktx-1.9.3-36 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\adcbcf0698133e59e4387d6cb1b14a56\transformed\activity-ktx-1.9.3\res
+com.kevin.hrtracker.wear.app-compose-foundation-1.3.1-37 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b9e55e0187f3285ce31f4929c7acbe06\transformed\compose-foundation-1.3.1\res
+com.kevin.hrtracker.wear.app-ui-geometry-release-38 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c0da5946de57cdb66c955e30a1940b66\transformed\ui-geometry-release\res
+com.kevin.hrtracker.wear.app-core-runtime-2.2.0-39 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cb32957fb1104c2904a092265fa27ec8\transformed\core-runtime-2.2.0\res
+com.kevin.hrtracker.wear.app-annotation-experimental-1.4.0-40 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ce456f14c7825008b4eca2bfabf7e3c5\transformed\annotation-experimental-1.4.0\res
+com.kevin.hrtracker.wear.app-foundation-release-41 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cf41b4e533e3d2e8688fca6257aa6eda\transformed\foundation-release\res
+com.kevin.hrtracker.wear.app-savedstate-1.2.1-42 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d270b734f79b01e1c5ab8d8e4309ee6e\transformed\savedstate-1.2.1\res
+com.kevin.hrtracker.wear.app-play-services-basement-18.4.0-43 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\res
+com.kevin.hrtracker.wear.app-savedstate-ktx-1.2.1-44 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d6edf5bef21d7434809d5a6a4550ef43\transformed\savedstate-ktx-1.2.1\res
+com.kevin.hrtracker.wear.app-ui-graphics-release-45 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d722aebf3ab623f9a9fd0af2470ef2b9\transformed\ui-graphics-release\res
+com.kevin.hrtracker.wear.app-activity-1.9.3-46 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\e555eb6dc690e4977b7a9166a3aa9f5c\transformed\activity-1.9.3\res
+com.kevin.hrtracker.wear.app-activity-compose-1.9.3-47 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f332e9a2f7b3d5a0180c3eea18528cab\transformed\activity-compose-1.9.3\res
+com.kevin.hrtracker.wear.app-compose-material-1.3.1-48 C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ffbb34424128e2e7355455627b593229\transformed\compose-material-1.3.1\res

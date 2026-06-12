@@ -154,6 +154,9 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
+        isFakeActive = false
+        fakeJob?.cancel()
+        fakeJob = null
         // Close any existing GATT before opening a new one —
         // leaving it open causes duplicate onCharacteristicChanged callbacks.
         bluetoothGatt?.disconnect()
@@ -293,6 +296,13 @@ class HrBleManager @Inject constructor(
             characteristic: BluetoothGattCharacteristic,
             value: ByteArray
         ) {
+            // Samsung BLE stack bug: GPS's BLE connection to Galaxy Watch (which also advertises
+            // HR Service 0x2A37) can cross-deliver notifications to this callback. Reject any
+            // notification that did not come from the device we explicitly connected to.
+            if (gatt.device.address != lastDevice?.address) {
+                Log.w(TAG, "Dropped HR notification from unexpected device ${gatt.device.address}")
+                return
+            }
             if (characteristic.uuid == HR_MEASUREMENT_UUID) handleHrData(value)
         }
 
@@ -302,10 +312,14 @@ class HrBleManager @Inject constructor(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic
         ) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                && characteristic.uuid == HR_MEASUREMENT_UUID
-            ) {
-                handleHrData(characteristic.value ?: return)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                if (gatt.device.address != lastDevice?.address) {
+                    Log.w(TAG, "Dropped HR notification from unexpected device ${gatt.device.address}")
+                    return
+                }
+                if (characteristic.uuid == HR_MEASUREMENT_UUID) {
+                    handleHrData(characteristic.value ?: return)
+                }
             }
         }
     }

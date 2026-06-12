@@ -3,6 +3,7 @@ package com.kevin.hrtracker.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.health.HealthConnectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,6 +47,8 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
+
+    fun setHrSource(source: HrSource) = viewModelScope.launch { settingsRepository.setHrSource(source) }
 
     fun importRestingHrFromHealthConnect() = viewModelScope.launch {
         _healthImportStatus.value = HealthImportStatus.LOADING

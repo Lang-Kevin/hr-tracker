@@ -6,8 +6,10 @@ import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.wearable.WearableHrSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -18,7 +20,8 @@ import javax.inject.Inject
 class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
     private val sessionRepository: SessionRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val wearableHrSource: WearableHrSource
 ) : ViewModel() {
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
@@ -78,11 +81,16 @@ class LiveViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            bleManager.hrSamples.collect { parsed ->
-                _currentBpm.value = parsed.bpm
-                _lastRrMs.value = parsed.rrIntervalsMs.lastOrNull()
-                _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
-            }
+            settingsRepository.userSettings
+                .flatMapLatest { s ->
+                    if (s.hrSource == HrSource.WATCH) wearableHrSource.hrSamples
+                    else bleManager.hrSamples
+                }
+                .collect { parsed ->
+                    _currentBpm.value = parsed.bpm
+                    _lastRrMs.value = parsed.rrIntervalsMs.lastOrNull()
+                    _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
+                }
         }
         viewModelScope.launch {
             while (true) {

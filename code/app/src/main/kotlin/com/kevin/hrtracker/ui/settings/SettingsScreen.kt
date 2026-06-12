@@ -18,6 +18,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
+import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.ui.theme.ZoneColors
 
@@ -182,6 +183,38 @@ fun SettingsScreen(
         }
 
         ZoneErklarungCard()
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("HR-Quelle", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Herzfrequenzquelle für Aufzeichnungen",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = settings.hrSource == HrSource.BLE,
+                        onClick = { viewModel.setHrSource(HrSource.BLE) },
+                        label = { Text("BLE-Sensor") }
+                    )
+                    FilterChip(
+                        selected = settings.hrSource == HrSource.WATCH,
+                        onClick = { viewModel.setHrSource(HrSource.WATCH) },
+                        label = { Text("Galaxy Watch") }
+                    )
+                }
+                if (settings.hrSource == HrSource.WATCH) {
+                    Text(
+                        "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 

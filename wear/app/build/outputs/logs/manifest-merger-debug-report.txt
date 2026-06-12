@@ -1,0 +1,365 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:2:1-37:12
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:2:1-37:12
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:2:1-37:12
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:2:1-37:12
+MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\2b78067d548dca8d1a528189852601cb\transformed\compose-material-core-1.3.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.wear.compose:compose-foundation:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b9e55e0187f3285ce31f4929c7acbe06\transformed\compose-foundation-1.3.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.wear.compose:compose-material:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ffbb34424128e2e7355455627b593229\transformed\compose-material-1.3.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6af6a94d4f57c8fd614aecc42bbe99cf\transformed\material-icons-core-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-ripple-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0252059daa1b24c8e246231446d10e82\transformed\material-ripple-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9238760ba0c1f1cbe4427e08909c0885\transformed\foundation-layout-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cf41b4e533e3d2e8688fca6257aa6eda\transformed\foundation-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\79480a43babafc1c28a588db85d6007c\transformed\animation-core-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5ad0ed8d5400de1d9e896e4680d8874b\transformed\animation-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\17c29b4fc06fa892bf6d5d8d7e1ebdd3\transformed\ui-unit-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d722aebf3ab623f9a9fd0af2470ef2b9\transformed\ui-graphics-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c0da5946de57cdb66c955e30a1940b66\transformed\ui-geometry-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7e46d552522ef8e8e61561306390cdfb\transformed\ui-util-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6c1a70ce288ec1002c400e5e5a4e4de5\transformed\ui-text-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4e09c4cb80dd6d4fc2eb332f8a9329fd\transformed\ui-release\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-wearable:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b851b1bb47e2f292c17319b8ba46ce74\transformed\play-services-wearable-18.2.0\AndroidManifest.xml:2:1-8:12
+MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f87bf35417ebab2470a6bfd3351edcd7\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:2:1-5:12
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:2:1-9:12
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\bf52c05d367e42ec9e538da61096ce92\transformed\fragment-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\e555eb6dc690e4977b7a9166a3aa9f5c\transformed\activity-1.9.3\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\adcbcf0698133e59e4387d6cb1b14a56\transformed\activity-ktx-1.9.3\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity-compose:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f332e9a2f7b3d5a0180c3eea18528cab\transformed\activity-compose-1.9.3\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0d4266630c2024df7605e86fcc0cc9af\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.core:core-ktx:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\8447c919a57017e193afaaf5a4f50ef0\transformed\core-ktx-1.13.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d591d9a4213ba40dd75d75599ea9656a\transformed\autofill-1.0.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4fce48b71234dc68de4acb1a593eca67\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d44560f70014b361affd4d1b0bb514cb\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\341ac4dbabdaef6a33e87de2ed4f6998\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d6edf5bef21d7434809d5a6a4550ef43\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d270b734f79b01e1c5ab8d8e4309ee6e\transformed\savedstate-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1e2ff9edb0ebf58213af9f5df3755eec\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\533e0f28f8583b41b5e0517cc48c8e3f\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\a4a36c22f37360ef7eab18e8ea0d4bcb\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b0e04a2a0933683f4870eb2678a97cc4\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:2:1-5:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0837b2a99f79f5d7972156a4f862ae22\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\014e31138990c8ed158c0df4dce429c3\transformed\lifecycle-runtime-release\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\94d1eba70e0df8b22fc33c8ee4252771\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4c6f94bebfa234014fe579a0ee6963bf\transformed\lifecycle-viewmodel-ktx-2.8.7\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ad2241d0e56fb66e85bb0c41cbfc8101\transformed\lifecycle-runtime-ktx-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7b1b173c2dd24df8b769a3fde8bbd423\transformed\runtime-saveable-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9f0abcad825dc90f13fddab71c42614a\transformed\runtime-release\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\97b5c72d17e24c47db7ba185a81c5ff1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ce456f14c7825008b4eca2bfabf7e3c5\transformed\annotation-experimental-1.4.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c6317268dbc87384ecdcaeaa7ae5b12d\transformed\tracing-1.0.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ff52e95dc4cc48daea058218b8326dc3\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cb32957fb1104c2904a092265fa27ec8\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
+	package
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:2:11-69
+uses-permission#android.permission.BODY_SENSORS
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:4:5-70
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:4:22-68
+uses-permission#android.permission.WAKE_LOCK
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:5:5-67
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:5:22-65
+uses-feature#android.hardware.type.watch
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:7:5-63
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:7:19-61
+application
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:9:5-36:19
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:9:5-36:19
+MERGED from [com.google.android.gms:play-services-wearable:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b851b1bb47e2f292c17319b8ba46ce74\transformed\play-services-wearable-18.2.0\AndroidManifest.xml:6:5-20
+MERGED from [com.google.android.gms:play-services-wearable:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b851b1bb47e2f292c17319b8ba46ce74\transformed\play-services-wearable-18.2.0\AndroidManifest.xml:6:5-20
+MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:4:5-6:19
+MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:4:5-6:19
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f87bf35417ebab2470a6bfd3351edcd7\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f87bf35417ebab2470a6bfd3351edcd7\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:5:5-7:19
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:5:5-7:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\97b5c72d17e24c47db7ba185a81c5ff1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\97b5c72d17e24c47db7ba185a81c5ff1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+	android:extractNativeLibs
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:11:9-41
+	android:theme
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:12:9-59
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:10:9-40
+activity#com.kevin.hrtracker.wear.MainActivity
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:14:9-22:20
+	android:exported
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:16:13-36
+	android:taskAffinity
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:17:13-36
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:15:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:18:13-21:29
+action#android.intent.action.MAIN
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:19:17-68
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:19:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:20:17-76
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:20:27-74
+service#com.kevin.hrtracker.wear.comms.WatchCommandListener
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:24:9-34:19
+	android:exported
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:26:13-36
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:25:13-55
+intent-filter#action:name:com.google.android.gms.wearable.MESSAGE_RECEIVED+data:host:*+data:pathPrefix:/session_state+data:scheme:wear
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:27:13-33:29
+action#com.google.android.gms.wearable.MESSAGE_RECEIVED
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:28:17-90
+	android:name
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:28:25-88
+data
+ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:29:17-32:58
+	android:host
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:31:21-37
+	android:scheme
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:30:21-42
+	android:pathPrefix
+		ADDED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml:32:21-56
+uses-sdk
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\2b78067d548dca8d1a528189852601cb\transformed\compose-material-core-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.compose:compose-material-core:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\2b78067d548dca8d1a528189852601cb\transformed\compose-material-core-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.compose:compose-foundation:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b9e55e0187f3285ce31f4929c7acbe06\transformed\compose-foundation-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.compose:compose-foundation:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b9e55e0187f3285ce31f4929c7acbe06\transformed\compose-foundation-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.compose:compose-material:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ffbb34424128e2e7355455627b593229\transformed\compose-material-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.wear.compose:compose-material:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ffbb34424128e2e7355455627b593229\transformed\compose-material-1.3.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6af6a94d4f57c8fd614aecc42bbe99cf\transformed\material-icons-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6af6a94d4f57c8fd614aecc42bbe99cf\transformed\material-icons-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0252059daa1b24c8e246231446d10e82\transformed\material-ripple-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0252059daa1b24c8e246231446d10e82\transformed\material-ripple-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9238760ba0c1f1cbe4427e08909c0885\transformed\foundation-layout-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9238760ba0c1f1cbe4427e08909c0885\transformed\foundation-layout-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cf41b4e533e3d2e8688fca6257aa6eda\transformed\foundation-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cf41b4e533e3d2e8688fca6257aa6eda\transformed\foundation-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\79480a43babafc1c28a588db85d6007c\transformed\animation-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\79480a43babafc1c28a588db85d6007c\transformed\animation-core-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5ad0ed8d5400de1d9e896e4680d8874b\transformed\animation-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5ad0ed8d5400de1d9e896e4680d8874b\transformed\animation-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\17c29b4fc06fa892bf6d5d8d7e1ebdd3\transformed\ui-unit-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\17c29b4fc06fa892bf6d5d8d7e1ebdd3\transformed\ui-unit-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d722aebf3ab623f9a9fd0af2470ef2b9\transformed\ui-graphics-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d722aebf3ab623f9a9fd0af2470ef2b9\transformed\ui-graphics-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c0da5946de57cdb66c955e30a1940b66\transformed\ui-geometry-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c0da5946de57cdb66c955e30a1940b66\transformed\ui-geometry-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7e46d552522ef8e8e61561306390cdfb\transformed\ui-util-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7e46d552522ef8e8e61561306390cdfb\transformed\ui-util-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6c1a70ce288ec1002c400e5e5a4e4de5\transformed\ui-text-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6c1a70ce288ec1002c400e5e5a4e4de5\transformed\ui-text-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4e09c4cb80dd6d4fc2eb332f8a9329fd\transformed\ui-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4e09c4cb80dd6d4fc2eb332f8a9329fd\transformed\ui-release\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-wearable:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b851b1bb47e2f292c17319b8ba46ce74\transformed\play-services-wearable-18.2.0\AndroidManifest.xml:4:5-44
+MERGED from [com.google.android.gms:play-services-wearable:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b851b1bb47e2f292c17319b8ba46ce74\transformed\play-services-wearable-18.2.0\AndroidManifest.xml:4:5-44
+MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f87bf35417ebab2470a6bfd3351edcd7\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f87bf35417ebab2470a6bfd3351edcd7\transformed\play-services-tasks-18.2.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:3:5-44
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\bf52c05d367e42ec9e538da61096ce92\transformed\fragment-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.fragment:fragment:1.1.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\bf52c05d367e42ec9e538da61096ce92\transformed\fragment-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\e555eb6dc690e4977b7a9166a3aa9f5c\transformed\activity-1.9.3\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\e555eb6dc690e4977b7a9166a3aa9f5c\transformed\activity-1.9.3\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\adcbcf0698133e59e4387d6cb1b14a56\transformed\activity-ktx-1.9.3\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\adcbcf0698133e59e4387d6cb1b14a56\transformed\activity-ktx-1.9.3\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f332e9a2f7b3d5a0180c3eea18528cab\transformed\activity-compose-1.9.3\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.9.3] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\f332e9a2f7b3d5a0180c3eea18528cab\transformed\activity-compose-1.9.3\AndroidManifest.xml:5:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0d4266630c2024df7605e86fcc0cc9af\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0d4266630c2024df7605e86fcc0cc9af\transformed\customview-poolingcontainer-1.0.0\AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.core:core-ktx:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\8447c919a57017e193afaaf5a4f50ef0\transformed\core-ktx-1.13.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\8447c919a57017e193afaaf5a4f50ef0\transformed\core-ktx-1.13.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d591d9a4213ba40dd75d75599ea9656a\transformed\autofill-1.0.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d591d9a4213ba40dd75d75599ea9656a\transformed\autofill-1.0.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4fce48b71234dc68de4acb1a593eca67\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4fce48b71234dc68de4acb1a593eca67\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d44560f70014b361affd4d1b0bb514cb\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d44560f70014b361affd4d1b0bb514cb\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\341ac4dbabdaef6a33e87de2ed4f6998\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\341ac4dbabdaef6a33e87de2ed4f6998\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d6edf5bef21d7434809d5a6a4550ef43\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d6edf5bef21d7434809d5a6a4550ef43\transformed\savedstate-ktx-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d270b734f79b01e1c5ab8d8e4309ee6e\transformed\savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d270b734f79b01e1c5ab8d8e4309ee6e\transformed\savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1e2ff9edb0ebf58213af9f5df3755eec\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1e2ff9edb0ebf58213af9f5df3755eec\transformed\lifecycle-livedata-core-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\533e0f28f8583b41b5e0517cc48c8e3f\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\533e0f28f8583b41b5e0517cc48c8e3f\transformed\lifecycle-livedata-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\a4a36c22f37360ef7eab18e8ea0d4bcb\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\a4a36c22f37360ef7eab18e8ea0d4bcb\transformed\lifecycle-livedata-core-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b0e04a2a0933683f4870eb2678a97cc4\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\b0e04a2a0933683f4870eb2678a97cc4\transformed\lifecycle-viewmodel-2.8.7\AndroidManifest.xml:4:5-43
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0837b2a99f79f5d7972156a4f862ae22\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\0837b2a99f79f5d7972156a4f862ae22\transformed\lifecycle-viewmodel-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\014e31138990c8ed158c0df4dce429c3\transformed\lifecycle-runtime-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\014e31138990c8ed158c0df4dce429c3\transformed\lifecycle-runtime-release\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\94d1eba70e0df8b22fc33c8ee4252771\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\94d1eba70e0df8b22fc33c8ee4252771\transformed\lifecycle-viewmodel-savedstate-2.8.7\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4c6f94bebfa234014fe579a0ee6963bf\transformed\lifecycle-viewmodel-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\4c6f94bebfa234014fe579a0ee6963bf\transformed\lifecycle-viewmodel-ktx-2.8.7\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ad2241d0e56fb66e85bb0c41cbfc8101\transformed\lifecycle-runtime-ktx-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ad2241d0e56fb66e85bb0c41cbfc8101\transformed\lifecycle-runtime-ktx-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7b1b173c2dd24df8b769a3fde8bbd423\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\7b1b173c2dd24df8b769a3fde8bbd423\transformed\runtime-saveable-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9f0abcad825dc90f13fddab71c42614a\transformed\runtime-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.6.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\9f0abcad825dc90f13fddab71c42614a\transformed\runtime-release\AndroidManifest.xml:5:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\97b5c72d17e24c47db7ba185a81c5ff1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\97b5c72d17e24c47db7ba185a81c5ff1\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ce456f14c7825008b4eca2bfabf7e3c5\transformed\annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ce456f14c7825008b4eca2bfabf7e3c5\transformed\annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c6317268dbc87384ecdcaeaa7ae5b12d\transformed\tracing-1.0.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.tracing:tracing:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\c6317268dbc87384ecdcaeaa7ae5b12d\transformed\tracing-1.0.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ff52e95dc4cc48daea058218b8326dc3\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\ff52e95dc4cc48daea058218b8326dc3\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cb32957fb1104c2904a092265fa27ec8\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\cb32957fb1104c2904a092265fa27ec8\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Code\Android\Projekt_TrackerApp\wear\app\src\main\AndroidManifest.xml
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.5.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\05d17ffae9e6434f2f592fa02a04949d\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\d52037e275e2f4b580963a91b35454db\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\3a94b22dcee91918fc97cdc74466e9f2\transformed\startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.3.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\1c2b355e9ff13e6fb45a57cc98681a2b\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+permission#com.kevin.hrtracker.wear.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+uses-permission#com.kevin.hrtracker.wear.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.0] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\042e3a9a9eeff7b3eb902360233b0519\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\6b641aadcac71e7742977e0033a9ecfc\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Kiwi PC\.gradle\caches\8.13\transforms\5539488eb0b60bd378208964b4420d1e\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
