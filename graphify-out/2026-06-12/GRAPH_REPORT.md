@@ -1,4 +1,4 @@
-# Graph Report - C:\Code\Android\Projekt_TrackerApp  (2026-06-12)
+# Graph Report - .  (2026-06-12)
 
 ## Corpus Check
 - cluster-only mode — file stats not available
@@ -9,7 +9,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `d1e6b20f`
+- Built from commit: `5749d679`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
