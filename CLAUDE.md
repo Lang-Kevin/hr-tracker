@@ -52,9 +52,10 @@ Diese Regeln sind **nicht verhandelbar**. Wer sie kippt, bricht entweder eine BL
 ## Workflow
 
 1. **Pro Milestone**: build → lint → test → commit → `/compact`.
-2. Ein Commit pro Milestone. Keine Sammelcommits.
-3. Kleinste mögliche Änderung. Großflächige Refactorings nur auf Anfrage.
-4. Macht-/Datenmigrationen-Änderungen → vorher kurz freigeben lassen.
+2. **Commit ist Pflicht** am Ende jeder Implementierung — kein Commit = Aufgabe nicht abgeschlossen. Format via `caveman-commit` (`git add -A && git commit`).
+3. Ein Commit pro Milestone. Keine Sammelcommits.
+4. Kleinste mögliche Änderung. Großflächige Refactorings nur auf Anfrage.
+5. Migrations-Änderungen → vorher kurz freigeben lassen.
 
 ## Modell-Routing (wichtig)
 
@@ -64,7 +65,7 @@ Alles andere wird an Subagenten delegiert, jeder mit eigenem Kontextfenster:
 
 | Subagent       | Modell  | Zweck                                                   |
 | -------------- | ------- | ------------------------------------------------------- |
-| `@explorer`    | Haiku   | Datei-/Symbol-Suche, Dependency-Audit, Code-Lookup      |
+| `@explorer`    | Caveman | Datei-/Symbol-Suche, Dependency-Audit, Code-Lookup      |
 | `@implementer` | Sonnet  | Fokussierte Code-Änderung in 1–3 Dateien                |
 | `@reviewer`    | Sonnet  | Code-Review nach Änderung (Spec / Sicherheit / Stil)    |
 | `@architect`   | Opus    | Milestone-Planung, schwierige Architekturfragen         |
@@ -115,5 +116,24 @@ In dieser Reihenfolge, jeweils als eigener Subagent-Lauf:
 - Vollständige Spezifikation: `docs/SPEC.md`
 - Designentscheidungen & Farbpalette: `docs/SPEC.md#design-system`
 - Historie (abgeschlossene Milestones, Batches, Bugfixes): `docs/CHANGELOG.md`
+- Visualisierungsregeln (Charts, Graphs, Vico): via `/graphify` Slash-Command (nach `graphify install`). Output-Artefakte unter `graphify-out/` — siehe `docs/SPEC.md#visualisierung--graphify`
 
-Nur lesen, wenn der aktuelle Task es konkret braucht. Beide Dateien sind bewusst nicht in CLAUDE.md inline, damit das Kontextbudget pro Session nicht draufgeht.
+Nur lesen, wenn der aktuelle Task es konkret braucht.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+Before investigating architecture:
+
+1. Read graphify-out/GRAPH_REPORT.md
+2. Use graphify information as primary source
+3. Use file searches only for verification
+
+USE POWERSHELL INSTEAD OF BASH!

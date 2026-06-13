@@ -22,16 +22,28 @@ object DatabaseModule {
         }
     }
 
-    private val predefinedLabels = listOf(
-        "Volleyball", "Beach-Volleyball", "Krafttraining",
-        "Cardio", "Laufen", "Radfahren", "Schwimmen", "Yoga"
-    )
+    private val MIGRATION_2_3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("DELETE FROM SportLabel WHERE isPredefined = 1")
+            listOf("Allg. Training", "Beachvolleyball", "Trainingsbike", "Volleyball").forEach { name ->
+                database.execSQL("INSERT INTO SportLabel (name, isPredefined) VALUES (?, 1)", arrayOf(name))
+            }
+        }
+    }
+
+    private val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE Session ADD COLUMN deletedAt INTEGER DEFAULT NULL")
+        }
+    }
+
+    private val predefinedLabels = listOf("Allg. Training", "Beachvolleyball", "Trainingsbike", "Volleyball")
 
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HrDatabase =
         Room.databaseBuilder(context, HrDatabase::class.java, "hr_tracker.db")
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .addCallback(object : androidx.room.RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     predefinedLabels.forEach { name ->

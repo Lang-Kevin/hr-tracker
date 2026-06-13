@@ -33,27 +33,34 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
     val summaryStats by viewModel.summaryStats.collectAsStateWithLifecycle()
     val weeklyData by viewModel.weeklyData.collectAsStateWithLifecycle()
     val trimpHistory by viewModel.trimpHistory.collectAsStateWithLifecycle()
-    var showDeleteDialog by remember { mutableStateOf(false) }
+    var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    if (showDeleteDialog) {
+    pendingDeleteIds?.let { ids ->
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Aufträge löschen?") },
-            text = { Text("${selectedIds.size} Eintrag(Einträge) werden unwiderruflich gelöscht.") },
+            onDismissRequest = { pendingDeleteIds = null },
+            title = { Text("In Papierkorb verschieben?") },
+            text = {
+                val count = ids.size
+                Text(
+                    "$count ${if (count == 1) "Eintrag wird" else "Einträge werden"} in den Papierkorb " +
+                        "verschoben und beim nächsten App-Start endgültig gelöscht."
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
-                    showDeleteDialog = false
-                    viewModel.deleteSelected()
-                }) { Text("Löschen") }
+                    viewModel.moveToTrash(ids)
+                    pendingDeleteIds = null
+                }) { Text("Verschieben") }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Abbrechen") }
+                TextButton(onClick = { pendingDeleteIds = null }) { Text("Abbrechen") }
             }
         )
     }
@@ -78,7 +85,7 @@ fun HistoryScreen(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(
-                    onClick = { showDeleteDialog = true },
+                    onClick = { pendingDeleteIds = selectedIds.toList() },
                     enabled = selectedIds.isNotEmpty()
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = "Löschen")
@@ -91,8 +98,11 @@ fun HistoryScreen(
             }
         }
 
-        TabRow(selectedTabIndex = selectedTab) {
-            listOf("Verlauf", "Statistik").forEachIndexed { index, title ->
+        TabRow(
+            selectedTabIndex = selectedTab,
+            contentColor = PrimaryPurple
+        ) {
+            listOf("Verlauf", "Statistik", "Papierkorb").forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
@@ -121,8 +131,8 @@ fun HistoryScreen(
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
                                 if (!isSelectionMode && value == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteSingle(session.id)
-                                    true
+                                    pendingDeleteIds = listOf(session.id)
+                                    false
                                 } else false
                             }
                         )
@@ -161,6 +171,7 @@ fun HistoryScreen(
                 }
             }
             1 -> StatistikTab(weeklyData, trimpHistory)
+            2 -> TrashTab(trashSessions, onRestore = { viewModel.restoreSessions(listOf(it)) })
         }
     }
 }
@@ -229,14 +240,20 @@ private fun SessionListItem(
                 Text(session.label, style = MaterialTheme.typography.titleMedium)
                 Text(
                     session.startedAt.toDateString(),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 session.endedAt?.let { end ->
                     Text(
                         "Dauer: ${durationString((end - session.startedAt) / 1000)}",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                } ?: Text("läuft noch…", style = MaterialTheme.typography.bodySmall)
+                } ?: Text(
+                    "läuft noch…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -338,6 +355,64 @@ private fun StatistikTab(
             }
         }
 
+        item { Spacer(Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun TrashTab(
+    trashSessions: List<Session>,
+    onRestore: (Long) -> Unit
+) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        item {
+            if (trashSessions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Text(
+                        "Elemente werden beim nächsten App-Start endgültig gelöscht.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+        if (trashSessions.isEmpty()) {
+            item {
+                Text(
+                    "Papierkorb ist leer.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            items(trashSessions, key = { it.id }) { session ->
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(session.label, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                session.startedAt.toDateString(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(onClick = { onRestore(session.id) }) {
+                            Text("Wiederherstellen")
+                        }
+                    }
+                }
+            }
+        }
         item { Spacer(Modifier.height(16.dp)) }
     }
 }

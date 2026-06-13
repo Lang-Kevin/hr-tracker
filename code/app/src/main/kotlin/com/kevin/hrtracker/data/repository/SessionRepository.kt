@@ -41,14 +41,13 @@ class SessionRepository @Inject constructor(
     private var sampleJob: Job? = null
 
     init {
-        // On startup SessionRepository has no active session — close any DB sessions
-        // left open by a previous crash, kill, or the double-start bug.
         scope.launch {
             db.sessionDao().closeOrphanedSessions(
-                cutoff = System.currentTimeMillis(), // all open sessions
+                cutoff = System.currentTimeMillis(),
                 endedAt = System.currentTimeMillis()
             )
-            Log.d("HRTracker", "Orphaned sessions cleaned up")
+            db.sessionDao().permanentlyDeleteTrashed()
+            Log.d("HRTracker", "Orphaned sessions closed, trash purged")
         }
     }
 
@@ -100,5 +99,10 @@ class SessionRepository @Inject constructor(
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 
-    suspend fun deleteSessionsByIds(ids: List<Long>) = db.sessionDao().deleteByIds(ids)
+    fun getTrashFlow() = db.sessionDao().getTrashFlow()
+
+    suspend fun deleteSessionsByIds(ids: List<Long>) =
+        db.sessionDao().softDeleteByIds(ids, System.currentTimeMillis())
+
+    suspend fun restoreSessionsByIds(ids: List<Long>) = db.sessionDao().restoreByIds(ids)
 }

@@ -18,9 +18,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.hrtracker.FeatureFlags
 
 @Composable
 fun SettingsScreen(
@@ -71,7 +74,12 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Herzfrequenz", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Herzfrequenz",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
 
                 NumberField(
                     label = "Alter",
@@ -107,7 +115,7 @@ fun SettingsScreen(
                     isError = restingHrError,
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
-                if (viewModel.isHealthConnectAvailable) {
+                if (FeatureFlags.SMARTWATCH_ENABLED && viewModel.isHealthConnectAvailable) {
                     OutlinedButton(
                         onClick = { requestHcPermissions.launch(hcPermissions) },
                         modifier = Modifier.fillMaxWidth(),
@@ -130,7 +138,12 @@ fun SettingsScreen(
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
 
                 HorizontalDivider()
-                Text("Ziel-Zone", style = MaterialTheme.typography.labelMedium)
+                Text(
+                    "Ziel-Zone",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     (1..5).forEach { z ->
                         val selected = settings.targetZone == z
@@ -154,7 +167,12 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text("Zonen-Vorschau", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Zonen-Vorschau",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
                 HorizontalDivider()
                 val zones = com.kevin.hrtracker.domain.HrZoneCalculator
                     .calculateZones(effectiveMaxHr, settings.restingHr)
@@ -172,7 +190,7 @@ fun SettingsScreen(
                             Surface(
                                 color = zoneColor,
                                 shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(16.dp)
                             ) {}
                             Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
                         }
@@ -189,7 +207,12 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("HR-Quelle", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "HR-Quelle",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
                 Text(
                     "Herzfrequenzquelle für Aufzeichnungen",
                     style = MaterialTheme.typography.bodySmall
@@ -200,13 +223,15 @@ fun SettingsScreen(
                         onClick = { viewModel.setHrSource(HrSource.BLE) },
                         label = { Text("BLE-Sensor") }
                     )
-                    FilterChip(
-                        selected = settings.hrSource == HrSource.WATCH,
-                        onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                        label = { Text("Galaxy Watch") }
-                    )
+                    if (FeatureFlags.SMARTWATCH_ENABLED) {
+                        FilterChip(
+                            selected = settings.hrSource == HrSource.WATCH,
+                            onClick = { viewModel.setHrSource(HrSource.WATCH) },
+                            label = { Text("Galaxy Watch") }
+                        )
+                    }
                 }
-                if (settings.hrSource == HrSource.WATCH) {
+                if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
                     Text(
                         "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
                         style = MaterialTheme.typography.bodySmall,
@@ -288,6 +313,7 @@ private fun NumberField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
         isError = isError,
         supportingText = supportingText?.let { msg -> { Text(msg, color = MaterialTheme.colorScheme.error) } },
         trailingIcon = {

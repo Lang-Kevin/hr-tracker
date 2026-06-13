@@ -12,5 +12,6 @@ data class Session(
     val maxHrUsed: Int,
     val restingHr: Int?,
     val note: String? = null,
-    val zoneSnapshotJson: String? = null
+    val zoneSnapshotJson: String? = null,
+    val deletedAt: Long? = null
 )

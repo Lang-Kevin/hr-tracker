@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -137,7 +138,7 @@ fun DetailScreen(
         Spacer(Modifier.height(12.dp))
 
         // Stats Row
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("BPM Ø", stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
             StatItem(
                 "DAUER",
@@ -152,7 +153,7 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         // Analytics Row
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("RMSSD", rmssd?.let { "${it}ms" } ?: "—", Modifier.weight(1f))
             StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
             StatItem("MIN BPM", stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
@@ -162,30 +163,33 @@ fun DetailScreen(
 
         // Note field
         val noteText = session?.note
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showNoteDialog = true }
-                .padding(vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth().clickable { showNoteDialog = true },
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Notiz",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (noteText.isNullOrBlank()) "Notiz hinzufügen…" else noteText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (noteText.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+                    )
+                }
                 Text(
-                    "Notiz",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.5f)
-                )
-                Text(
-                    text = if (noteText.isNullOrBlank()) "Notiz hinzufügen…" else noteText,
+                    "✎",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (noteText.isNullOrBlank()) Color.White.copy(alpha = 0.35f) else Color.White
+                    color = PrimaryPurple
                 )
             }
-            Text(
-                "✎",
-                style = MaterialTheme.typography.bodyMedium,
-                color = PrimaryPurple
-            )
         }
 
         Spacer(Modifier.height(8.dp))

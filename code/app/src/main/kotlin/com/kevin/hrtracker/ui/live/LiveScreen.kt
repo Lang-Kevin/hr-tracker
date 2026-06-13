@@ -38,6 +38,7 @@ import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.OnPrimary
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.TertiaryPink
 import com.kevin.hrtracker.ui.theme.ZoneColors
 
@@ -110,23 +111,31 @@ fun LiveScreen(
                 color = PrimaryPurple,
                 style = MaterialTheme.typography.titleLarge
             )
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = TertiaryPink,
-                    modifier = Modifier
-                        .size(14.dp)
-                        .scale(pulseScale.value)
-                )
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = currentBpm?.let { "$it BPM" } ?: "— BPM",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    text = "BPM",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = TertiaryPink,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .scale(pulseScale.value)
+                    )
+                    Text(
+                        text = currentBpm?.toString() ?: "—",
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -156,7 +165,7 @@ fun LiveScreen(
         Spacer(Modifier.height(12.dp))
 
         // Stats Row
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("BPM Ø", averageBpm?.toString() ?: "—", Modifier.weight(1f))
             StatItem("ZIEL-ZONE", "Zone $targetZone", Modifier.weight(1f), valueColor = PrimaryPurple)
             StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
@@ -457,20 +466,28 @@ private fun StatItem(
     modifier: Modifier = Modifier,
     valueColor: Color = Color.White
 ) {
-    Column(
+    Card(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.headlineSmall,
-            color = valueColor,
-            fontWeight = FontWeight.Bold
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineSmall,
+                color = valueColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

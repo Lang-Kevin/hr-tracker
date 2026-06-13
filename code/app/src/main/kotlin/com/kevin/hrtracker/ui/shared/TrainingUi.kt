@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.ZoneColors
 
 @Composable
@@ -184,7 +187,7 @@ fun ZeitInZoneSection(
         ) {
             Text(
                 "ZEIT IN ZONE",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
@@ -269,20 +272,28 @@ fun StatItem(
     modifier: Modifier = Modifier,
     valueColor: Color = Color.White
 ) {
-    Column(
+    Card(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
     ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.headlineSmall,
-            color = valueColor,
-            fontWeight = FontWeight.Bold
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineSmall,
+                color = valueColor,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

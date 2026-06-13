@@ -30,6 +30,9 @@ class HistoryViewModel @Inject constructor(
     val sessions: StateFlow<List<Session>> = sessionRepository.getSessionsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val trashSessions: StateFlow<List<Session>> = sessionRepository.getTrashFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
     val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
 
@@ -131,14 +134,13 @@ class HistoryViewModel @Inject constructor(
         _selectedIds.value = emptySet()
     }
 
-    fun deleteSingle(id: Long) {
-        viewModelScope.launch { sessionRepository.deleteSessionsByIds(listOf(id)) }
-    }
-
-    fun deleteSelected() {
-        val ids = _selectedIds.value.toList()
+    fun moveToTrash(ids: List<Long>) {
         if (ids.isEmpty()) return
         _selectedIds.value = emptySet()
         viewModelScope.launch { sessionRepository.deleteSessionsByIds(ids) }
+    }
+
+    fun restoreSessions(ids: List<Long>) {
+        viewModelScope.launch { sessionRepository.restoreSessionsByIds(ids) }
     }
 }

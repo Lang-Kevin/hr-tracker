@@ -2,10 +2,13 @@ package com.kevin.hrtracker.ui.onboarding
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -35,12 +38,26 @@ fun OnboardingScreen(
             .background(BackgroundDark)
             .padding(24.dp)
     ) {
-        LinearProgressIndicator(
-            progress = { (step + 1) / 3f },
-            modifier = Modifier.fillMaxWidth(),
-            color = PrimaryPurple,
-            trackColor = SurfaceDark
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            (0..2).forEach { i ->
+                val isActive = i <= step
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(if (i == step) 12.dp else 8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isActive) PrimaryPurple
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                )
+            }
+        }
 
         Spacer(Modifier.height(32.dp))
 
