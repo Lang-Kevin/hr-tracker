@@ -1,8 +1,6 @@
 package com.kevin.hrtracker.ui.history
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,9 +19,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.kevin.shared.ui.session.SessionListItem
+import com.kevin.shared.ui.session.SummaryCard
+import com.kevin.shared.ui.session.durationString
+import com.kevin.shared.ui.session.toDateString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,7 +115,12 @@ fun HistoryScreen(
         when (selectedTab) {
             0 -> {
                 if (sessions.isNotEmpty()) {
-                    SummaryCard(summaryStats)
+                    SummaryCard(listOf(
+                        "TRAININGS" to summaryStats.sessionCount.toString(),
+                        "GESAMTDAUER" to durationString(summaryStats.totalDurationS),
+                        "Ø BPM" to (summaryStats.avgBpm?.toString() ?: "—"),
+                        "LÄNGSTE" to durationString(summaryStats.longestDurationS)
+                    ))
                     Spacer(Modifier.height(8.dp))
                 }
                 if (sessions.isEmpty()) {
@@ -157,7 +161,9 @@ fun HistoryScreen(
                             enableDismissFromStartToEnd = false
                         ) {
                             SessionListItem(
-                                session = session,
+                                label = session.label,
+                                startedAt = session.startedAt,
+                                endedAt = session.endedAt,
                                 isSelected = session.id in selectedIds,
                                 isSelectionMode = isSelectionMode,
                                 onClick = {
@@ -172,89 +178,6 @@ fun HistoryScreen(
             }
             1 -> StatistikTab(weeklyData, trimpHistory)
             2 -> TrashTab(trashSessions, onRestore = { viewModel.restoreSessions(listOf(it)) })
-        }
-    }
-}
-
-@Composable
-private fun SummaryCard(stats: HistoryViewModel.SummaryStats) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            SummaryItem("TRAININGS", stats.sessionCount.toString())
-            SummaryItem("GESAMTDAUER", durationString(stats.totalDurationS))
-            SummaryItem("Ø BPM", stats.avgBpm?.toString() ?: "—")
-            SummaryItem("LÄNGSTE", durationString(stats.longestDurationS))
-        }
-    }
-}
-
-@Composable
-private fun SummaryItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SessionListItem(
-    session: Session,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    val containerColor = if (isSelected)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surface
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(session.label, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    session.startedAt.toDateString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                session.endedAt?.let { end ->
-                    Text(
-                        "Dauer: ${durationString((end - session.startedAt) / 1000)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } ?: Text(
-                    "läuft noch…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
@@ -417,13 +340,3 @@ private fun TrashTab(
     }
 }
 
-private fun Long.toDateString(): String =
-    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(this))
-
-internal fun durationString(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%02d:%02d:%02d".format(h, m, s)
-    else "%02d:%02d".format(m, s)
-}

@@ -22,7 +22,7 @@ import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.OnPrimary
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.history.durationString
+import com.kevin.shared.ui.session.durationString
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
