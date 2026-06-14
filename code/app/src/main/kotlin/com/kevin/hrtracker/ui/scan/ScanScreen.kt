@@ -2,14 +2,10 @@ package com.kevin.hrtracker.ui.scan
 
 import android.Manifest
 import android.os.Build
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +16,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.shared.ble.ConnectionState
-import com.kevin.shared.ble.ConnectionState.Reconnecting
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
@@ -32,11 +27,10 @@ import com.kevin.shared.domain.DeviceType
 import com.kevin.shared.domain.DiscoveredDevice
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.FeatureFlags
-import com.kevin.hrtracker.ui.theme.ConnectedGreen
-import com.kevin.hrtracker.ui.theme.ErrorRed
 import com.kevin.hrtracker.ui.theme.LightPurple
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
+import com.kevin.shared.ui.scan.BleStatusCard
+import com.kevin.shared.ui.scan.DiscoveredDeviceItem
+import com.kevin.shared.ui.scan.SavedDeviceItem
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -113,62 +107,12 @@ fun ScanScreen(
             }
         }
 
-        val statusText = when (connectionState) {
-            is Reconnecting -> "Verbindung verloren — reconnecting…"
-            is ConnectionState.Error -> "Fehler: ${(connectionState as ConnectionState.Error).reason}"
-            else -> connectionState::class.simpleName ?: ""
-        }
-        val statusColor = if (connectionState is ConnectionState.Error)
-            MaterialTheme.colorScheme.error
-        else
-            MaterialTheme.colorScheme.onSurface
-        val dotColor = when {
-            connectionState is ConnectionState.Ready -> ConnectedGreen
-            connectionState is ConnectionState.Error -> ErrorRed
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
-        }
-        val statusCardBorder = if (connectionState is ConnectionState.Ready)
-            BorderStroke(1.dp, PrimaryPurple) else null
-        val statusCardBg = if (connectionState is ConnectionState.Error)
-            ErrorRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Card(
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = statusCardBg),
-                border = statusCardBorder
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.size(8.dp).background(dotColor, CircleShape))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Status: $statusText",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = statusColor,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (connectionState !is ConnectionState.Disconnected) {
-                        TextButton(onClick = { viewModel.disconnect() }) { Text("Trennen") }
-                    }
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Auto-Connect", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.width(4.dp))
-                Switch(
-                    checked = autoConnect,
-                    onCheckedChange = { viewModel.toggleAutoConnect() }
-                )
-            }
-        }
+        BleStatusCard(
+            connectionState = connectionState,
+            autoConnect = autoConnect,
+            onDisconnect = { viewModel.disconnect() },
+            onToggleAutoConnect = { viewModel.toggleAutoConnect() }
+        )
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
@@ -243,55 +187,24 @@ fun ScanScreen(
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(discoveredDevices, key = { it.address }) { device ->
-                    DeviceItem(device = device) { viewModel.connectToDiscovered(device) }
+                    DiscoveredDeviceItem(
+                        device = device,
+                        onClick = { viewModel.connectToDiscovered(device) },
+                        iconAndSubtitle = { d ->
+                            when {
+                                d is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
+                                FeatureFlags.SMARTWATCH_ENABLED && d.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
+                                d.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
+                                else -> Icons.Default.Bluetooth to d.address
+                            }
+                        }
+                    )
                 }
             }
         }
     }
 }
 
-@Composable
-private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit, onForget: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
-                Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    device.address,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            TextButton(onClick = onForget) { Text("Vergessen") }
-        }
-    }
-}
-
-@Composable
-private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
-    val (icon, subtitle) = when {
-        device is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
-        FeatureFlags.SMARTWATCH_ENABLED && device.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
-        device.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
-        else -> Icons.Default.Bluetooth to device.address
-    }
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(12.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(icon, contentDescription = null)
-            Column {
-                Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
 
 @Composable
 private fun StartTrainingDialog(
