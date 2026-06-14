@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.SportLabel
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
-import com.kevin.hrtracker.domain.DiscoveredDevice
-import com.kevin.hrtracker.domain.SavedDevice
+import com.kevin.shared.ble.ConnectionState
+import com.kevin.shared.domain.DiscoveredDevice
+import com.kevin.shared.domain.SavedDevice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -43,9 +43,9 @@ class ScanViewModel @Inject constructor(
 
     val discoveredDevices: StateFlow<List<DiscoveredDevice>> = bleManager.scanResults
         .map { results ->
-            listOf(DiscoveredDevice.Fake) + results.map { DiscoveredDevice.Real(it) }
+            listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)) + results.map { DiscoveredDevice.Real(it) }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(DiscoveredDevice.Fake))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)))
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId

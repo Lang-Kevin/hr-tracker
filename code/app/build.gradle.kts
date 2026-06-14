@@ -59,6 +59,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preferences)
+    implementation("com.kevin.shared:shared")
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.vico.compose)

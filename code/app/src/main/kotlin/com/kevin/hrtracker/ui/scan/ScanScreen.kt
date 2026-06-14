@@ -19,8 +19,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.kevin.hrtracker.ble.ConnectionState
-import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
+import com.kevin.shared.ble.ConnectionState
+import com.kevin.shared.ble.ConnectionState.Reconnecting
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
@@ -28,9 +28,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
-import com.kevin.hrtracker.domain.DiscoveredDevice
-import com.kevin.hrtracker.domain.DeviceType
-import com.kevin.hrtracker.domain.SavedDevice
+import com.kevin.shared.domain.DeviceType
+import com.kevin.shared.domain.DiscoveredDevice
+import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.FeatureFlags
 import com.kevin.hrtracker.ui.theme.ConnectedGreen
 import com.kevin.hrtracker.ui.theme.ErrorRed

@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.kevin.hrtracker.domain.HrSource
-import com.kevin.hrtracker.domain.SavedDevice
+import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map

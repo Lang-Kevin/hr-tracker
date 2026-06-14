@@ -2,7 +2,7 @@ package com.kevin.hrtracker.ui.live
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kevin.hrtracker.ble.ConnectionState
+import com.kevin.shared.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
