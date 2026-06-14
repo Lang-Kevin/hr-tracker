@@ -1,0 +1,702 @@
+{
+  "communities": {
+    "0": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_mainactivity_kt_bundle",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_mainactivity_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_mainactivity_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailscreen_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsscreen_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsscreen_kt_string",
+      "componentactivity",
+      "detail_detailscreen",
+      "detail_detailscreen_detailscreen",
+      "detail_detailscreen_editnotedialog",
+      "detail_detailscreen_edittrainingtypedialog",
+      "detailviewmodel",
+      "hrtracker_mainactivity",
+      "hrtracker_mainactivity_mainactivity",
+      "hrtracker_mainactivity_mainactivity_hrtrackernav",
+      "hrtracker_mainactivity_mainactivity_oncreate",
+      "hrtracker_mainactivity_mainactivity_startrecordingservice",
+      "hrtracker_mainactivity_route",
+      "hrtracker_mainactivity_route_detail",
+      "settings_settingsscreen",
+      "settings_settingsscreen_numberfield",
+      "settings_settingsscreen_settingsscreen",
+      "settings_settingsscreen_zoneerklarungcard",
+      "settingsviewmodel",
+      "theme_theme",
+      "theme_theme_hrtrackertheme",
+      "ui_homescreen",
+      "ui_homescreen_homescreen",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_mainactivity_kt_bundle",
+      "wear_mainactivity",
+      "wear_mainactivity_mainactivity",
+      "wear_mainactivity_mainactivity_oncreate",
+      "wear_mainactivity_mainactivity_starthrcollection"
+    ],
+    "1": [
+      "ble_hrblemanager",
+      "ble_hrblemanager_connected",
+      "ble_hrblemanager_connecting",
+      "ble_hrblemanager_connectionstate",
+      "ble_hrblemanager_disconnected",
+      "ble_hrblemanager_error",
+      "ble_hrblemanager_hrblemanager",
+      "ble_hrblemanager_hrblemanager_connect",
+      "ble_hrblemanager_hrblemanager_connectfake",
+      "ble_hrblemanager_hrblemanager_connecttoaddress",
+      "ble_hrblemanager_hrblemanager_disconnect",
+      "ble_hrblemanager_hrblemanager_handlehrdata",
+      "ble_hrblemanager_hrblemanager_schedulereconnect",
+      "ble_hrblemanager_hrblemanager_startfakeemission",
+      "ble_hrblemanager_hrblemanager_startscan",
+      "ble_hrblemanager_hrblemanager_stopscan",
+      "ble_hrblemanager_ready",
+      "ble_hrblemanager_reconnecting",
+      "bluetoothgatt",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_bluetoothdevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_bytearray",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_job",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_parsedhr",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_sharedflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_hrblemanager_kt_string",
+      "scancallback",
+      "scanresult"
+    ],
+    "2": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_context",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_hrsource",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_intent",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_job",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_service_hrrecordingservice_kt_string",
+      "com",
+      "hrblemanager",
+      "ibinder",
+      "notification",
+      "service",
+      "service_hrrecordingservice",
+      "service_hrrecordingservice_hrrecordingservice",
+      "service_hrrecordingservice_hrrecordingservice_buildnotification",
+      "service_hrrecordingservice_hrrecordingservice_createnotificationchannel",
+      "service_hrrecordingservice_hrrecordingservice_notifywatch",
+      "service_hrrecordingservice_hrrecordingservice_onbind",
+      "service_hrrecordingservice_hrrecordingservice_oncreate",
+      "service_hrrecordingservice_hrrecordingservice_ondestroy",
+      "service_hrrecordingservice_hrrecordingservice_onstartcommand",
+      "service_hrrecordingservice_hrrecordingservice_startsession",
+      "service_hrrecordingservice_hrrecordingservice_stopsession",
+      "service_hrrecordingservice_hrrecordingservice_updatenotification",
+      "service_hrrecordingservice_startintent",
+      "service_hrrecordingservice_stopintent",
+      "sessionrepository",
+      "wearablehrsource"
+    ],
+    "3": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_flow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_hrsource",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_saveddevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_settingsrepository_kt_usersettings",
+      "repository_settingsrepository",
+      "repository_settingsrepository_keys",
+      "repository_settingsrepository_settingsrepository",
+      "repository_settingsrepository_settingsrepository_addsaveddevice",
+      "repository_settingsrepository_settingsrepository_clearsaveddevice",
+      "repository_settingsrepository_settingsrepository_removesaveddevice",
+      "repository_settingsrepository_settingsrepository_savedeviceaddress",
+      "repository_settingsrepository_settingsrepository_setage",
+      "repository_settingsrepository_settingsrepository_setautoconnect",
+      "repository_settingsrepository_settingsrepository_sethrsource",
+      "repository_settingsrepository_settingsrepository_setmanualmaxhr",
+      "repository_settingsrepository_settingsrepository_setonboardingdone",
+      "repository_settingsrepository_settingsrepository_setrestinghr",
+      "repository_settingsrepository_settingsrepository_settargetzone"
+    ],
+    "4": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_bluetoothdevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_connectionstate",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_discovereddevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_saveddevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanviewmodel_kt_string",
+      "scan_scanviewmodel",
+      "scan_scanviewmodel_scanviewmodel",
+      "scan_scanviewmodel_scanviewmodel_connect",
+      "scan_scanviewmodel_scanviewmodel_connecttodiscovered",
+      "scan_scanviewmodel_scanviewmodel_connecttosaved",
+      "scan_scanviewmodel_scanviewmodel_disconnect",
+      "scan_scanviewmodel_scanviewmodel_forgetdevice",
+      "scan_scanviewmodel_scanviewmodel_oncleared",
+      "scan_scanviewmodel_scanviewmodel_startscan",
+      "scan_scanviewmodel_scanviewmodel_startsession",
+      "scan_scanviewmodel_scanviewmodel_stopscan",
+      "scan_scanviewmodel_scanviewmodel_stopsession",
+      "scan_scanviewmodel_scanviewmodel_toggleautoconnect"
+    ],
+    "5": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_context",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_hrsample",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_intent",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_session",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_export_sessionexporter_kt_string",
+      "export_sessionexporter",
+      "export_sessionexporter_sessionexporter",
+      "export_sessionexporter_sessionexporter_buildcsv",
+      "export_sessionexporter_sessionexporter_buildcsvshareintent",
+      "export_sessionexporter_sessionexporter_buildjson",
+      "export_sessionexporter_sessionexporter_buildshareintent",
+      "export_sessionexporter_sessionexporter_csvshareintent",
+      "export_sessionexporter_sessionexporter_shareintent",
+      "export_sessionexporter_sessionexporter_ts",
+      "export_sessionexporter_sessionexporter_writecsvtocache",
+      "export_sessionexporter_sessionexporter_writetocache",
+      "file"
+    ],
+    "6": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_context",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_float",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_hrsample",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_intent",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_map",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_session",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_detail_detailviewmodel_kt_zonebounds",
+      "detail_detailviewmodel",
+      "detail_detailviewmodel_detailviewmodel",
+      "detail_detailviewmodel_detailviewmodel_export",
+      "detail_detailviewmodel_detailviewmodel_exportcsv",
+      "detail_detailviewmodel_detailviewmodel_updatelabel",
+      "detail_detailviewmodel_detailviewmodel_updatenote",
+      "detail_detailviewmodel_stats"
+    ],
+    "7": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_connectionstate",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_float",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_map",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_liveviewmodel_kt_zonebounds",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingviewmodel_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingviewmodel_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingviewmodel_kt_stateflow",
+      "live_liveviewmodel",
+      "live_liveviewmodel_liveviewmodel",
+      "live_liveviewmodel_liveviewmodel_settargetzone",
+      "onboarding_onboardingviewmodel",
+      "onboarding_onboardingviewmodel_onboardingviewmodel",
+      "onboarding_onboardingviewmodel_onboardingviewmodel_complete",
+      "viewmodel"
+    ],
+    "8": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sessiondao_kt_flow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sessiondao_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sessiondao_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sessiondao_kt_session",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sessiondao_kt_string",
+      "db_sessiondao",
+      "db_sessiondao_sessiondao",
+      "db_sessiondao_sessiondao_closeorphanedsessions",
+      "db_sessiondao_sessiondao_closesession",
+      "db_sessiondao_sessiondao_deletebyids",
+      "db_sessiondao_sessiondao_getallsessions",
+      "db_sessiondao_sessiondao_getbyid",
+      "db_sessiondao_sessiondao_getbyidflow",
+      "db_sessiondao_sessiondao_insert",
+      "db_sessiondao_sessiondao_updatelabel",
+      "db_sessiondao_sessiondao_updatenote"
+    ],
+    "9": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyviewmodel_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyviewmodel_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyviewmodel_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyviewmodel_kt_session",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyviewmodel_kt_stateflow",
+      "history_historyviewmodel",
+      "history_historyviewmodel_historyviewmodel",
+      "history_historyviewmodel_historyviewmodel_clearselection",
+      "history_historyviewmodel_historyviewmodel_deleteselected",
+      "history_historyviewmodel_historyviewmodel_deletesingle",
+      "history_historyviewmodel_historyviewmodel_startselection",
+      "history_historyviewmodel_historyviewmodel_toggleselection",
+      "history_historyviewmodel_sessiontrimpentry",
+      "history_historyviewmodel_summarystats",
+      "history_historyviewmodel_weekstats",
+      "set"
+    ],
+    "10": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_color",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_float",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_map",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_modifier",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_live_livescreen_kt_zonebounds",
+      "live_livescreen",
+      "live_livescreen_bpmzonechart",
+      "live_livescreen_confirmdialog",
+      "live_livescreen_livescreen",
+      "live_livescreen_statitem",
+      "live_livescreen_zeitinzonesection",
+      "liveviewmodel"
+    ],
+    "11": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_hrsource",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_settings_settingsviewmodel_kt_usersettings",
+      "settings_settingsviewmodel",
+      "settings_settingsviewmodel_healthimportstatus",
+      "settings_settingsviewmodel_settingsviewmodel",
+      "settings_settingsviewmodel_settingsviewmodel_clearsaveddevice",
+      "settings_settingsviewmodel_settingsviewmodel_importrestinghrfromhealthconnect",
+      "settings_settingsviewmodel_settingsviewmodel_setage",
+      "settings_settingsviewmodel_settingsviewmodel_sethrsource",
+      "settings_settingsviewmodel_settingsviewmodel_setmanualmaxhr",
+      "settings_settingsviewmodel_settingsviewmodel_setrestinghr",
+      "settings_settingsviewmodel_settingsviewmodel_settargetzone"
+    ],
+    "12": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_hrsampledao_kt_flow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_hrsampledao_kt_hrsample",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_hrsampledao_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_hrsampledao_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_hrsampledao_kt_long",
+      "db_hrsampledao",
+      "db_hrsampledao_hrsampledao",
+      "db_hrsampledao_hrsampledao_getglobalavgbpm",
+      "db_hrsampledao_hrsampledao_getsamplecount",
+      "db_hrsampledao_hrsampledao_getsamplesforsession",
+      "db_hrsampledao_hrsampledao_getsamplesonce",
+      "db_hrsampledao_hrsampledao_getsessionavgbpms",
+      "db_hrsampledao_hrsampledao_insert",
+      "db_hrsampledao_sessionavgbpm"
+    ],
+    "13": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_flow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_job",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_parsedhr",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_stateflow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_repository_sessionrepository_kt_string",
+      "repository_sessionrepository",
+      "repository_sessionrepository_sessionrepository",
+      "repository_sessionrepository_sessionrepository_deletesessionsbyids",
+      "repository_sessionrepository_sessionrepository_getsessionsflow",
+      "repository_sessionrepository_sessionrepository_startsession",
+      "repository_sessionrepository_sessionrepository_stopsession"
+    ],
+    "14": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyscreen_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyscreen_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyscreen_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyscreen_kt_session",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_history_historyscreen_kt_string",
+      "history_historyscreen",
+      "history_historyscreen_durationstring",
+      "history_historyscreen_historyscreen",
+      "history_historyscreen_sessionlistitem",
+      "history_historyscreen_statistiktab",
+      "history_historyscreen_summarycard",
+      "history_historyscreen_summaryitem",
+      "history_historyscreen_todatestring",
+      "historyviewmodel"
+    ],
+    "15": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_color",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_float",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_long",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_map",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_modifier",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_string",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_trainingui_kt_zonebounds",
+      "shared_trainingui",
+      "shared_trainingui_bpmzonechart",
+      "shared_trainingui_statitem",
+      "shared_trainingui_zeitinzonesection"
+    ],
+    "16": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanscreen_kt_discovereddevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanscreen_kt_saveddevice",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_scan_scanscreen_kt_string",
+      "scan_scanscreen",
+      "scan_scanscreen_brandhint",
+      "scan_scanscreen_deviceitem",
+      "scan_scanscreen_saveddeviceitem",
+      "scan_scanscreen_scanscreen",
+      "scan_scanscreen_smartwatchhelpdialog",
+      "scan_scanscreen_starttrainingdialog",
+      "scanviewmodel"
+    ],
+    "17": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_hrzonecalculator_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_hrzonecalculator_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_hrzonecalculator_kt_string",
+      "domain_hrzonecalculator",
+      "domain_hrzonecalculator_hrzonecalculator",
+      "domain_hrzonecalculator_hrzonecalculator_calculatezones",
+      "domain_hrzonecalculator_hrzonecalculator_tanakamaxhr",
+      "domain_hrzonecalculator_hrzonecalculator_zonefor",
+      "domain_hrzonecalculator_zonebounds",
+      "pair"
+    ],
+    "18": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingscreen_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingscreen_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_onboarding_onboardingscreen_kt_string",
+      "onboarding_onboardingscreen",
+      "onboarding_onboardingscreen_onboardingscreen",
+      "onboarding_onboardingscreen_step1",
+      "onboarding_onboardingscreen_step2",
+      "onboarding_onboardingscreen_step3",
+      "onboarding_onboardingscreen_summaryrow",
+      "onboardingviewmodel"
+    ],
+    "19": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_wearable_wearhrlistenerservice_kt_messageevent",
+      "comms_watchcommandlistener",
+      "comms_watchcommandlistener_watchcommandlistener",
+      "comms_watchcommandlistener_watchcommandlistener_onmessagereceived",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_comms_watchcommandlistener_kt_messageevent",
+      "wearable_wearhrlistenerservice",
+      "wearable_wearhrlistenerservice_wearablehrsource",
+      "wearable_wearhrlistenerservice_wearhrlistenerservice",
+      "wearable_wearhrlistenerservice_wearhrlistenerservice_onmessagereceived",
+      "wearablelistenerservice"
+    ],
+    "20": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sportlabeldao_kt_flow",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sportlabeldao_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_data_db_sportlabeldao_kt_long",
+      "db_sportlabeldao",
+      "db_sportlabeldao_sportlabeldao",
+      "db_sportlabeldao_sportlabeldao_delete",
+      "db_sportlabeldao_sportlabeldao_getalllabels",
+      "db_sportlabeldao_sportlabeldao_insert",
+      "sportlabel"
+    ],
+    "21": [
+      "db_hrdatabase",
+      "db_hrdatabase_hrdatabase",
+      "db_hrdatabase_hrdatabase_hrsampledao",
+      "db_hrdatabase_hrdatabase_sessiondao",
+      "db_hrdatabase_hrdatabase_sportlabeldao",
+      "hrsampledao",
+      "roomdatabase",
+      "sessiondao",
+      "sportlabeldao"
+    ],
+    "22": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_di_databasemodule_kt_context",
+      "di_databasemodule",
+      "di_databasemodule_databasemodule",
+      "di_databasemodule_databasemodule_providedatabase",
+      "di_databasemodule_databasemodule_providehrsampledao",
+      "di_databasemodule_databasemodule_providesessiondao",
+      "di_databasemodule_databasemodule_providesportlabeldao",
+      "hrdatabase"
+    ],
+    "23": [
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_watchstate_kt_boolean",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_watchstate_kt_int",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_watchstate_kt_stateflow",
+      "wear_watchstate",
+      "wear_watchstate_watchstate",
+      "wear_watchstate_watchstate_setbpm",
+      "wear_watchstate_watchstate_setrecording"
+    ],
+    "24": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_di_datamodule_kt_context",
+      "datastore",
+      "di_datamodule",
+      "di_datamodule_datamodule",
+      "di_datamodule_datamodule_providedatastore",
+      "preferences"
+    ],
+    "25": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_discovereddevice_kt_string",
+      "devicetype",
+      "domain_discovereddevice",
+      "domain_discovereddevice_discovereddevice",
+      "domain_discovereddevice_fake",
+      "domain_discovereddevice_real"
+    ],
+    "26": [
+      "application",
+      "hrtracker_hrtrackerapplication",
+      "hrtracker_hrtrackerapplication_hrtrackerapplication",
+      "wear_wearapplication",
+      "wear_wearapplication_wearapplication"
+    ],
+    "27": [
+      "ble_heartrateparser",
+      "ble_heartrateparser_heartrateparser",
+      "ble_heartrateparser_heartrateparser_parse",
+      "ble_heartrateparser_parsedhr",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ble_heartrateparser_kt_bytearray"
+    ],
+    "28": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_health_healthconnectmanager_kt_boolean",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_health_healthconnectmanager_kt_int",
+      "health_healthconnectmanager",
+      "health_healthconnectmanager_healthconnectmanager",
+      "health_healthconnectmanager_healthconnectmanager_readlatestrestinghr"
+    ],
+    "29": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_bpmlinechart_kt_int",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_bpmlinechart_kt_list",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_ui_shared_bpmlinechart_kt_modifier",
+      "shared_bpmlinechart",
+      "shared_bpmlinechart_bpmlinechart"
+    ],
+    "30": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_wearable_wearablehrsource_kt_parsedhr",
+      "code_app_src_main_kotlin_com_kevin_hrtracker_wearable_wearablehrsource_kt_sharedflow",
+      "wearable_wearablehrsource",
+      "wearable_wearablehrsource_wearablehrsource",
+      "wearable_wearablehrsource_wearablehrsource_tryemit"
+    ],
+    "31": [
+      "sensor_hrsensormanager",
+      "sensor_hrsensormanager_hrsensormanager",
+      "sensor_hrsensormanager_hrsensormanager_hrflow",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_sensor_hrsensormanager_kt_flow",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_sensor_hrsensormanager_kt_int"
+    ],
+    "32": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_devicetype_kt_string",
+      "domain_devicetype",
+      "domain_devicetype_devicetype",
+      "domain_devicetype_guessdevicetype"
+    ],
+    "33": [
+      "comms_phonemessenger",
+      "comms_phonemessenger_phonemessenger",
+      "comms_phonemessenger_phonemessenger_sendhrsample",
+      "wear_app_src_main_kotlin_com_kevin_hrtracker_wear_comms_phonemessenger_kt_int"
+    ],
+    "34": [
+      "code_app_src_main_kotlin_com_kevin_hrtracker_domain_usersettings_kt_int",
+      "domain_usersettings",
+      "domain_usersettings_usersettings"
+    ],
+    "35": [
+      "domain_hrsource",
+      "domain_hrsource_hrsource"
+    ],
+    "36": [
+      "domain_saveddevice",
+      "domain_saveddevice_saveddevice"
+    ],
+    "37": [
+      "entity_hrsample",
+      "entity_hrsample_hrsample"
+    ],
+    "38": [
+      "entity_session",
+      "entity_session_session"
+    ],
+    "39": [
+      "entity_sportlabel",
+      "entity_sportlabel_sportlabel"
+    ],
+    "40": [
+      "code_app_build_gradle_kts_app_build_gradle"
+    ],
+    "41": [
+      "code_build_gradle"
+    ],
+    "42": [
+      "code_ic_launcher"
+    ],
+    "43": [
+      "code_ic_launcher-playstore"
+    ],
+    "44": [
+      "code_ic_launcher_foreground"
+    ],
+    "45": [
+      "code_ic_launcher_foreground_xhdpi"
+    ],
+    "46": [
+      "code_ic_launcher_round"
+    ],
+    "47": [
+      "code_ic_launcher_round_mdpi"
+    ],
+    "48": [
+      "code_ic_launcher_xhdpi"
+    ],
+    "49": [
+      "code_settings_gradle"
+    ],
+    "50": [
+      "theme_color"
+    ],
+    "51": [
+      "theme_type"
+    ],
+    "52": [
+      "wear_app_build_gradle_kts_app_build_gradle"
+    ],
+    "53": [
+      "wear_build_gradle"
+    ],
+    "54": [
+      "wear_settings_gradle"
+    ]
+  },
+  "cohesion": {
+    "0": 0.07765151515151515,
+    "1": 0.10344827586206896,
+    "2": 0.11375661375661375,
+    "3": 0.12554112554112554,
+    "4": 0.12987012987012986,
+    "5": 0.2807017543859649,
+    "6": 0.1286549707602339,
+    "7": 0.1111111111111111,
+    "8": 0.23333333333333334,
+    "9": 0.175,
+    "10": 0.18333333333333332,
+    "11": 0.16666666666666666,
+    "12": 0.27472527472527475,
+    "13": 0.16483516483516483,
+    "14": 0.27472527472527475,
+    "15": 0.1794871794871795,
+    "16": 0.2727272727272727,
+    "17": 0.3111111111111111,
+    "18": 0.35555555555555557,
+    "19": 0.2222222222222222,
+    "20": 0.2777777777777778,
+    "21": 0.2222222222222222,
+    "22": 0.35714285714285715,
+    "23": 0.38095238095238093,
+    "24": 0.3333333333333333,
+    "25": 0.7333333333333333,
+    "26": 0.4,
+    "27": 0.5,
+    "28": 0.4,
+    "29": 0.4,
+    "30": 0.5,
+    "31": 0.4,
+    "32": 0.6666666666666666,
+    "33": 0.5,
+    "34": 0.6666666666666666,
+    "35": 1.0,
+    "36": 1.0,
+    "37": 1.0,
+    "38": 1.0,
+    "39": 1.0,
+    "40": 1.0,
+    "41": 1.0,
+    "42": 1.0,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0,
+    "47": 1.0,
+    "48": 1.0,
+    "49": 1.0,
+    "50": 1.0,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 1.0,
+    "54": 1.0
+  },
+  "gods": [
+    {
+      "id": "scan_scanviewmodel_scanviewmodel",
+      "label": "ScanViewModel",
+      "degree": 22
+    },
+    {
+      "id": "ble_hrblemanager_hrblemanager",
+      "label": "HrBleManager",
+      "degree": 20
+    },
+    {
+      "id": "repository_settingsrepository_settingsrepository",
+      "label": "SettingsRepository",
+      "degree": 18
+    },
+    {
+      "id": "service_hrrecordingservice_hrrecordingservice",
+      "label": "HrRecordingService",
+      "degree": 18
+    },
+    {
+      "id": "detail_detailviewmodel_detailviewmodel",
+      "label": "DetailViewModel",
+      "degree": 16
+    },
+    {
+      "id": "history_historyviewmodel_historyviewmodel",
+      "label": "HistoryViewModel",
+      "degree": 16
+    },
+    {
+      "id": "settings_settingsviewmodel_settingsviewmodel",
+      "label": "SettingsViewModel",
+      "degree": 14
+    },
+    {
+      "id": "live_liveviewmodel_liveviewmodel",
+      "label": "LiveViewModel",
+      "degree": 12
+    },
+    {
+      "id": "db_sessiondao_sessiondao",
+      "label": "SessionDao",
+      "degree": 10
+    },
+    {
+      "id": "export_sessionexporter_sessionexporter",
+      "label": "SessionExporter",
+      "degree": 10
+    }
+  ],
+  "surprises": [
+    {
+      "source": "DetailScreen()",
+      "target": "durationString()",
+      "source_files": [
+        "code/app/src/main/kotlin/com/kevin/hrtracker/ui/detail/DetailScreen.kt",
+        "code/app/src/main/kotlin/com/kevin/hrtracker/ui/history/HistoryScreen.kt"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 14430,
+    "output": 1793
+  }
+}

@@ -13,9 +13,10 @@ Du prüfst den letzten Diff. Du änderst nichts. Du gibst priorisiertes Feedback
 
 ## Vorgehen
 
-1. `git diff` lesen (oder `git diff --staged`, je nach Zustand).
-2. Nur die geänderten Dateien plus die direkten Aufrufer/Caller anschauen.
-3. Spec-Abgleich nur bei verdächtigem Verhalten, nicht prophylaktisch.
+1. `graphify-out/GRAPH_REPORT.md` lesen — Layer-Grenzen und Abhängigkeiten verstehen, bevor der Diff bewertet wird.
+2. `git diff` lesen (oder `git diff --staged`, je nach Zustand).
+3. Nur die geänderten Dateien plus die direkten Aufrufer/Caller anschauen.
+4. Spec-Abgleich nur bei verdächtigem Verhalten, nicht prophylaktisch.
 
 ## Checkliste
 

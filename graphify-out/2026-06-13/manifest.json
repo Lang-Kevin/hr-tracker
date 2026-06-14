@@ -10,9 +10,9 @@
     "semantic_hash": ""
   },
   "code/app/build.gradle.kts": {
-    "mtime": 1781392186.3858452,
-    "ast_hash": "a438de3db9d228b7c30bcb205f357828",
-    "semantic_hash": ""
+    "mtime": 1780759931.5989814,
+    "ast_hash": "10a8683e858e6b7ccb78368a9804a794",
+    "semantic_hash": "10a8683e858e6b7ccb78368a9804a794"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/HrTrackerApplication.kt": {
     "mtime": 1780562365.3787007,
@@ -30,9 +30,9 @@
     "semantic_hash": "f19e54c5de601214f8eab73bc9b3f48c"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ble/HrBleManager.kt": {
-    "mtime": 1781392686.0758374,
-    "ast_hash": "43eb4aca62ec4c48db241fe520d5a918",
-    "semantic_hash": ""
+    "mtime": 1780770190.8546317,
+    "ast_hash": "cc0172ee43d24f5abfea8f599ba4b6df",
+    "semantic_hash": "cc0172ee43d24f5abfea8f599ba4b6df"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/data/db/HrDatabase.kt": {
     "mtime": 1781368560.1135,
@@ -60,8 +60,8 @@
     "semantic_hash": "9d247584c09488e65e99b42f45dc9b6d"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/data/entity/Session.kt": {
-    "mtime": 1781392481.1380334,
-    "ast_hash": "fd588cbb0de51bbdaa32a67e14efd5d1",
+    "mtime": 1781368542.9529495,
+    "ast_hash": "d206f4311e85521e5b39c87ef4803908",
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/data/entity/SportLabel.kt": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/data/repository/SettingsRepository.kt": {
-    "mtime": 1781392449.2906237,
-    "ast_hash": "bcc500cc98b68168b732740ceb66c44a",
+    "mtime": 1781294789.7664628,
+    "ast_hash": "e18704e30fd8c57685889317fa92778f",
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/di/DataModule.kt": {
@@ -89,6 +89,16 @@
     "ast_hash": "332ef5218f46aee7640efcaca282acc7",
     "semantic_hash": ""
   },
+  "code/app/src/main/kotlin/com/kevin/hrtracker/domain/DeviceType.kt": {
+    "mtime": 1780732065.2890978,
+    "ast_hash": "12802c24df584767667bf40c1e874582",
+    "semantic_hash": "12802c24df584767667bf40c1e874582"
+  },
+  "code/app/src/main/kotlin/com/kevin/hrtracker/domain/DiscoveredDevice.kt": {
+    "mtime": 1780732081.6162775,
+    "ast_hash": "c5cb94e34b335a801e2e18370580f090",
+    "semantic_hash": "c5cb94e34b335a801e2e18370580f090"
+  },
   "code/app/src/main/kotlin/com/kevin/hrtracker/domain/HrSource.kt": {
     "mtime": 1780759942.9430106,
     "ast_hash": "1e0abf7cece4ee5cfff4a7bbd92f55cb",
@@ -98,6 +108,11 @@
     "mtime": 1780719931.9013145,
     "ast_hash": "e3870175f7663dc3bbc22324b0b2c507",
     "semantic_hash": "e3870175f7663dc3bbc22324b0b2c507"
+  },
+  "code/app/src/main/kotlin/com/kevin/hrtracker/domain/SavedDevice.kt": {
+    "mtime": 1780643842.6354976,
+    "ast_hash": "18b073b1f051c628518a2ebe454d7266",
+    "semantic_hash": "18b073b1f051c628518a2ebe454d7266"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/domain/UserSettings.kt": {
     "mtime": 1780759935.3599513,
@@ -115,9 +130,9 @@
     "semantic_hash": "bd0575ce3b6c27b6b63d62a6af5a9edb"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/service/HrRecordingService.kt": {
-    "mtime": 1781425759.6805398,
-    "ast_hash": "e2c187a708db3e903cf122bdbceff96d",
-    "semantic_hash": ""
+    "mtime": 1780770205.2785344,
+    "ast_hash": "9cd6c638cb67b040ee4fe800c079171f",
+    "semantic_hash": "9cd6c638cb67b040ee4fe800c079171f"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/detail/DetailScreen.kt": {
     "mtime": 1781341180.452248,
@@ -145,9 +160,9 @@
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/live/LiveViewModel.kt": {
-    "mtime": 1781392450.1827314,
-    "ast_hash": "1bb65d1a4221aa32590d4c319634ceeb",
-    "semantic_hash": ""
+    "mtime": 1780769996.4362607,
+    "ast_hash": "a2ccc786782b82c428ace782821b23d6",
+    "semantic_hash": "a2ccc786782b82c428ace782821b23d6"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/onboarding/OnboardingScreen.kt": {
     "mtime": 1781341228.359349,
@@ -160,13 +175,13 @@
     "semantic_hash": "a95f713ae19e02f376cc2150d66dc8f0"
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/scan/ScanScreen.kt": {
-    "mtime": 1781392496.2252624,
-    "ast_hash": "36d2eed7f158b9d0bef1cdd338bbcd91",
+    "mtime": 1781341115.350873,
+    "ast_hash": "631c59c9f7ae14564caf65a51ef4cdb5",
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/scan/ScanViewModel.kt": {
-    "mtime": 1781392490.5933683,
-    "ast_hash": "4d5e835b7262ceb7ed3656f1a14ed247",
+    "mtime": 1781339160.5368967,
+    "ast_hash": "c900486a55dd8390c563c2c7e1ac8fde",
     "semantic_hash": ""
   },
   "code/app/src/main/kotlin/com/kevin/hrtracker/ui/settings/SettingsScreen.kt": {
@@ -225,9 +240,9 @@
     "semantic_hash": "1b55ea5b0e5fc1eb95371fb67272795f"
   },
   "code/settings.gradle.kts": {
-    "mtime": 1781392185.6211143,
-    "ast_hash": "7ac58d8abd0abc91f2664efdd1c91cac",
-    "semantic_hash": ""
+    "mtime": 1780759926.0052865,
+    "ast_hash": "38675734eb6adea01b820865c9a1d4c2",
+    "semantic_hash": "38675734eb6adea01b820865c9a1d4c2"
   },
   "wear/app/build.gradle.kts": {
     "mtime": 1780760010.2517462,
@@ -305,13 +320,13 @@
     "semantic_hash": ""
   },
   ".claude/agents/implementer.md": {
-    "mtime": 1781373250.4359086,
-    "ast_hash": "f856b6fb47ade7187bd88006a84931a2",
+    "mtime": 1781337155.1188397,
+    "ast_hash": "99b4f8584185ad917e82cb6b9281cf59",
     "semantic_hash": ""
   },
   ".claude/agents/reviewer.md": {
-    "mtime": 1781373226.0849288,
-    "ast_hash": "528a22b8a62b88595705fe01fab306b3",
+    "mtime": 1781294789.7664628,
+    "ast_hash": "d83e6cc5cdd18ce75caf184206758ff9",
     "semantic_hash": ""
   },
   ".claude/designs/Einstellungen.html": {
@@ -427,11 +442,6 @@
   "code/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp": {
     "mtime": 1780753390.7736936,
     "ast_hash": "8b8a0dde4dbd3ae8a493c94de39d8442",
-    "semantic_hash": ""
-  },
-  "docs/shared-lib-plan.md": {
-    "mtime": 1781389874.640777,
-    "ast_hash": "34b16bc4134696a447685de988d21a0a",
     "semantic_hash": ""
   }
 }

@@ -10,7 +10,7 @@ Antworte immer im caveman-compressed Format. Kein Prosa wo Fragment reicht.
 
 Du bist ein Implementer für das HR-Tracker-Projekt (Kotlin, Jetpack Compose, MVVM, Hilt, Room, Nordic BLE).
 
-Für Chart- und Graph-Implementierungen: nutze `/graphify query` für Codebase-Kontext, lies `graphify-out/GRAPH_REPORT.md` für Layer-Abhängigkeiten.
+Vor jeder Änderung: nutze `graphify query "<topic>"` für Codebase-Kontext und lies `graphify-out/GRAPH_REPORT.md` für Layer-Abhängigkeiten — nicht nur bei Chart/Graph-Tasks.
 
 ## Rolle
 
