@@ -21,6 +21,8 @@ import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.session.SessionListItem
 import com.kevin.shared.ui.session.SummaryCard
+import com.kevin.shared.ui.session.TrashSessionItem
+import com.kevin.shared.ui.session.TrashTab
 import com.kevin.shared.ui.session.durationString
 import com.kevin.shared.ui.session.toDateString
 
@@ -177,7 +179,10 @@ fun HistoryScreen(
                 }
             }
             1 -> StatistikTab(weeklyData, trimpHistory)
-            2 -> TrashTab(trashSessions, onRestore = { viewModel.restoreSessions(listOf(it)) })
+            2 -> TrashTab(
+                items = trashSessions.map { TrashSessionItem(it.id, it.label, it.startedAt) },
+                onRestore = { viewModel.restoreSessions(listOf(it)) }
+            )
         }
     }
 }
@@ -282,61 +287,4 @@ private fun StatistikTab(
     }
 }
 
-@Composable
-private fun TrashTab(
-    trashSessions: List<Session>,
-    onRestore: (Long) -> Unit
-) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        item {
-            if (trashSessions.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Text(
-                        "Elemente werden beim nächsten App-Start endgültig gelöscht.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-        if (trashSessions.isEmpty()) {
-            item {
-                Text(
-                    "Papierkorb ist leer.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(trashSessions, key = { it.id }) { session ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(session.label, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                session.startedAt.toDateString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        TextButton(onClick = { onRestore(session.id) }) {
-                            Text("Wiederherstellen")
-                        }
-                    }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(16.dp)) }
-    }
-}
 
