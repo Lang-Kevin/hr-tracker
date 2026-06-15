@@ -153,6 +153,52 @@ Samsung Galaxy Watch liefert keine RR-Intervalle über SensorManager → Watch-S
 
 ---
 
+## Toolchain-Upgrade Android Studio 2026.1.1 (2026-06-15)
+
+Aligns both `:app` and `:wear` with the versions already in use in `shared-android-lib`.
+
+### Versionen
+
+| Artefakt | Alt | Neu |
+| --- | --- | --- |
+| Gradle wrapper | 8.13 | 9.4.1 |
+| AGP | 8.13.2 | 9.2.1 |
+| Kotlin | 2.0.20 | 2.1.0 |
+| KSP | 2.0.20-1.0.25 | 2.1.0-1.0.29 |
+| Compose BOM | 2024.11.00 | 2026.05.01 |
+| compileSdk | 35 | 37 (beide Module) |
+| Hilt | 2.53 | 2.57.1 |
+| Room | 2.6.1 | 2.8.3 |
+| Lifecycle | 2.8.7 | 2.9.2 |
+| Navigation | 2.8.5 | 2.9.7 |
+| Coroutines | 1.9.0 | 1.11.0 |
+| Vico | 2.0.1 | 3.0.3 |
+| Health Connect | 1.1.0-alpha06 | 1.1.0 |
+| Wear Compose | 1.3.1 | 1.6.2 |
+
+### AGP 9.x Kompatibilität
+
+AGP 9.x registriert die `kotlin`-Extension automatisch (built-in Kotlin support). Da Hilt 2.57.1 noch `BaseExtension` aus dem alten AGP-Pfad referenziert, wird der neue Modus über `gradle.properties` deaktiviert:
+
+```properties
+android.builtInKotlin=false
+android.newDsl=false
+```
+
+Gilt für beide `gradle.properties` (`:app` und `:wear`). Kann entfernt werden, sobald Hilt AGP 9.x nativ unterstützt.
+
+### Vico 3.x API-Migration
+
+`vico:compose:3.x` ist ein KMP-Artefakt. Die Klassen `CartesianChartModelProducer` und `lineSeries` sind von `com.patrykandpatrick.vico.core.cartesian.data.*` nach `com.patrykandpatrick.vico.compose.cartesian.data.*` gewandert.
+
+Geändert: `ui/shared/BpmLineChart.kt` (2 Imports).
+
+### Sonstige Fixes
+
+- `ui/detail/DetailScreen.kt` — `Locale.getDefault()` in Composable durch `LocalConfiguration.current.locales[0]` ersetzt (Lint `NonObservableLocale`).
+
+---
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).

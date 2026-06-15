@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.kevin.hrtracker.wear"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.kevin.hrtracker.wear"
