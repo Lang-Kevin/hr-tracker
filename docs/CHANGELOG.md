@@ -220,6 +220,19 @@ Geändert: `ui/shared/BpmLineChart.kt` (2 Imports).
 
 ---
 
+## Ziel-Zone-Picker + Zonen-Sichtbarkeits-Toggle (2026-06-17)
+
+Bisher setzte ein Klick auf eine "Zeit in Zone"-Spalte die Ziel-Zone — unintuitiv, da ein Statistik-Element den Recording-Zustand änderte.
+
+- Ziel-Zone wird jetzt über Klick auf die **"ZIEL-ZONE"**-Stat ausgewählt (öffnet Dialog mit FilterChips Z1–Z5).
+- "Zeit in Zone"-Klicks blenden die jeweilige Zone stattdessen im Live-Chart ein/aus (`visibleZones: Set<Int>`, rein lokaler UI-State, kein DataStore).
+- Ziel-Band + "ZIEL"-Badge im Chart ignorieren den Sichtbarkeits-Toggle bewusst — bleiben immer sichtbar.
+- `visibleZones` wird bei Sessionstart auf alle 5 Zonen zurückgesetzt.
+
+Geänderte Dateien:
+- `ui/live/LiveViewModel.kt` → `visibleZones`-StateFlow, `toggleZoneVisibility()`, Reset in `activeSessionId.collect`
+- `ui/live/LiveScreen.kt` → `StatItem` mit optionalem `onClick`, `TargetZoneDialog`, `ZeitInZoneSection`/`BpmZoneChart` mit `visibleZones`-Parameter
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).

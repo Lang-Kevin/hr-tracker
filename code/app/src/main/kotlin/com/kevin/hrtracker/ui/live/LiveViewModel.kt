@@ -77,6 +77,13 @@ class LiveViewModel @Inject constructor(
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 
+    private val _visibleZones = MutableStateFlow(setOf(1, 2, 3, 4, 5))
+    val visibleZones: StateFlow<Set<Int>> = _visibleZones.asStateFlow()
+
+    fun toggleZoneVisibility(zone: Int) {
+        _visibleZones.update { if (zone in it) it - zone else it + zone }
+    }
+
     private var sessionStartMs = 0L
 
     init {
@@ -108,6 +115,7 @@ class LiveViewModel @Inject constructor(
                 if (id != null && sessionStartMs == 0L) {
                     sessionStartMs = sessionRepository.activeSession.first()?.startedAt
                         ?: System.currentTimeMillis()
+                    _visibleZones.value = setOf(1, 2, 3, 4, 5)
                 }
                 if (id == null) {
                     sessionStartMs = 0L

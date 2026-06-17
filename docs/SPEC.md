@@ -98,6 +98,8 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 
 Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `ConfirmDialog` vor Aktion. System-Back öffnet bei aktiver Session zusätzlich einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen). Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
 
+Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Klick auf eine **Zeit-in-Zone**-Spalte blendet diese Zone im Live-Chart ein/aus (`visibleZones`, rein lokaler State, kein Persistenz, Reset bei Sessionstart). Ziel-Band + "ZIEL"-Badge im Chart bleiben unabhängig davon immer sichtbar.
+
 ## Analytics (DetailScreen)
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").

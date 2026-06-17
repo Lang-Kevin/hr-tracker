@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -60,6 +61,7 @@ fun LiveScreen(
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
     val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
+    val visibleZones by viewModel.visibleZones.collectAsStateWithLifecycle()
 
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
@@ -73,6 +75,7 @@ fun LiveScreen(
     var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
+    var showTargetZoneDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = activeSessionId != null) { showLeaveDialog = true }
 
@@ -101,6 +104,14 @@ fun LiveScreen(
             confirmLabel = "Speichern",
             onConfirm = { showStopDialog = false; onStopSession() },
             onDismiss = { showStopDialog = false }
+        )
+    }
+
+    if (showTargetZoneDialog) {
+        TargetZoneDialog(
+            targetZone = targetZone,
+            onSelect = { viewModel.setTargetZone(it); showTargetZoneDialog = false },
+            onDismiss = { showTargetZoneDialog = false }
         )
     }
 
@@ -160,6 +171,7 @@ fun LiveScreen(
             currentBpm = currentBpm,
             zoneBounds = zoneBounds,
             targetZone = targetZone,
+            visibleZones = visibleZones,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -172,7 +184,8 @@ fun LiveScreen(
             timeInZone = timeInZone,
             percentInTargetZone = percentInTargetZone,
             targetZone = targetZone,
-            onZoneClick = { viewModel.setTargetZone(it) }
+            visibleZones = visibleZones,
+            onZoneClick = { viewModel.toggleZoneVisibility(it) }
         )
 
         Spacer(Modifier.height(12.dp))
@@ -180,7 +193,13 @@ fun LiveScreen(
         // Stats Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("BPM Ø", averageBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem("ZIEL-ZONE", "Zone $targetZone", Modifier.weight(1f), valueColor = PrimaryPurple)
+            StatItem(
+                "ZIEL-ZONE",
+                "Zone $targetZone",
+                Modifier.weight(1f),
+                valueColor = PrimaryPurple,
+                onClick = { showTargetZoneDialog = true }
+            )
             StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
         }
 
@@ -259,11 +278,44 @@ private fun ConfirmDialog(
 }
 
 @Composable
+private fun TargetZoneDialog(
+    targetZone: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ziel-Zone wählen") },
+        text = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                (1..5).forEach { z ->
+                    val selected = targetZone == z
+                    val zoneColor = ZoneColors.getOrElse(z - 1) { PrimaryPurple }
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onSelect(z) },
+                        label = { Text("Z$z") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = zoneColor,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schließen") }
+        }
+    )
+}
+
+@Composable
 private fun BpmZoneChart(
     bpmHistory: List<Int>,
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
+    visibleZones: Set<Int>,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -288,7 +340,7 @@ private fun BpmZoneChart(
         }
 
         // Zone separator lines and Y-axis labels
-        zoneBounds.forEach { z ->
+        zoneBounds.filter { it.zone in visibleZones }.forEach { z ->
             val y = bpmToY(z.lo)
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
@@ -305,7 +357,7 @@ private fun BpmZoneChart(
             )
         }
         // Top boundary line for highest zone
-        zoneBounds.lastOrNull()?.let { z ->
+        zoneBounds.lastOrNull()?.takeIf { it.zone in visibleZones }?.let { z ->
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, bpmToY(z.hi)),
@@ -403,6 +455,7 @@ private fun ZeitInZoneSection(
     timeInZone: Map<Int, Long>,
     percentInTargetZone: Float?,
     targetZone: Int,
+    visibleZones: Set<Int>,
     onZoneClick: (Int) -> Unit = {}
 ) {
     val pct = percentInTargetZone ?: 0f
@@ -461,10 +514,12 @@ private fun ZeitInZoneSection(
         ) {
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
-                val isTarget = z == targetZone
+                val isVisible = z in visibleZones
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onZoneClick(z) }
+                    modifier = Modifier
+                        .clickable { onZoneClick(z) }
+                        .alpha(if (isVisible) 1f else 0.35f)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -478,16 +533,16 @@ private fun ZeitInZoneSection(
                         Text(
                             "Z$z",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isTarget) Color.White
+                            fontWeight = if (isVisible) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isVisible) Color.White
                             else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Text(
                         "%02d:%02d".format(secs / 60, secs % 60),
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isTarget) Color.White
+                        fontWeight = if (isVisible) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isVisible) Color.White
                         else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -501,7 +556,8 @@ private fun StatItem(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.White
+    valueColor: Color = Color.White,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier,
@@ -511,6 +567,7 @@ private fun StatItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
