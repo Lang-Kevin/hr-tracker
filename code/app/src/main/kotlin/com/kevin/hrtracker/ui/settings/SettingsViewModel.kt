@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.UserSettings
+import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.health.HealthConnectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,6 +50,10 @@ class SettingsViewModel @Inject constructor(
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 
     fun setHrSource(source: HrSource) = viewModelScope.launch { settingsRepository.setHrSource(source) }
+
+    fun setCustomZones(zones: List<ZoneBounds>?) = viewModelScope.launch {
+        settingsRepository.setCustomZones(zones)
+    }
 
     fun importRestingHrFromHealthConnect() = viewModelScope.launch {
         _healthImportStatus.value = HealthImportStatus.LOADING

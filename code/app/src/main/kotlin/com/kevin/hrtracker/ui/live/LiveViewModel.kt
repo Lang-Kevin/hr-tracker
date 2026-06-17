@@ -55,10 +55,7 @@ class LiveViewModel @Inject constructor(
         settingsRepository.userSettings
     ) { bpm, settings ->
         if (bpm == null) null
-        else {
-            val zones = HrZoneCalculator.calculateZones(settings.maxHrUsed, settings.restingHr)
-            HrZoneCalculator.zoneFor(bpm, zones)
-        }
+        else HrZoneCalculator.zoneFor(bpm, settings.effectiveZones)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val targetZone: StateFlow<Int> = settingsRepository.userSettings
@@ -71,9 +68,9 @@ class LiveViewModel @Inject constructor(
         if (elapsed == 0L) null else (tiz[tz] ?: 0L).toFloat() / elapsed.toFloat()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val zoneBounds: StateFlow<List<ZoneBounds>> = settingsRepository.userSettings.map { settings ->
-        HrZoneCalculator.calculateZones(settings.maxHrUsed, settings.restingHr)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val zoneBounds: StateFlow<List<ZoneBounds>> = settingsRepository.userSettings
+        .map { it.effectiveZones }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 

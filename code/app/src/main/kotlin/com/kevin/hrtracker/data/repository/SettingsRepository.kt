@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
+import com.kevin.hrtracker.domain.ZoneBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -30,6 +31,7 @@ class SettingsRepository @Inject constructor(
         val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
         val ONBOARDING_DONE  = booleanPreferencesKey("onboarding_done")
         val HR_SOURCE        = stringPreferencesKey("hr_source")
+        val CUSTOM_ZONES     = stringPreferencesKey("custom_zones")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -40,7 +42,10 @@ class SettingsRepository @Inject constructor(
             targetZone   = prefs[Keys.TARGET_ZONE] ?: 2,
             hrSource     = prefs[Keys.HR_SOURCE]?.let {
                 runCatching { HrSource.valueOf(it) }.getOrDefault(HrSource.BLE)
-            } ?: HrSource.BLE
+            } ?: HrSource.BLE,
+            customZones  = prefs[Keys.CUSTOM_ZONES]?.let {
+                runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull()
+            }
         )
     }
 
@@ -113,5 +118,12 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setHrSource(source: HrSource) {
         dataStore.edit { it[Keys.HR_SOURCE] = source.name }
+    }
+
+    suspend fun setCustomZones(zones: List<ZoneBounds>?) {
+        dataStore.edit {
+            if (zones != null) it[Keys.CUSTOM_ZONES] = Json.encodeToString(zones)
+            else it.remove(Keys.CUSTOM_ZONES)
+        }
     }
 }

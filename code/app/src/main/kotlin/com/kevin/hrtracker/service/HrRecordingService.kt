@@ -61,7 +61,10 @@ class HrRecordingService : BaseRecordingService() {
         currentHrSource = s.hrSource
         val hrFlow: Flow<ParsedHr> = if (s.hrSource == HrSource.WATCH) wearableHrSource.hrSamples
                                      else bleManager.hrSamples
-        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, hrSamples = hrFlow)
+        sessionRepository.startSession(
+            label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr,
+            hrSamples = hrFlow, customZones = s.customZones
+        )
         if (currentHrSource == HrSource.WATCH) notifyWatch(true)
         val startMs = System.currentTimeMillis()
         notificationJob = serviceScope.launch {

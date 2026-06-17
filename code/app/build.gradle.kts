@@ -70,4 +70,6 @@ dependencies {
     implementation(libs.play.services.wearable)
 
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation("junit:junit:4.13.2")
 }

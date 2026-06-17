@@ -21,6 +21,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.hrtracker.FeatureFlags
@@ -162,39 +163,115 @@ fun SettingsScreen(
             }
         }
 
+        var customZonesEnabled by remember(settings.customZones != null) {
+            mutableStateOf(settings.customZones != null)
+        }
+        var zoneTexts by remember(customZonesEnabled) {
+            val base = settings.customZones
+                ?: HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
+            mutableStateOf(base.map { it.lo.toString() to it.hi.toString() })
+        }
+        val zoneErrors = HrZoneCalculator.validateZoneTexts(zoneTexts)
+        val zonesValid = zoneErrors.all { it == null }
+
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    "Zonen-Vorschau",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = PrimaryPurple,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Zonen-Vorschau",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrimaryPurple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Eigene Werte", style = MaterialTheme.typography.bodySmall)
+                        Switch(
+                            checked = customZonesEnabled,
+                            onCheckedChange = { enabled ->
+                                customZonesEnabled = enabled
+                                if (!enabled) viewModel.setCustomZones(null)
+                            }
+                        )
+                    }
+                }
                 HorizontalDivider()
-                val zones = com.kevin.hrtracker.domain.HrZoneCalculator
-                    .calculateZones(effectiveMaxHr, settings.restingHr)
-                zones.forEach { z ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                if (customZonesEnabled) {
+                    zoneTexts.forEachIndexed { i, (loText, hiText) ->
+                        val zoneColor = ZoneColors.getOrElse(i) { MaterialTheme.colorScheme.primary }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            val zoneColor = ZoneColors.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
                             Surface(
                                 color = zoneColor,
                                 shape = MaterialTheme.shapes.extraSmall,
                                 modifier = Modifier.size(16.dp)
                             ) {}
-                            Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                            Text("Z${i + 1}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(28.dp))
+                            OutlinedTextField(
+                                value = loText,
+                                onValueChange = { v ->
+                                    zoneTexts = zoneTexts.toMutableList().also { it[i] = v to hiText }
+                                },
+                                label = { Text("Min") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                isError = zoneErrors[i] != null,
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = hiText,
+                                onValueChange = { v ->
+                                    zoneTexts = zoneTexts.toMutableList().also { it[i] = loText to v }
+                                },
+                                label = { Text("Max") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                isError = zoneErrors[i] != null,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                        Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                        zoneErrors[i]?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.setCustomZones(
+                                zoneTexts.mapIndexed { i, (lo, hi) -> ZoneBounds(i + 1, lo.toInt(), hi.toInt()) }
+                            )
+                        },
+                        enabled = zonesValid,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Speichern") }
+                } else {
+                    settings.effectiveZones.forEach { z ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val zoneColor = ZoneColors.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
+                                Surface(
+                                    color = zoneColor,
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.size(16.dp)
+                                ) {}
+                                Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }

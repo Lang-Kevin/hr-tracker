@@ -55,9 +55,10 @@ class SessionRepository @Inject constructor(
         label: String,
         maxHrUsed: Int,
         restingHr: Int?,
-        hrSamples: Flow<ParsedHr> = bleManager.hrSamples
+        hrSamples: Flow<ParsedHr> = bleManager.hrSamples,
+        customZones: List<ZoneBounds>? = null
     ): Long {
-        val zones = HrZoneCalculator.calculateZones(maxHrUsed, restingHr)
+        val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr)
         val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
         val id = db.sessionDao().insert(
             Session(
