@@ -105,7 +105,10 @@ class LiveViewModel @Inject constructor(
         }
         viewModelScope.launch {
             activeSessionId.collect { id ->
-                if (id != null && sessionStartMs == 0L) sessionStartMs = System.currentTimeMillis()
+                if (id != null && sessionStartMs == 0L) {
+                    sessionStartMs = sessionRepository.activeSession.first()?.startedAt
+                        ?: System.currentTimeMillis()
+                }
                 if (id == null) {
                     sessionStartMs = 0L
                     _elapsedSeconds.value = 0

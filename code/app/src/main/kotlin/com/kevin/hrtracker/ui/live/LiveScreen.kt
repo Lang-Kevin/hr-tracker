@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.Animatable
@@ -58,6 +59,7 @@ fun LiveScreen(
     val zoneBounds by viewModel.zoneBounds.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
     val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
+    val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
 
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
@@ -70,6 +72,17 @@ fun LiveScreen(
 
     var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = activeSessionId != null) { showLeaveDialog = true }
+
+    if (showLeaveDialog) {
+        LeaveSessionDialog(
+            onSave = { showLeaveDialog = false; onStopSession() },
+            onDiscard = { showLeaveDialog = false; onAbortSession() },
+            onDismiss = { showLeaveDialog = false }
+        )
+    }
 
     if (showAbortDialog) {
         ConfirmDialog(
@@ -198,6 +211,30 @@ fun LiveScreen(
             ) { Text("Abschließen") }
         }
     }
+}
+
+@Composable
+private fun LeaveSessionDialog(
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Session verlassen?") },
+        text = { Text("Was soll mit der laufenden Aufzeichnung passieren?") },
+        confirmButton = {
+            TextButton(onClick = onSave) { Text("Speichern") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDiscard) {
+                    Text("Verwerfen", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onDismiss) { Text("Weiter messen") }
+            }
+        }
+    )
 }
 
 @Composable

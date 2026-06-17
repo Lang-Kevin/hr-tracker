@@ -39,7 +39,8 @@ fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
     onSessionStarted: (label: String) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onResumeSession: () -> Unit = {}
 ) {
     val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -130,12 +131,20 @@ fun ScanScreen(
                         Text(if (isStarting) "Starte…" else "Training starten")
                     }
                 } else {
-                    Button(
-                        onClick = { viewModel.stopSession() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Session stoppen  (ID: $activeSessionId)")
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onResumeSession,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Fortsetzen")
+                        }
+                        Button(
+                            onClick = { viewModel.stopSession() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Stoppen")
+                        }
                     }
                 }
                 HorizontalDivider()

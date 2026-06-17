@@ -143,6 +143,27 @@ Samsung Galaxy Watch liefert keine RR-Intervalle über SensorManager → Watch-S
 
 **Problem**: BPM-Wert wechselte im BLE-Modus zwischen zwei Werten (2-stellig HR8, 3-stellig Watch). Trat erst nach Smartwatch-Feature auf.
 
+---
+
+## Resume-Session + Back-Button-Warnung (2026-06-17)
+
+In-app-Resume: solange der Prozess lebt, führt ein neuer "Fortsetzen"-Button auf `ScanScreen` zurück zur laufenden `LiveScreen`. Kein Process-Death-Recovery, kein BLE-Auto-Reconnect-on-Cold-Start.
+
+System-Back auf `LiveScreen` öffnet bei aktiver Session einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen) statt die Session stillschweigend zu verlassen.
+
+**Bugfix**: bestehender "Abbrechen"-Button in `LiveScreen` verwarf die Session nicht wirklich — `MainActivity` verdrahtete kein eigenes `onAbortSession`, fiel auf `onStopSession` zurück (speicherte statt zu verwerfen). Jetzt korrekt verdrahtet, nutzt denselben Discard-Pfad wie der Back-Dialog (Hard-Delete inkl. `HrSample`-Cascade).
+
+Geänderte/neue Dateien:
+- `data/db/SessionDao.kt` → `deleteById(id)`
+- `data/repository/SessionRepository.kt` → `discardSession()`
+- `ui/scan/ScanViewModel.kt` → `discardSession()`-Wrapper
+- `ui/scan/ScanScreen.kt` → `onResumeSession`-Parameter, "Fortsetzen"-Button
+- `ui/live/LiveScreen.kt` → `BackHandler`, `LeaveSessionDialog`
+- `ui/live/LiveViewModel.kt` → `sessionStartMs` aus persistiertem `Session.startedAt` statt Wanduhr-Zeit (korrekte Elapsed-Time nach Re-Entry)
+- `MainActivity.kt` → Navigation für Resume + `onAbortSession`-Verdrahtung
+
+Bekannte Restlücke: `timeInZone` (Sekunden pro Zone) wird beim Re-Entry auf leer zurückgesetzt — nur In-Memory, kein persistierter Quellwert. Gesamt-Elapsed-Zeit ist korrekt.
+
 **Ursache**: Samsung BLE-Stack-Bug. Google Play Services verbindet sich über BLE mit der Galaxy Watch (die ebenfalls `0x2A37` exponiert). Samsungs Routing-Tabelle nutzt das Characteristic-UUID als Key statt das `(device, handle)`-Tupel — Watch-HR landete in `HrBleManager.gattCallback` und mischte sich mit HR8-Daten.
 
 ### Fixes

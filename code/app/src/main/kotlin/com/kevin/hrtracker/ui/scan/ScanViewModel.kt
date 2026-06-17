@@ -143,6 +143,8 @@ class ScanViewModel @Inject constructor(
 
     fun stopSession() = viewModelScope.launch { sessionRepository.stopSession() }
 
+    fun discardSession() = viewModelScope.launch { sessionRepository.discardSession() }
+
     override fun onCleared() {
         super.onCleared()
         stopScan()

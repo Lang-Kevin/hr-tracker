@@ -97,6 +97,15 @@ class SessionRepository @Inject constructor(
         Log.d("HRTracker", "Session $id stopped")
     }
 
+    suspend fun discardSession() {
+        val id = _activeSessionId.value ?: return
+        sampleJob?.cancel()
+        sampleJob = null
+        _activeSessionId.value = null
+        db.sessionDao().deleteById(id)
+        Log.d("HRTracker", "Session $id discarded")
+    }
+
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 
     fun getTrashFlow() = db.sessionDao().getTrashFlow()

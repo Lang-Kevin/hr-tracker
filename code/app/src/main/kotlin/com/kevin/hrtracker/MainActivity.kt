@@ -92,16 +92,24 @@ class MainActivity : ComponentActivity() {
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
-                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
+                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) },
+                    onResumeSession = { navController.navigate(Route.LIVE) { launchSingleTop = true } }
                 )
             }
 
             composable(Route.LIVE) {
-                LiveScreen(onStopSession = {
-                    scanViewModel.stopSession()
-                    stopService(HrRecordingService.stopIntent(this@MainActivity))
-                    navController.popBackStack()
-                })
+                LiveScreen(
+                    onStopSession = {
+                        scanViewModel.stopSession()
+                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        navController.popBackStack()
+                    },
+                    onAbortSession = {
+                        scanViewModel.discardSession()
+                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Route.HISTORY) {
