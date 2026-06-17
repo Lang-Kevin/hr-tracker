@@ -81,7 +81,15 @@ class LiveViewModel @Inject constructor(
         _visibleZones.update { if (zone in it) it - zone else it + zone }
     }
 
+    val isPaused: StateFlow<Boolean> = sessionRepository.isPaused
+
+    fun togglePause() = viewModelScope.launch {
+        if (isPaused.value) sessionRepository.resume() else sessionRepository.pause()
+    }
+
     private var sessionStartMs = 0L
+    private var pausedAccumMs = 0L
+    private var pauseStartedMs = 0L
 
     init {
         viewModelScope.launch {
@@ -98,13 +106,23 @@ class LiveViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (true) {
-                if (activeSessionId.value != null && sessionStartMs > 0) {
-                    _elapsedSeconds.value = (System.currentTimeMillis() - sessionStartMs) / 1000
+                if (activeSessionId.value != null && sessionStartMs > 0 && !isPaused.value) {
+                    _elapsedSeconds.value =
+                        (System.currentTimeMillis() - sessionStartMs - pausedAccumMs) / 1000
                     currentZone.value?.let { z ->
                         _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
                     }
                 }
                 delay(1_000)
+            }
+        }
+        viewModelScope.launch {
+            isPaused.collect { paused ->
+                if (paused) pauseStartedMs = System.currentTimeMillis()
+                else if (pauseStartedMs > 0) {
+                    pausedAccumMs += System.currentTimeMillis() - pauseStartedMs
+                    pauseStartedMs = 0L
+                }
             }
         }
         viewModelScope.launch {
@@ -118,6 +136,8 @@ class LiveViewModel @Inject constructor(
                     sessionStartMs = 0L
                     _elapsedSeconds.value = 0
                     _timeInZone.value = emptyMap()
+                    pausedAccumMs = 0L
+                    pauseStartedMs = 0L
                 }
             }
         }

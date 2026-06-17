@@ -62,6 +62,7 @@ fun LiveScreen(
     val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val visibleZones by viewModel.visibleZones.collectAsStateWithLifecycle()
+    val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
 
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
@@ -220,6 +221,10 @@ fun LiveScreen(
                     1.dp, MaterialTheme.colorScheme.error
                 )
             ) { Text("Abbrechen") }
+            OutlinedButton(
+                onClick = { viewModel.togglePause() },
+                modifier = Modifier.weight(1f)
+            ) { Text(if (isPaused) "Fortsetzen" else "Pause") }
             Button(
                 onClick = { showStopDialog = true },
                 modifier = Modifier.weight(1f),
