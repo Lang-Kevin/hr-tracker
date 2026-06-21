@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.session.CategoryFilterRow
 import com.kevin.shared.ui.session.SessionListItem
 import com.kevin.shared.ui.session.SummaryCard
 import com.kevin.shared.ui.session.TrashSessionItem
@@ -34,7 +35,9 @@ fun HistoryScreen(
     onSessionClick: (Long) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    val sessions by viewModel.filteredSessions.collectAsStateWithLifecycle()
+    val availableLabels by viewModel.availableLabels.collectAsStateWithLifecycle()
+    val selectedLabels by viewModel.selectedLabels.collectAsStateWithLifecycle()
     val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
@@ -111,6 +114,11 @@ fun HistoryScreen(
                         "LÄNGSTE" to durationString(summaryStats.longestDurationS)
                     ))
                     Spacer(Modifier.height(8.dp))
+                    CategoryFilterRow(
+                        categories = availableLabels,
+                        selected = selectedLabels,
+                        onToggle = { viewModel.toggleLabelFilter(it) }
+                    )
                 }
                 if (sessions.isEmpty()) {
                     Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)

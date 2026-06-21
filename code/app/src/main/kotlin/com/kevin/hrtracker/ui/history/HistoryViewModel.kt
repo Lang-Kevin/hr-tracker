@@ -30,6 +30,17 @@ class HistoryViewModel @Inject constructor(
     val sessions: StateFlow<List<Session>> = sessionRepository.getSessionsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val _selectedLabels = MutableStateFlow<Set<String>>(emptySet())
+    val selectedLabels: StateFlow<Set<String>> = _selectedLabels.asStateFlow()
+
+    val availableLabels: StateFlow<List<String>> = sessions.map { sessionList ->
+        sessionList.map { it.label }.distinct().sorted()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val filteredSessions: StateFlow<List<Session>> = combine(sessions, _selectedLabels) { all, selected ->
+        if (selected.isEmpty()) all else all.filter { it.label in selected }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val trashSessions: StateFlow<List<Session>> = sessionRepository.getTrashFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -120,6 +131,11 @@ class HistoryViewModel @Inject constructor(
             SessionTrimpEntry(sess.id, sess.label, sess.startedAt, trimp)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun toggleLabelFilter(label: String) {
+        val current = _selectedLabels.value
+        _selectedLabels.value = if (label in current) current - label else current + label
+    }
 
     fun startSelection(id: Long) {
         _selectedIds.value = setOf(id)
