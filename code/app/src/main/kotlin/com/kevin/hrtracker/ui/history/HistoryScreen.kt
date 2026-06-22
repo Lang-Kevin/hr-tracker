@@ -27,6 +27,11 @@ import com.kevin.shared.ui.session.SoftDeleteConfirmationDialog
 import com.kevin.shared.ui.session.TrashTab
 import com.kevin.shared.ui.session.durationString
 import com.kevin.shared.ui.session.toDateString
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +61,11 @@ fun HistoryScreen(
         onDismiss = { pendingDeleteIds = null }
     )
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("history").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,7 +101,8 @@ fun HistoryScreen(
 
         TabRow(
             selectedTabIndex = selectedTab,
-            contentColor = PrimaryPurple
+            contentColor = PrimaryPurple,
+            modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_tabs")
         ) {
             listOf("Verlauf", "Statistik", "Papierkorb").forEachIndexed { index, title ->
                 Tab(
@@ -114,11 +125,13 @@ fun HistoryScreen(
                         "LÄNGSTE" to durationString(summaryStats.longestDurationS)
                     ))
                     Spacer(Modifier.height(8.dp))
-                    CategoryFilterRow(
-                        categories = availableLabels,
-                        selected = selectedLabels,
-                        onToggle = { viewModel.toggleLabelFilter(it) }
-                    )
+                    Box(Modifier.tutorialAnchor(tutorialAnchors, "history_filter")) {
+                        CategoryFilterRow(
+                            categories = availableLabels,
+                            selected = selectedLabels,
+                            onToggle = { viewModel.toggleLabelFilter(it) }
+                        )
+                    }
                 }
                 if (sessions.isEmpty()) {
                     Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
@@ -127,7 +140,10 @@ fun HistoryScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_list")
+                ) {
                     items(sessions, key = { it.id }) { session ->
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
@@ -181,6 +197,18 @@ fun HistoryScreen(
                 TrashTab(items = trashItems, onRestore = { viewModel.restoreSessions(listOf(it)) })
             }
         }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("history_tabs", "Ansichten", "Wechsle zwischen Verlauf, Statistik und Papierkorb."),
+                TutorialStep("history_filter", "Filter", "Filtere deine Trainings nach Art."),
+                TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
+            ),
+            anchors = tutorialAnchors,
+            visible = !tutorialSeen,
+            onFinish = { tutorialViewModel.markSeen("history") }
+        )
     }
 }
 

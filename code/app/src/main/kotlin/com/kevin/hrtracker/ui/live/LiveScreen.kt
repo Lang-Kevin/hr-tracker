@@ -45,6 +45,11 @@ import com.kevin.hrtracker.ui.theme.TertiaryPink
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.shared.ui.session.LeaveSessionDialog
 import com.kevin.shared.ui.zone.TargetZoneDialog
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @Composable
 fun LiveScreen(
@@ -123,6 +128,11 @@ fun LiveScreen(
     val mm = elapsed / 60
     val ss = elapsed % 60
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("live").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -180,6 +190,7 @@ fun LiveScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .tutorialAnchor(tutorialAnchors, "live_chart")
         )
 
         Spacer(Modifier.height(12.dp))
@@ -201,7 +212,7 @@ fun LiveScreen(
             StatItem(
                 "ZIEL-ZONE",
                 "Zone $targetZone",
-                Modifier.weight(1f),
+                Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_zone_stat"),
                 valueColor = PrimaryPurple,
                 onClick = { showTargetZoneDialog = true }
             )
@@ -227,17 +238,30 @@ fun LiveScreen(
             ) { Text("Abbrechen") }
             OutlinedButton(
                 onClick = { viewModel.togglePause() },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_pause")
             ) { Text(if (isPaused) "Fortsetzen" else "Pause") }
             Button(
                 onClick = { showStopDialog = true },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_stop"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryPurple,
                     contentColor = OnPrimary
                 )
             ) { Text("Abschließen") }
         }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone."),
+                TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
+                TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
+                TutorialStep("live_stop", "Abschließen", "Beendet das Training und speichert die aufgezeichneten Daten.")
+            ),
+            anchors = tutorialAnchors,
+            visible = !tutorialSeen,
+            onFinish = { tutorialViewModel.markSeen("live") }
+        )
     }
 }
 

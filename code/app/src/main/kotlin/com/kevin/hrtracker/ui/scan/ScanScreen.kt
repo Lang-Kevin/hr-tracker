@@ -31,6 +31,11 @@ import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.shared.ui.scan.BleStatusCard
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
 import com.kevin.shared.ui.scan.SavedDeviceItem
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -83,6 +88,11 @@ fun ScanScreen(
         if (permissionState.allPermissionsGranted) viewModel.startScan()
     }
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("scan").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -103,17 +113,19 @@ fun ScanScreen(
             TextButton(onClick = onNavigateToHistory) {
                 Text("Verlauf", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = onNavigateToSettings) {
+            TextButton(onClick = onNavigateToSettings, modifier = Modifier.tutorialAnchor(tutorialAnchors, "scan_settings")) {
                 Text("⚙", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
-        BleStatusCard(
-            connectionState = connectionState,
-            autoConnect = autoConnect,
-            onDisconnect = { viewModel.disconnect() },
-            onToggleAutoConnect = { viewModel.toggleAutoConnect() }
-        )
+        Box(Modifier.tutorialAnchor(tutorialAnchors, "scan_status")) {
+            BleStatusCard(
+                connectionState = connectionState,
+                autoConnect = autoConnect,
+                onDisconnect = { viewModel.disconnect() },
+                onToggleAutoConnect = { viewModel.toggleAutoConnect() }
+            )
+        }
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
@@ -187,7 +199,9 @@ fun ScanScreen(
             Button(
                 onClick = { viewModel.startScan() },
                 enabled = !isScanning,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .tutorialAnchor(tutorialAnchors, "scan_start")
             ) {
                 Text(if (isScanning) "Suche läuft…" else "Suche starten")
             }
@@ -211,6 +225,18 @@ fun ScanScreen(
                 }
             }
         }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("scan_status", "Verbindungsstatus", "Hier siehst du, ob dein Brustgurt verbunden ist."),
+                TutorialStep("scan_start", "Geräte suchen", "Starte hier die Bluetooth-Suche nach deinem Brustgurt."),
+                TutorialStep("scan_settings", "Einstellungen", "Hier passt du Alter, Ruhepuls und HR-Zonen an.")
+            ),
+            anchors = tutorialAnchors,
+            visible = !tutorialSeen,
+            onFinish = { tutorialViewModel.markSeen("scan") }
+        )
     }
 }
 

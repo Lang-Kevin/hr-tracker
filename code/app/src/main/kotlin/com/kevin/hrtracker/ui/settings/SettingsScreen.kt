@@ -25,6 +25,12 @@ import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.hrtracker.FeatureFlags
+import com.kevin.shared.domain.validateZoneTexts
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @Composable
 fun SettingsScreen(
@@ -58,6 +64,11 @@ fun SettingsScreen(
     val effectiveMaxHr = settings.maxHrUsed
     val model = if (settings.restingHr != null) "Karvonen (HRR)" else "%HRmax"
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("settings").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -70,7 +81,7 @@ fun SettingsScreen(
             Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_hr")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -171,10 +182,10 @@ fun SettingsScreen(
                 ?: HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
             mutableStateOf(base.map { it.lo.toString() to it.hi.toString() })
         }
-        val zoneErrors = HrZoneCalculator.validateZoneTexts(zoneTexts)
+        val zoneErrors = validateZoneTexts(zoneTexts)
         val zonesValid = zoneErrors.all { it == null }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_zones")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -279,7 +290,7 @@ fun SettingsScreen(
 
         ZoneErklarungCard()
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -317,6 +328,18 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("settings_hr", "Herzfrequenz", "Trage Alter und Ruhepuls ein — daraus berechnen wir deine Trainingszonen."),
+                TutorialStep("settings_zones", "Zonen-Vorschau", "Hier siehst du deine berechneten Zonen oder kannst eigene Werte eintragen."),
+                TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt.")
+            ),
+            anchors = tutorialAnchors,
+            visible = !tutorialSeen,
+            onFinish = { tutorialViewModel.markSeen("settings") }
+        )
     }
 }
 

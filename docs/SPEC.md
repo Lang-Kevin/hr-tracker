@@ -95,7 +95,9 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 | History  | Sessionliste, Summary-Card, Swipe-to-Delete                             |
 | Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
 | Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, HR-Quelle |
-| Onboarding | 7-Step-Wizard (Willkommen, Alter, Ruhepuls, BLE-Info, Live-Info, Verlauf-Info, Zusammenfassung), jederzeit überspringbar |
+| Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
+
+Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken.
 
 Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `ConfirmDialog` vor Aktion. System-Back öffnet bei aktiver Session zusätzlich einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen). Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
 

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
@@ -32,6 +33,7 @@ class SettingsRepository @Inject constructor(
         val ONBOARDING_DONE  = booleanPreferencesKey("onboarding_done")
         val HR_SOURCE        = stringPreferencesKey("hr_source")
         val CUSTOM_ZONES     = stringPreferencesKey("custom_zones")
+        val TUTORIAL_SEEN    = stringSetPreferencesKey("tutorial_seen_screens")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -124,6 +126,14 @@ class SettingsRepository @Inject constructor(
         dataStore.edit {
             if (zones != null) it[Keys.CUSTOM_ZONES] = Json.encodeToString(zones)
             else it.remove(Keys.CUSTOM_ZONES)
+        }
+    }
+
+    val tutorialSeenScreens: Flow<Set<String>> = dataStore.data.map { it[Keys.TUTORIAL_SEEN] ?: emptySet() }
+
+    suspend fun markTutorialSeen(screenKey: String) {
+        dataStore.edit { prefs ->
+            prefs[Keys.TUTORIAL_SEEN] = (prefs[Keys.TUTORIAL_SEEN] ?: emptySet()) + screenKey
         }
     }
 }
