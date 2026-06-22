@@ -43,6 +43,8 @@ import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.TertiaryPink
 import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.session.LeaveSessionDialog
+import com.kevin.shared.ui.zone.TargetZoneDialog
 
 @Composable
 fun LiveScreen(
@@ -112,7 +114,9 @@ fun LiveScreen(
         TargetZoneDialog(
             targetZone = targetZone,
             onSelect = { viewModel.setTargetZone(it); showTargetZoneDialog = false },
-            onDismiss = { showTargetZoneDialog = false }
+            onDismiss = { showTargetZoneDialog = false },
+            zoneCount = 5,
+            zoneColors = ZoneColors
         )
     }
 
@@ -238,30 +242,6 @@ fun LiveScreen(
 }
 
 @Composable
-private fun LeaveSessionDialog(
-    onSave: () -> Unit,
-    onDiscard: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Session verlassen?") },
-        text = { Text("Was soll mit der laufenden Aufzeichnung passieren?") },
-        confirmButton = {
-            TextButton(onClick = onSave) { Text("Speichern") }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDiscard) {
-                    Text("Verwerfen", color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = onDismiss) { Text("Weiter messen") }
-            }
-        }
-    )
-}
-
-@Composable
 private fun ConfirmDialog(
     title: String,
     text: String,
@@ -278,38 +258,6 @@ private fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Weiter messen") }
-        }
-    )
-}
-
-@Composable
-private fun TargetZoneDialog(
-    targetZone: Int,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Ziel-Zone wählen") },
-        text = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (1..5).forEach { z ->
-                    val selected = targetZone == z
-                    val zoneColor = ZoneColors.getOrElse(z - 1) { PrimaryPurple }
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onSelect(z) },
-                        label = { Text("Z$z") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = zoneColor,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schließen") }
         }
     )
 }

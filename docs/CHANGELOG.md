@@ -233,6 +233,12 @@ Geänderte Dateien:
 - `ui/live/LiveViewModel.kt` → `visibleZones`-StateFlow, `toggleZoneVisibility()`, Reset in `activeSessionId.collect`
 - `ui/live/LiveScreen.kt` → `StatItem` mit optionalem `onClick`, `TargetZoneDialog`, `ZeitInZoneSection`/`BpmZoneChart` mit `visibleZones`-Parameter
 
+## Shared-Lib-Migration-Lücke: LeaveSessionDialog (2026-06-22)
+
+`LiveScreen.kt` war bereits lokal auf `com.kevin.shared.ui.session.LeaveSessionDialog` umgestellt (Teil einer laufenden Migration nach `shared-android-lib`), aber die Composable fehlte im Ziel-Modul — Build-Fehler (`Unresolved reference`). `TargetZoneDialog` war korrekt migriert, `LeaveSessionDialog` nicht.
+
+Fix: `LeaveSessionDialog` (unverändert aus `LiveScreen.kt` übernommen) in `shared-android-lib/shared/.../ui/session/SessionComponents.kt` ergänzt.
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).

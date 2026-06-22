@@ -141,6 +141,18 @@ Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML
 
 Font: **Space Grotesk** (via `ui-text-google-fonts`, `Type.kt`, `HrTrackerTypography`). Material3 darkColorScheme.
 
+## Shared Library (shared-android-lib)
+
+Gradle Composite Build, eingebunden via `includeBuild("../../shared-android-lib")` in `settings.gradle.kts`. Repo getrennt unter `C:\Code\Android\shared-android-lib`, ebenfalls eingebunden in ArmSwing (`C:\Code\Arduino\ArmSwingProject`). Kein Maven/AAR-Publishing — Solo-Dev, manuelles Deployment.
+
+Geteilter Code (`com.kevin.shared.*`):
+- `ble`: `BleConstants`, `ConnectionState`
+- `domain`: `SavedDevice`, `DeviceType`, `SoftDeletable`, `DiscoveredDevice`
+- `settings`: `BleDevicePrefKeys`, `BleDevicePreferences`
+- `service`: `RecordingServiceContract`, `BaseRecordingService`
+
+Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `LiveViewModel`, `ScanViewModel`, `ScanScreen`, `DetailScreen`, `HistoryScreen`, `Session`.
+
 ## Architektur-Entscheidungen
 
 1. HRmax = Tanaka + optional Override
