@@ -249,6 +249,12 @@ Geänderte Dateien:
 - `ui/onboarding/OnboardingScreen.kt` → Dot-Indicator `(0..6)`, globaler Skip-`TextButton`, 4 neue private Composables (`StepWelcome`, `StepBleInfo`, `StepLiveInfo`, `StepHistoryInfo`)
 - `ui/onboarding/OnboardingViewModel.kt` → `skip()` setzt nur `onboardingDone = true`, ohne Alter/Ruhepuls zu erzwingen
 
+## Fix: Verlauf-Crash durch Compose-BOM-Skew (2026-06-22)
+
+Verlauf crashte (`NoSuchMethodError: FlowRow(...FlowRowOverflow...)`) sobald Sessions mit Labels existierten — `CategoryFilterRow` in `shared-android-lib` returnt früh bei leerer Liste, daher trat der Fehler erst mit echten Daten auf. Ursache: `shared-android-lib` war auf `compose-bom 2024.11.00` gepinnt, App auf `2026.05.01` — binär inkompatible `FlowRow`-Signatur im finalen APK.
+
+Fix: `shared-android-lib/gradle/libs.versions.toml` → `compose-bom` auf `2026.05.01` angehoben (Kotlin/AGP waren bereits identisch).
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).
