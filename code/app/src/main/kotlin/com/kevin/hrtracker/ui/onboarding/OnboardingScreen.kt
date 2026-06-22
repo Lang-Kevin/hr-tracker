@@ -32,60 +32,165 @@ fun OnboardingScreen(
     val restingHr = restingHrText.toIntOrNull()
     val ageValid = age != null && age in 10..99
 
+    val lastStep = 6
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
             .padding(24.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            (0..2).forEach { i ->
-                val isActive = i <= step
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .size(if (i == step) 12.dp else 8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isActive) PrimaryPurple
-                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                        )
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                (0..lastStep).forEach { i ->
+                    val isActive = i <= step
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .size(if (i == step) 12.dp else 8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isActive) PrimaryPurple
+                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                    )
+                }
+            }
+            if (step < lastStep) {
+                TextButton(
+                    onClick = {
+                        viewModel.skip()
+                        onComplete()
+                    },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) { Text("Überspringen", color = Color.White.copy(alpha = 0.7f)) }
             }
         }
 
         Spacer(Modifier.height(32.dp))
 
         when (step) {
-            0 -> Step1(
+            0 -> StepWelcome(onNext = { step = 1 })
+            1 -> Step1(
                 ageText = ageText,
                 onAgeChange = { ageText = it.filter(Char::isDigit).take(3) },
                 computedMaxHr = computedMaxHr,
                 ageValid = ageValid,
-                onNext = { step = 1 }
-            )
-            1 -> Step2(
-                restingHrText = restingHrText,
-                onRestingHrChange = { restingHrText = it.filter(Char::isDigit).take(3) },
-                onSkip = { step = 2 },
                 onNext = { step = 2 }
             )
-            2 -> Step3(
+            2 -> Step2(
+                restingHrText = restingHrText,
+                onRestingHrChange = { restingHrText = it.filter(Char::isDigit).take(3) },
+                onSkip = { step = 3 },
+                onNext = { step = 3 }
+            )
+            3 -> StepBleInfo(onNext = { step = 4 })
+            4 -> StepLiveInfo(onNext = { step = 5 })
+            5 -> StepHistoryInfo(onNext = { step = 6 })
+            6 -> Step3(
                 age = age,
                 computedMaxHr = computedMaxHr,
                 restingHr = restingHr,
                 onComplete = {
-                    viewModel.complete(age!!, restingHr)
+                    if (age != null) {
+                        viewModel.complete(age, restingHr)
+                    } else {
+                        viewModel.skip()
+                    }
                     onComplete()
                 }
             )
         }
     }
+}
+
+@Composable
+private fun ColumnScope.StepWelcome(onNext: () -> Unit) {
+    Text(
+        "Willkommen bei HR-Tracker",
+        style = MaterialTheme.typography.headlineMedium,
+        color = Color.White
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Zeichne deine Herzfrequenz mit deinem BLE-Brustgurt auf und behalte deine Trainingszonen im Blick.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.7f)
+    )
+    Spacer(Modifier.weight(1f))
+    Button(
+        onClick = onNext,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+    ) { Text("Weiter") }
+}
+
+@Composable
+private fun ColumnScope.StepBleInfo(onNext: () -> Unit) {
+    Text(
+        "Brustgurt verbinden",
+        style = MaterialTheme.typography.headlineMedium,
+        color = Color.White
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Auf dem Scan-Screen findest du deinen Gurt per Bluetooth. Einmal verbunden, merkt sich die App das Gerät für automatisches Reconnect.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.7f)
+    )
+    Spacer(Modifier.weight(1f))
+    Button(
+        onClick = onNext,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+    ) { Text("Weiter") }
+}
+
+@Composable
+private fun ColumnScope.StepLiveInfo(onNext: () -> Unit) {
+    Text(
+        "Live-Tracking & Zonen",
+        style = MaterialTheme.typography.headlineMedium,
+        color = Color.White
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Während der Aufzeichnung siehst du deinen aktuellen Puls, ein Zonen-Chart (Z1–Z5) und kannst die Session pausieren/fortsetzen.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.7f)
+    )
+    Spacer(Modifier.weight(1f))
+    Button(
+        onClick = onNext,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+    ) { Text("Weiter") }
+}
+
+@Composable
+private fun ColumnScope.StepHistoryInfo(onNext: () -> Unit) {
+    Text(
+        "Verlauf & Export",
+        style = MaterialTheme.typography.headlineMedium,
+        color = Color.White
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        "Abgeschlossene Sessions findest du im Verlauf, filterbar nach Label. Details lassen sich exportieren.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White.copy(alpha = 0.7f)
+    )
+    Spacer(Modifier.weight(1f))
+    Button(
+        onClick = onNext,
+        modifier = Modifier.fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+    ) { Text("Weiter") }
 }
 
 @Composable

@@ -239,6 +239,16 @@ Geänderte Dateien:
 
 Fix: `LeaveSessionDialog` (unverändert aus `LiveScreen.kt` übernommen) in `shared-android-lib/shared/.../ui/session/SessionComponents.kt` ergänzt.
 
+## Onboarding-Flow erweitert (2026-06-22)
+
+Bestehender Wizard (Alter → Ruhepuls → Zusammenfassung) auf 7 Steps erweitert, erklärt jetzt Kernfunktionen statt nur Setup. Jederzeit über globalen "Überspringen"-Button abbrechbar (außer letzter Step).
+
+Neue Steps (0, 3–5): Willkommen, BLE-Brustgurt verbinden, Live-Tracking & Zonen, Verlauf & Export — reine Info-Steps, gleiches Pattern wie bestehende Steps.
+
+Geänderte Dateien:
+- `ui/onboarding/OnboardingScreen.kt` → Dot-Indicator `(0..6)`, globaler Skip-`TextButton`, 4 neue private Composables (`StepWelcome`, `StepBleInfo`, `StepLiveInfo`, `StepHistoryInfo`)
+- `ui/onboarding/OnboardingViewModel.kt` → `skip()` setzt nur `onboardingDone = true`, ohne Alter/Ruhepuls zu erzwingen
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).
