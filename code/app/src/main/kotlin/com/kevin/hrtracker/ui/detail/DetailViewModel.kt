@@ -6,8 +6,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.db.HrDatabase
+import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.data.entity.SportLabel
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
@@ -24,10 +26,15 @@ import kotlin.math.sqrt
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val db: HrDatabase,
-    private val exporter: SessionExporter
+    private val exporter: SessionExporter,
+    private val sportLabelDao: SportLabelDao
 ) : ViewModel() {
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
+
+    val trainingLabels: StateFlow<List<String>> = sportLabelDao.getAllLabels()
+        .map { it.map(SportLabel::name) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val session: StateFlow<Session?> = db.sessionDao().getByIdFlow(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)

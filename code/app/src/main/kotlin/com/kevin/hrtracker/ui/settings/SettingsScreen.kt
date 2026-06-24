@@ -34,7 +34,6 @@ import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -76,10 +75,7 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Zurück") }
-            Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
-        }
+        Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
 
         Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_hr")) {
             Column(
@@ -216,41 +212,45 @@ fun SettingsScreen(
                 if (customZonesEnabled) {
                     zoneTexts.forEachIndexed { i, (loText, hiText) ->
                         val zoneColor = ZoneColors.getOrElse(i) { MaterialTheme.colorScheme.primary }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Surface(
-                                color = zoneColor,
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(16.dp)
-                            ) {}
-                            Text("Z${i + 1}", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(28.dp))
-                            OutlinedTextField(
-                                value = loText,
-                                onValueChange = { v ->
-                                    zoneTexts = zoneTexts.toMutableList().also { it[i] = v to hiText }
-                                },
-                                label = { Text("Min") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                isError = zoneErrors[i] != null,
-                                modifier = Modifier.weight(1f)
-                            )
-                            OutlinedTextField(
-                                value = hiText,
-                                onValueChange = { v ->
-                                    zoneTexts = zoneTexts.toMutableList().also { it[i] = loText to v }
-                                },
-                                label = { Text("Max") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                isError = zoneErrors[i] != null,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        zoneErrors[i]?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    color = zoneColor,
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.size(12.dp)
+                                ) {}
+                                Text("Zone ${i + 1}", style = MaterialTheme.typography.labelMedium)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = loText,
+                                    onValueChange = { v ->
+                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = v to hiText }
+                                    },
+                                    label = { Text("Min BPM") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    isError = zoneErrors[i] != null,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = hiText,
+                                    onValueChange = { v ->
+                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = loText to v }
+                                    },
+                                    label = { Text("Max BPM") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    isError = zoneErrors[i] != null,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            zoneErrors[i]?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
                         }
                     }
                     Button(
@@ -328,6 +328,29 @@ fun SettingsScreen(
                 }
             }
         }
+
+        val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        "Debug-Modus",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrimaryPurple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                    Text(
+                        "Schaltet Test-Funktionen frei (z. B. Pseudo-Sensor beim Scan)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(checked = debugMode, onCheckedChange = { viewModel.setDebugMode(it) })
+            }
+        }
     }
 
         TutorialOverlay(
@@ -337,7 +360,7 @@ fun SettingsScreen(
                 TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt.")
             ),
             anchors = tutorialAnchors,
-            visible = !tutorialSeen,
+            visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("settings") }
         )
     }

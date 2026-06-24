@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -231,9 +233,12 @@ fun ZeitInZoneSection(
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
                 val isTarget = z == targetZone
+                val label = "Zone $z: ${secs / 60} Min ${secs % 60} Sek${if (isTarget) ", Zielzone" else ""}"
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onZoneClick(z) }
+                    modifier = Modifier
+                        .clickable { onZoneClick(z) }
+                        .semantics { contentDescription = label }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -270,7 +275,8 @@ fun StatItem(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.White
+    valueColor: Color = Color.White,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier,
@@ -280,6 +286,7 @@ fun StatItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

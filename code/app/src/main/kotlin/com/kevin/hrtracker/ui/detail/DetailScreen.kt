@@ -5,7 +5,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,16 +31,10 @@ import com.kevin.shared.ui.session.durationString
 import java.text.SimpleDateFormat
 import java.util.Date
 
-private val TRAINING_TYPES = listOf(
-    "Allgemeines Training",
-    "Beachvolleyball",
-    "Trainingbike",
-    "Volleyball"
-)
+private val TRAINING_TYPES_FALLBACK = listOf("Allgemeines Training")  // ponytail: fallback, echte Labels kommen vom ViewModel
 
 @Composable
 fun DetailScreen(
-    onBack: () -> Unit,
     viewModel: DetailViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -50,13 +48,15 @@ fun DetailScreen(
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
     val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
+    val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
 
     if (showEditDialog) {
         EditTrainingTypeDialog(
-            current = session?.label ?: TRAINING_TYPES[0],
+            current = session?.label ?: trainingLabels.firstOrNull() ?: TRAINING_TYPES_FALLBACK[0],
+            types = trainingLabels.ifEmpty { TRAINING_TYPES_FALLBACK },
             onSave = { label ->
                 viewModel.updateLabel(label)
                 showEditDialog = false
@@ -80,6 +80,7 @@ fun DetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         // Header: tappable label + date
@@ -123,7 +124,7 @@ fun DetailScreen(
             targetZone = dominantZone,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .height(220.dp)
         )
 
         Spacer(Modifier.height(12.dp))
@@ -184,10 +185,11 @@ fun DetailScreen(
                         color = if (noteText.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
                     )
                 }
-                Text(
-                    "✎",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PrimaryPurple
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Notiz bearbeiten",
+                    tint = PrimaryPurple,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -195,28 +197,19 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         // Action buttons
-        Row(
+        Button(
+            onClick = {
+                scope.launch {
+                    val intent = viewModel.export(context) ?: return@launch
+                    context.startActivity(Intent.createChooser(intent, "JSON exportieren"))
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier.weight(1f)
-            ) { Text("← Zurück") }
-            Button(
-                onClick = {
-                    scope.launch {
-                        val intent = viewModel.export(context) ?: return@launch
-                        context.startActivity(Intent.createChooser(intent, "JSON exportieren"))
-                    }
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryPurple,
-                    contentColor = OnPrimary
-                )
-            ) { Text("JSON") }
-        }
+            colors = ButtonDefaults.buttonColors(
+                containerColor = PrimaryPurple,
+                contentColor = OnPrimary
+            )
+        ) { Text("JSON exportieren") }
         Spacer(Modifier.height(6.dp))
         OutlinedButton(
             onClick = {
@@ -253,9 +246,6 @@ private fun EditNoteDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(text.trim()) }) { Text("Speichern") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
         }
     )
 }
@@ -263,6 +253,7 @@ private fun EditNoteDialog(
 @Composable
 private fun EditTrainingTypeDialog(
     current: String,
+    types: List<String>,
     onSave: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -272,7 +263,7 @@ private fun EditTrainingTypeDialog(
         title = { Text("Trainingstyp ändern") },
         text = {
             Column {
-                TRAINING_TYPES.forEach { type ->
+                types.forEach { type ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -292,9 +283,6 @@ private fun EditTrainingTypeDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(selected) }) { Text("Speichern") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
         }
     )
 }

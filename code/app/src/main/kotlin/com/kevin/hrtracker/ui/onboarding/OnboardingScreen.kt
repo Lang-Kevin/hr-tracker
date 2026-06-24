@@ -49,14 +49,18 @@ fun OnboardingScreen(
             ) {
                 (0..lastStep).forEach { i ->
                     val isActive = i <= step
+                    val isCurrent = i == step
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
-                            .size(if (i == step) 12.dp else 8.dp)
+                            .size(10.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isActive) PrimaryPurple
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                when {
+                                    isCurrent -> PrimaryPurple
+                                    isActive  -> PrimaryPurple.copy(alpha = 0.5f)
+                                    else      -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                }
                             )
                     )
                 }

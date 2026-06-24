@@ -43,11 +43,11 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.ui.shared.StatItem
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.OnPrimary
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.TertiaryPink
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.shared.ui.session.LeaveSessionDialog
@@ -164,10 +164,10 @@ fun LiveScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
+                        contentDescription = "Herzschlag",
                         tint = TertiaryPink,
                         modifier = Modifier
-                            .size(14.dp)
+                            .size(20.dp)
                             .scale(pulseScale.value)
                     )
                     Text(
@@ -570,41 +570,6 @@ private fun ZeitInZoneSection(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueColor: Color = Color.White,
-    onClick: (() -> Unit)? = null
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(vertical = 10.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineSmall,
-                color = valueColor,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
