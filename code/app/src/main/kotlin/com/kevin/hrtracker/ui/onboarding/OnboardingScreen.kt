@@ -72,7 +72,7 @@ fun OnboardingScreen(
                         onComplete()
                     },
                     modifier = Modifier.align(Alignment.CenterEnd)
-                ) { Text("Überspringen", color = Color.White.copy(alpha = 0.7f)) }
+                ) { Text("Überspringen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
 
@@ -114,7 +114,7 @@ private fun ColumnScope.StepWelcome(onNext: () -> Unit) {
     Text(
         "Zeichne deine Herzfrequenz mit deinem BLE-Brustgurt auf und behalte deine Trainingszonen im Blick.",
         style = MaterialTheme.typography.bodyMedium,
-        color = Color.White.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.weight(1f))
     Button(
@@ -141,7 +141,7 @@ private fun ColumnScope.Step1(
     Text(
         "Wir berechnen damit deine maximale Herzfrequenz nach der Tanaka-Formel.",
         style = MaterialTheme.typography.bodyMedium,
-        color = Color.White.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.height(24.dp))
     OutlinedTextField(
@@ -166,7 +166,7 @@ private fun ColumnScope.Step1(
                 modifier = Modifier.padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Maximale Herzfrequenz", color = Color.White.copy(alpha = 0.7f))
+                Text("Maximale Herzfrequenz", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("$it BPM", color = PrimaryPurple, style = MaterialTheme.typography.titleMedium)
             }
         }
@@ -195,7 +195,7 @@ private fun ColumnScope.Step2(
     Text(
         "Für genauere Zonen-Berechnungen nach der Karvonen-Formel. Typisch: 50–70 BPM morgens nach dem Aufwachen.",
         style = MaterialTheme.typography.bodyMedium,
-        color = Color.White.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.height(24.dp))
     OutlinedTextField(

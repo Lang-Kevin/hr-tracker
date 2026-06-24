@@ -106,7 +106,7 @@ fun DetailScreen(
                     s.endedAt?.let { end ->
                         Text(
                             durationString((end - s.startedAt) / 1000),
-                            color = Color.White.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

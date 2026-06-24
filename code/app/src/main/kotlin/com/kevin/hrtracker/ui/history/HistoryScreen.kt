@@ -1,19 +1,23 @@
 package com.kevin.hrtracker.ui.history
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -36,7 +40,6 @@ import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    onBack: () -> Unit,
     onSessionClick: (Long) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
@@ -51,6 +54,8 @@ fun HistoryScreen(
     val trimpHistory by viewModel.trimpHistory.collectAsStateWithLifecycle()
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    BackHandler(enabled = isSelectionMode) { viewModel.clearSelection() }
 
     SoftDeleteConfirmationDialog(
         pendingIds = pendingDeleteIds,
@@ -77,9 +82,6 @@ fun HistoryScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                IconButton(onClick = { viewModel.clearSelection() }) {
-                    Icon(Icons.Default.Close, contentDescription = "Auswahl abbrechen")
-                }
                 Text(
                     "${selectedIds.size} ausgewählt",
                     style = MaterialTheme.typography.titleMedium,
@@ -93,10 +95,7 @@ fun HistoryScreen(
                 }
             }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack) { Text("← Zurück") }
-                Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
-            }
+            Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
         }
 
         TabRow(
@@ -134,11 +133,30 @@ fun HistoryScreen(
                     }
                 }
                 if (sessions.isEmpty()) {
-                    Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp).alpha(0.3f),
+                            tint = PrimaryPurple
+                        )
+                        Text(
+                            "Noch keine Trainings",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -206,7 +224,7 @@ fun HistoryScreen(
                 TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
             ),
             anchors = tutorialAnchors,
-            visible = !tutorialSeen,
+            visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("history") }
         )
     }
@@ -219,6 +237,56 @@ private fun StatistikTab(
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
+            val maxDur = weeklyData.maxOfOrNull { it.totalDurationMin }?.coerceAtLeast(1) ?: 1
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Dauer pro Woche (min)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        weeklyData.forEach { week ->
+                            val fraction = (week.totalDurationMin.toFloat() / maxDur).coerceIn(0f, 1f)
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                verticalArrangement = Arrangement.Bottom
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(fraction.coerceAtLeast(0.03f))
+                                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                        .background(
+                                            if (fraction > 0f) PrimaryPurple
+                                            else PrimaryPurple.copy(alpha = 0.15f)
+                                        )
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        weeklyData.forEach { week ->
+                            Text(
+                                week.weekLabel.take(5),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        item {
             Text(
                 "Letzte 6 Wochen",
                 style = MaterialTheme.typography.titleMedium,
@@ -230,7 +298,7 @@ private fun StatistikTab(
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text("WOCHE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                        Text("EINH.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
+                        Text("ANZ.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
                         Text("MIN", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
                         Text("Ø BPM", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
                     }
