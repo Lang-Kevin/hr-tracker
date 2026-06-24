@@ -90,7 +90,7 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 
 | Screen   | Inhalt                                                                  |
 | -------- | ----------------------------------------------------------------------- |
-| Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label  |
+| Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label, HRV-Messung-Button |
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
 | History  | Sessionliste, Summary-Card, Swipe-to-Delete                             |
 | Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
@@ -100,6 +100,8 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken.
 
 Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `ConfirmDialog` vor Aktion. System-Back öffnet bei aktiver Session zusätzlich einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen). Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
+
+HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
 
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Klick auf eine **Zeit-in-Zone**-Spalte blendet diese Zone im Live-Chart ein/aus (`visibleZones`, rein lokaler State, kein Persistenz, Reset bei Sessionstart). Ziel-Band + "ZIEL"-Badge im Chart bleiben unabhängig davon immer sichtbar.
 

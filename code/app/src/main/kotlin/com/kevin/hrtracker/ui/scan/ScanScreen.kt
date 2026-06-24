@@ -43,6 +43,7 @@ import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
     onSessionStarted: (label: String) -> Unit = {},
+    onHrvSessionStarted: (seconds: Int) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     onResumeSession: () -> Unit = {}
@@ -56,6 +57,7 @@ fun ScanScreen(
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
 
     var showStartDialog by remember { mutableStateOf(false) }
+    var showHrvDialog by remember { mutableStateOf(false) }
     var showSmartWatchHelp by remember { mutableStateOf(false) }
     var isStarting by remember { mutableStateOf(false) }
     // Reset isStarting once session is confirmed active
@@ -71,6 +73,16 @@ fun ScanScreen(
                 onSessionStarted(label)
             },
             onDismiss = { showStartDialog = false }
+        )
+    }
+    if (showHrvDialog) {
+        HrvDurationDialog(
+            onSelect = { seconds ->
+                showHrvDialog = false
+                isStarting = true
+                onHrvSessionStarted(seconds)
+            },
+            onDismiss = { showHrvDialog = false }
         )
     }
     if (FeatureFlags.SMARTWATCH_ENABLED && showSmartWatchHelp) {
@@ -141,6 +153,13 @@ fun ScanScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(if (isStarting) "Starte…" else "Training starten")
+                    }
+                    OutlinedButton(
+                        onClick = { if (!isStarting) showHrvDialog = true },
+                        enabled = !isStarting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("HRV messen")
                     }
                 } else {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,7 +253,7 @@ fun ScanScreen(
                 TutorialStep("scan_settings", "Einstellungen", "Hier passt du Alter, Ruhepuls und HR-Zonen an.")
             ),
             anchors = tutorialAnchors,
-            visible = !tutorialSeen,
+            visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("scan") }
         )
     }
@@ -295,9 +314,6 @@ private fun StartTrainingDialog(
         },
         confirmButton = {
             TextButton(onClick = { onStart(selected) }, enabled = selected.isNotEmpty()) { Text("Starten") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
         }
     )
 }
@@ -331,4 +347,30 @@ private fun BrandHint(brand: String, hint: String) {
         Text(brand, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         Text(hint, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun HrvDurationDialog(onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("HRV-Messung") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("Super Short", "30 Sek.", 30),
+                    Triple("Short", "1 Min.", 60),
+                    Triple("Full", "5 Min.", 300),
+                ).forEach { (name, duration, seconds) ->
+                    OutlinedButton(
+                        onClick = { onSelect(seconds) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("$name · $duration")
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
+    )
 }

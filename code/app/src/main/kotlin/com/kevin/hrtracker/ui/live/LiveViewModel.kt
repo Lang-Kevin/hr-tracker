@@ -10,6 +10,7 @@ import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.wearable.WearableHrSource
+import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -21,8 +22,14 @@ class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
     private val sessionRepository: SessionRepository,
     private val settingsRepository: SettingsRepository,
-    private val wearableHrSource: WearableHrSource
+    private val wearableHrSource: WearableHrSource,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val _hrvCountdown = MutableStateFlow<Int?>(
+        savedStateHandle.get<Int>("hrv")?.takeIf { it > 0 }
+    )
+    val hrvCountdown: StateFlow<Int?> = _hrvCountdown.asStateFlow()
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
@@ -87,6 +94,13 @@ class LiveViewModel @Inject constructor(
         if (isPaused.value) sessionRepository.resume() else sessionRepository.pause()
     }
 
+    private val _milestones = MutableStateFlow<List<Long>>(emptyList())
+    val milestones: StateFlow<List<Long>> = _milestones.asStateFlow()
+
+    fun addMilestone() {
+        _milestones.update { it + _elapsedSeconds.value }
+    }
+
     private var sessionStartMs = 0L
     private var pausedAccumMs = 0L
     private var pauseStartedMs = 0L
@@ -138,6 +152,15 @@ class LiveViewModel @Inject constructor(
                     _timeInZone.value = emptyMap()
                     pausedAccumMs = 0L
                     pauseStartedMs = 0L
+                }
+            }
+        }
+        if (_hrvCountdown.value != null) {
+            viewModelScope.launch {
+                activeSessionId.first { it != null }
+                while ((_hrvCountdown.value ?: 0) > 0) {
+                    delay(1_000)
+                    if (!isPaused.value) _hrvCountdown.update { it?.minus(1) }
                 }
             }
         }

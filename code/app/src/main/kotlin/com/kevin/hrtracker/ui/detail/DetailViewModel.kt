@@ -59,9 +59,15 @@ class DetailViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rmssd: StateFlow<Int?> = samples.map { list ->
+        // Collect all RR values in order (each BLE sample = one heartbeat notification,
+        // consecutive samples are consecutive beats — no gap between them).
+        // 300–2000 ms range filter removes ectopic beats and sensor noise before diffing.
         val allRrs = list.flatMap { sample ->
-            sample.rrIntervalsMs?.split(",")
-                ?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
+            sample.rrIntervalsMs
+                ?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.filter { it in 300..2000 }
+                ?: emptyList()
         }
         if (allRrs.size < 2) null
         else {

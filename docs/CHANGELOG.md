@@ -255,6 +255,24 @@ Verlauf crashte (`NoSuchMethodError: FlowRow(...FlowRowOverflow...)`) sobald Ses
 
 Fix: `shared-android-lib/gradle/libs.versions.toml` → `compose-bom` auf `2026.05.01` angehoben (Kotlin/AGP waren bereits identisch).
 
+## HRV-Messung (2026-06-24)
+
+Schnelle Ruhemessung zur RMSSD-Ermittlung direkt aus dem Scan-Screen.
+
+- **"HRV messen"-Button** im Scan-Screen (OutlinedButton unterhalb "Training starten").
+- **HrvDurationDialog**: Auswahl Super Short (30s) / Short (1 min) / Full (5 min).
+- Session wird automatisch mit Label `"HRV RMSSD"` gestartet (kein Label-Dialog).
+- HRV-Dauer als Nav-Arg (`hrv`) an LiveScreen übergeben.
+- `LiveViewModel` liest `hrv` aus `SavedStateHandle`, führt Countdown (pausierbar) via `hrvCountdown: StateFlow<Int?>`.
+- LiveScreen zeigt statt "GESAMTZEIT" ein rosa "VERBLEIBEND"-Countdown; stoppt Session automatisch bei 0.
+- RMSSD-Berechnung in `DetailViewModel`: globales `zipWithNext` über alle RR-Werte der Session, Range-Filter 300–2000 ms gegen Artefakte.
+
+Geänderte Dateien:
+- `ui/scan/ScanScreen.kt` → `onHrvSessionStarted`-Callback, `HrvDurationDialog`, "HRV messen"-Button
+- `ui/live/LiveViewModel.kt` → `SavedStateHandle`-Injektion, `hrvCountdown`-StateFlow + Countdown-Coroutine
+- `ui/live/LiveScreen.kt` → `hrvCountdown`-Collectierung, Auto-Stop, VERBLEIBEND-Anzeige
+- `MainActivity.kt` → Route `"live?hrv={hrv}"`, `onHrvSessionStarted`-Wiring, LaunchedEffect-Guard
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).

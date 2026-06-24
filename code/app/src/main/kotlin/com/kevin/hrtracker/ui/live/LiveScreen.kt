@@ -34,6 +34,13 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.BackgroundDark
@@ -70,6 +77,12 @@ fun LiveScreen(
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val visibleZones by viewModel.visibleZones.collectAsStateWithLifecycle()
     val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
+    val milestones by viewModel.milestones.collectAsStateWithLifecycle()
+    val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
+
+    LaunchedEffect(hrvCountdown) {
+        if (hrvCountdown == 0) onStopSession()
+    }
 
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
@@ -80,7 +93,6 @@ fun LiveScreen(
         }
     }
 
-    var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showTargetZoneDialog by remember { mutableStateOf(false) }
@@ -92,16 +104,6 @@ fun LiveScreen(
             onSave = { showLeaveDialog = false; onStopSession() },
             onDiscard = { showLeaveDialog = false; onAbortSession() },
             onDismiss = { showLeaveDialog = false }
-        )
-    }
-
-    if (showAbortDialog) {
-        ConfirmDialog(
-            title = "Training abbrechen?",
-            text = "Die aufgezeichneten Daten werden verworfen und nicht gespeichert.",
-            confirmLabel = "Abbrechen",
-            onConfirm = { showAbortDialog = false; onAbortSession() },
-            onDismiss = { showAbortDialog = false }
         )
     }
 
@@ -187,6 +189,8 @@ fun LiveScreen(
             zoneBounds = zoneBounds,
             targetZone = targetZone,
             visibleZones = visibleZones,
+            milestones = milestones,
+            elapsedSeconds = elapsed,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -216,7 +220,17 @@ fun LiveScreen(
                 valueColor = PrimaryPurple,
                 onClick = { showTargetZoneDialog = true }
             )
-            StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
+            if (hrvCountdown != null) {
+                val cr = hrvCountdown ?: 0
+                StatItem(
+                    "VERBLEIBEND",
+                    "%02d:%02d".format(cr / 60, cr % 60),
+                    Modifier.weight(1f),
+                    valueColor = TertiaryPink
+                )
+            } else {
+                StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -224,30 +238,30 @@ fun LiveScreen(
         // Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            OutlinedButton(
-                onClick = { showAbortDialog = true },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp, MaterialTheme.colorScheme.error
-                )
-            ) { Text("Abbrechen") }
-            OutlinedButton(
+            FilledTonalIconButton(
                 onClick = { viewModel.togglePause() },
-                modifier = Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_pause")
-            ) { Text(if (isPaused) "Fortsetzen" else "Pause") }
-            Button(
-                onClick = { showStopDialog = true },
-                modifier = Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_stop"),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryPurple,
-                    contentColor = OnPrimary
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_pause")
+            ) {
+                Icon(
+                    if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    contentDescription = if (isPaused) "Fortsetzen" else "Pause"
                 )
-            ) { Text("Abschließen") }
+            }
+            FilledTonalIconButton(
+                onClick = { viewModel.addMilestone() },
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_milestone")
+            ) {
+                Icon(Icons.Default.Flag, contentDescription = "Meilenstein setzen")
+            }
+            FilledIconButton(
+                onClick = { showStopDialog = true },
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_stop"),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = "Abschließen")
+            }
         }
     }
 
@@ -256,10 +270,11 @@ fun LiveScreen(
                 TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone."),
                 TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
                 TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
+                TutorialStep("live_milestone", "Meilenstein", "Setzt eine Markierung im Chart — z. B. für Intervallwechsel oder besondere Momente."),
                 TutorialStep("live_stop", "Abschließen", "Beendet das Training und speichert die aufgezeichneten Daten.")
             ),
             anchors = tutorialAnchors,
-            visible = !tutorialSeen,
+            visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("live") }
         )
     }
@@ -293,6 +308,8 @@ private fun BpmZoneChart(
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
     visibleZones: Set<Int>,
+    milestones: List<Long> = emptyList(),
+    elapsedSeconds: Long = 0L,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -380,6 +397,35 @@ private fun BpmZoneChart(
                 by + bh / 2 + zielPaint.textSize / 3f,
                 zielPaint
             )
+        }
+
+        // Milestone vertical lines — anchored to their timestamp, scroll left as new data arrives
+        if (bpmHistory.size >= 2 && milestones.isNotEmpty()) {
+            val milestonePaint = Paint().apply {
+                isAntiAlias = true
+                textSize = with(density) { 9.sp.toPx() }
+                color = android.graphics.Color.argb(200, 255, 200, 80)
+                textAlign = Paint.Align.CENTER
+            }
+            milestones.forEachIndexed { idx, ms ->
+                val secondsAgo = elapsedSeconds - ms
+                val posFromLeft = (bpmHistory.size - 1) - secondsAgo.toInt()
+                if (posFromLeft in 0 until bpmHistory.size) {
+                    val x = leftPaddingPx + (posFromLeft.toFloat() / (bpmHistory.size - 1)) * chartWidth
+                    drawLine(
+                        color = Color(0xFFFFC850).copy(alpha = 0.6f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = with(density) { 1.5.dp.toPx() }
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "M${idx + 1}",
+                        x,
+                        with(density) { 12.sp.toPx() },
+                        milestonePaint
+                    )
+                }
+            }
         }
 
         // BPM history line
