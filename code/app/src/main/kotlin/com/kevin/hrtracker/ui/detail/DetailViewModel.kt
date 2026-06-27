@@ -32,8 +32,7 @@ class DetailViewModel @Inject constructor(
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
 
-    val trainingLabels: StateFlow<List<String>> = sportLabelDao.getAllLabels()
-        .map { it.map(SportLabel::name) }
+    val trainingLabels: StateFlow<List<SportLabel>> = sportLabelDao.getAllLabels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val session: StateFlow<Session?> = db.sessionDao().getByIdFlow(sessionId)
@@ -136,4 +135,15 @@ class DetailViewModel @Inject constructor(
     suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)
 
     suspend fun exportCsv(context: Context): Intent? = exporter.buildCsvShareIntent(context, sessionId)
+
+    fun generateReport(): String {
+        val s = stats.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
+        val sess = session.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
+        val zones = timeInZone.value
+        val durationS = if (sess.endedAt != null) (sess.endedAt - sess.startedAt) / 1000L else 0L
+        val zonesJson = zones.entries
+            .sortedBy { it.key }
+            .joinToString(",") { "\"${it.key}\":${it.value}" }
+        return """{"avgHf":${s.avgBpm},"maxHf":${s.maxBpm},"dauerSekunden":$durationS,"zeitInZonen":{$zonesJson}}"""
+    }
 }

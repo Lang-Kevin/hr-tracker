@@ -17,7 +17,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.kevin.shared.ble.ConnectionState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
@@ -32,6 +31,7 @@ import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.shared.ui.scan.BleStatusCard
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
 import com.kevin.shared.ui.scan.SavedDeviceItem
+import com.kevin.shared.ui.LabelPickerDialog
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -65,15 +65,21 @@ fun ScanScreen(
     LaunchedEffect(activeSessionId) { if (activeSessionId != null) isStarting = false }
 
     if (showStartDialog) {
-        StartTrainingDialog(
-            labels = trainingLabels,
-            onAddLabel = viewModel::addTrainingLabel,
-            onStart = { label ->
-                showStartDialog = false
+        LabelPickerDialog(
+            title = "Trainingstyp wählen",
+            items = trainingLabels,
+            initialSelection = null,
+            confirmText = "Starten",
+            onConfirm = { label ->
                 isStarting = true
                 onSessionStarted(label)
+                showStartDialog = false
             },
-            onDismiss = { showStartDialog = false }
+            onDismiss = { showStartDialog = false },
+            dismissText = null,
+            addFieldLabel = "Neue Art",
+            onAdd = viewModel::addTrainingLabel,
+            onDelete = null
         )
     }
     if (showHrvDialog) {
@@ -262,65 +268,6 @@ fun ScanScreen(
             onFinish = { tutorialViewModel.markSeen("scan") }
         )
     }
-}
-
-
-@Composable
-private fun StartTrainingDialog(
-    labels: List<String>,
-    onAddLabel: (String) -> Unit,
-    onStart: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selected by remember(labels) { mutableStateOf(labels.firstOrNull() ?: "") }
-    var newLabelText by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Trainingstyp wählen") },
-        text = {
-            Column {
-                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                    items(labels) { type ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selected = type }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = selected == type, onClick = { selected = type })
-                            Spacer(Modifier.width(8.dp))
-                            Text(type, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = newLabelText,
-                        onValueChange = { newLabelText = it },
-                        label = { Text("Neue Art") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = {
-                            onAddLabel(newLabelText)
-                            newLabelText = ""
-                        },
-                        enabled = newLabelText.isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Hinzufügen")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onStart(selected) }, enabled = selected.isNotEmpty()) { Text("Starten") }
-        }
-    )
 }
 
 @Composable

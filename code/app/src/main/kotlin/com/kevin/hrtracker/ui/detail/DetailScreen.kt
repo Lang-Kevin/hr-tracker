@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
@@ -28,10 +29,9 @@ import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.OnPrimary
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.session.durationString
+import com.kevin.shared.ui.LabelPickerDialog
 import java.text.SimpleDateFormat
 import java.util.Date
-
-private val TRAINING_TYPES_FALLBACK = listOf("Allgemeines Training")  // ponytail: fallback, echte Labels kommen vom ViewModel
 
 @Composable
 fun DetailScreen(
@@ -52,16 +52,23 @@ fun DetailScreen(
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
+    var reportJson by remember { mutableStateOf<String?>(null) }
 
     if (showEditDialog) {
-        EditTrainingTypeDialog(
-            current = session?.label ?: trainingLabels.firstOrNull() ?: TRAINING_TYPES_FALLBACK[0],
-            types = trainingLabels.ifEmpty { TRAINING_TYPES_FALLBACK },
-            onSave = { label ->
+        LabelPickerDialog(
+            title = "Trainingstyp ändern",
+            items = trainingLabels,
+            initialSelection = session?.label ?: trainingLabels.firstOrNull()?.name,
+            confirmText = "Speichern",
+            onConfirm = { label ->
                 viewModel.updateLabel(label)
                 showEditDialog = false
             },
-            onDismiss = { showEditDialog = false }
+            onDismiss = { showEditDialog = false },
+            dismissText = null,
+            addFieldLabel = null,
+            onAdd = null,
+            onDelete = null
         )
     }
 
@@ -73,6 +80,21 @@ fun DetailScreen(
                 showNoteDialog = false
             },
             onDismiss = { showNoteDialog = false }
+        )
+    }
+
+    if (reportJson != null) {
+        AlertDialog(
+            onDismissRequest = { reportJson = null },
+            title = { Text("Report") },
+            text = {
+                SelectionContainer {
+                    Text(reportJson!!)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { reportJson = null }) { Text("Schließen") }
+            }
         )
     }
 
@@ -222,6 +244,16 @@ fun DetailScreen(
             border = BorderStroke(1.dp, PrimaryPurple),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
         ) { Text("CSV Export") }
+        Spacer(Modifier.height(6.dp))
+        OutlinedButton(
+            onClick = {
+                val json = viewModel.generateReport()
+                reportJson = json
+            },
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, PrimaryPurple),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
+        ) { Text("Report erzeugen") }
     }
 }
 
@@ -246,43 +278,6 @@ private fun EditNoteDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(text.trim()) }) { Text("Speichern") }
-        }
-    )
-}
-
-@Composable
-private fun EditTrainingTypeDialog(
-    current: String,
-    types: List<String>,
-    onSave: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selected by remember { mutableStateOf(current) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Trainingstyp ändern") },
-        text = {
-            Column {
-                types.forEach { type ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selected = type }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = selected == type,
-                            onClick = { selected = type }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(type, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(selected) }) { Text("Speichern") }
         }
     )
 }

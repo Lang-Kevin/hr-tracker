@@ -34,6 +34,7 @@ class SettingsRepository @Inject constructor(
         val HR_SOURCE        = stringPreferencesKey("hr_source")
         val CUSTOM_ZONES     = stringPreferencesKey("custom_zones")
         val TUTORIAL_SEEN    = stringSetPreferencesKey("tutorial_seen_screens")
+        val DEBUG_MODE       = booleanPreferencesKey("debug_mode")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -135,5 +136,11 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { prefs ->
             prefs[Keys.TUTORIAL_SEEN] = (prefs[Keys.TUTORIAL_SEEN] ?: emptySet()) + screenKey
         }
+    }
+
+    val debugMode: Flow<Boolean> = dataStore.data.map { it[Keys.DEBUG_MODE] ?: false }
+
+    suspend fun setDebugMode(enabled: Boolean) {
+        dataStore.edit { it[Keys.DEBUG_MODE] = enabled }
     }
 }

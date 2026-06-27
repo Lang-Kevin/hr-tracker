@@ -35,6 +35,11 @@ class SettingsViewModel @Inject constructor(
 
     val isHealthConnectAvailable: Boolean = healthConnectManager.isAvailable
 
+    val debugMode: StateFlow<Boolean> = settingsRepository.debugMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun setDebugMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDebugMode(enabled) }
+
     fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
 
     fun setAge(age: Int) = viewModelScope.launch { settingsRepository.setAge(age) }

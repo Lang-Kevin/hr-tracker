@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -33,19 +34,20 @@ class ScanViewModel @Inject constructor(
     private val sportLabelDao: SportLabelDao
 ) : ViewModel() {
 
-    val trainingLabels: StateFlow<List<String>> = sportLabelDao.getAllLabels()
-        .map { it.map(SportLabel::name) }
+    val trainingLabels: StateFlow<List<SportLabel>> = sportLabelDao.getAllLabels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun addTrainingLabel(name: String) = viewModelScope.launch {
         if (name.isNotBlank()) sportLabelDao.insert(SportLabel(name = name.trim(), isPredefined = false))
     }
 
-    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = bleManager.scanResults
-        .map { results ->
-            listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)) + results.map { DiscoveredDevice.Real(it) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)))
+    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = combine(
+        bleManager.scanResults,
+        settingsRepository.debugMode
+    ) { results, debugMode ->
+        val real = results.map { DiscoveredDevice.Real(it) }
+        if (debugMode) listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)) + real else real
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId

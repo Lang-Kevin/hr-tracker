@@ -16,10 +16,15 @@ class TutorialViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
-    fun seenState(screen: String): StateFlow<Boolean> =
-        settingsRepository.tutorialSeenScreens
-            .map { screen in it }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    // ponytail: cache prevents new StateFlow (and false initial flash) on every recomposition
+    private val cache = HashMap<String, StateFlow<Boolean?>>()
+
+    fun seenState(screen: String): StateFlow<Boolean?> =
+        cache.getOrPut(screen) {
+            settingsRepository.tutorialSeenScreens
+                .map { screen in it }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+        }
 
     fun markSeen(screen: String) {
         viewModelScope.launch { settingsRepository.markTutorialSeen(screen) }

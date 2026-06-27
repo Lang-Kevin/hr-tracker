@@ -1,9 +1,9 @@
 {
   "permissions": {
-    "defaultMode": "acceptEdits",
     "allow": [
       "Bash(./gradlew:*)",
-      "Bash(adb:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -11,20 +11,24 @@
       "Bash(git commit:*)",
       "Bash(git branch:*)"
     ],
+    "deny": [
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)"
+    ],
     "ask": [
       "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git checkout:*)",
       "Bash(git rebase:*)",
+      "Bash(git rm:*)",
       "Bash(rm:*)",
       "Bash(sudo:*)",
-      "Bash(npm install:*)",
       "Bash(curl:*)",
       "Bash(wget:*)"
     ],
-    "deny": [
-      "Bash(rm -rf /:*)",
-      "Bash(rm -rf ~:*)"
-    ]
+    "defaultMode": "acceptEdits"
+  },
+  "enabledPlugins": {
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
   }
 }
