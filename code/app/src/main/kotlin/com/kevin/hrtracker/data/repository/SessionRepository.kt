@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -130,6 +131,9 @@ class SessionRepository @Inject constructor(
         db.sessionDao().deleteById(id)
         Log.d("HRTracker", "Session $id discarded")
     }
+
+    suspend fun getSamplesForSession(sessionId: Long) =
+        db.hrSampleDao().getSamplesForSession(sessionId).first()
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 

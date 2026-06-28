@@ -102,16 +102,7 @@ class DetailViewModel @Inject constructor(
         if (sess == null || list.isEmpty()) emptyMap()
         else {
             val zones = HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
-            val sorted = list.sortedBy { it.timestampMs }
-            val result = mutableMapOf<Int, Long>()
-            for (i in 0 until sorted.size - 1) {
-                val zone = HrZoneCalculator.zoneFor(sorted[i].bpm, zones)
-                val durS = (sorted[i + 1].timestampMs - sorted[i].timestampMs) / 1000L
-                result[zone] = (result[zone] ?: 0L) + durS.coerceAtLeast(0L)
-            }
-            val lastZone = HrZoneCalculator.zoneFor(sorted.last().bpm, zones)
-            result[lastZone] = (result[lastZone] ?: 0L) + 1L
-            result
+            HrZoneCalculator.aggregateTimeInZone(list, zones)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 

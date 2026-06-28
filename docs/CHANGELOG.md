@@ -162,7 +162,7 @@ Geänderte/neue Dateien:
 - `ui/live/LiveViewModel.kt` → `sessionStartMs` aus persistiertem `Session.startedAt` statt Wanduhr-Zeit (korrekte Elapsed-Time nach Re-Entry)
 - `MainActivity.kt` → Navigation für Resume + `onAbortSession`-Verdrahtung
 
-Bekannte Restlücke: `timeInZone` (Sekunden pro Zone) wird beim Re-Entry auf leer zurückgesetzt — nur In-Memory, kein persistierter Quellwert. Gesamt-Elapsed-Zeit ist korrekt.
+`timeInZone` (Sekunden pro Zone) bleibt beim Re-Entry erhalten: wird beim Resume aus den persistierten `HrSample`s rekonstruiert (`HrZoneCalculator.aggregateTimeInZone`) statt auf leer zurückgesetzt. Gesamt-Elapsed-Zeit ist korrekt.
 
 **Ursache**: Samsung BLE-Stack-Bug. Google Play Services verbindet sich über BLE mit der Galaxy Watch (die ebenfalls `0x2A37` exponiert). Samsungs Routing-Tabelle nutzt das Characteristic-UUID als Key statt das `(device, handle)`-Tupel — Watch-HR landete in `HrBleManager.gattCallback` und mischte sich mit HR8-Daten.
 

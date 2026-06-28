@@ -131,11 +131,21 @@ class LiveViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            isPaused.collect { paused ->
-                if (paused) pauseStartedMs = System.currentTimeMillis()
-                else if (pauseStartedMs > 0) {
+            combine(activeSessionId, isPaused, sessionRepository.activeSession) { id, paused, session ->
+                Triple(id, paused, session)
+            }.collect { (id, paused, session) ->
+                if (paused) {
+                    pauseStartedMs = System.currentTimeMillis()
+                } else if (pauseStartedMs > 0) {
+                    // Resume event: reload samples and seed timeInZone from persisted data
                     pausedAccumMs += System.currentTimeMillis() - pauseStartedMs
                     pauseStartedMs = 0L
+
+                    if (id != null && session != null) {
+                        val samples = sessionRepository.getSamplesForSession(id)
+                        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+                        _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+                    }
                 }
             }
         }
