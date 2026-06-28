@@ -273,6 +273,18 @@ Geänderte Dateien:
 - `ui/live/LiveScreen.kt` → `hrvCountdown`-Collectierung, Auto-Stop, VERBLEIBEND-Anzeige
 - `MainActivity.kt` → Route `"live?hrv={hrv}"`, `onHrvSessionStarted`-Wiring, LaunchedEffect-Guard
 
+## Fix: Duration-Overflow (Zeit über 60 Minuten) (2026-06-28)
+
+**Problem**: Trainingsdauer und Zeit-in-Zone liefen nach 60 Minuten über (z. B. 1:23:45 zeigte sich als 23:45), da der Formatter `mm:ss` keine Stunden unterstützte.
+
+**Lösung**: Neue zentrale `formatDuration(totalSeconds: Long): String` in `ui/Format.kt`, liefert immer `HH:MM:SS`. Alle Call-Sites aktualisiert.
+
+Geänderte/neue Dateien:
+- `ui/Format.kt` — neu (zentrale `formatDuration`)
+- `ui/live/LiveScreen.kt` — Gesamtdauer + Zone-Zeit via `formatDuration`
+- `service/HrRecordingService.kt` — Notification via `formatDuration`
+- `ui/shared/TrainingUi.kt` — Zone-Detail + a11y-Label via `formatDuration`
+
 ## Offen
 
 - Eventuell: Wear-Modul-Watch-Komplikation (BPM auf Watchface).

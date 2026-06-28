@@ -69,7 +69,9 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 - BLE-Verbindung halten
 - Samples inkrementell speichern
-- BPM + Laufzeit in der Notification anzeigen
+- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatDuration`, immer `HH:MM:SS`)
+
+Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
 ## HR-Quellen-Switch
 

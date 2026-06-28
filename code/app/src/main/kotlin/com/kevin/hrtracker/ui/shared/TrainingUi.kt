@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.SurfaceDark
@@ -233,7 +234,7 @@ fun ZeitInZoneSection(
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
                 val isTarget = z == targetZone
-                val label = "Zone $z: ${secs / 60} Min ${secs % 60} Sek${if (isTarget) ", Zielzone" else ""}"
+                val label = "Zone $z: ${formatDuration(secs)}${if (isTarget) ", Zielzone" else ""}"
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -258,7 +259,7 @@ fun ZeitInZoneSection(
                         )
                     }
                     Text(
-                        "%02d:%02d".format(secs / 60, secs % 60),
+                        formatDuration(secs),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
                         color = if (isTarget) Color.White

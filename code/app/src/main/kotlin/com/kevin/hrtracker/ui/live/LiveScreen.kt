@@ -44,6 +44,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.shared.StatItem
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.OnPrimary
@@ -229,7 +230,7 @@ fun LiveScreen(
                     valueColor = TertiaryPink
                 )
             } else {
-                StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
+                StatItem("GESAMTZEIT", formatDuration(elapsed), Modifier.weight(1f))
             }
         }
 
@@ -562,7 +563,7 @@ private fun ZeitInZoneSection(
                         )
                     }
                     Text(
-                        "%02d:%02d".format(secs / 60, secs % 60),
+                        formatDuration(secs),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (isVisible) FontWeight.Bold else FontWeight.Normal,
                         color = if (isVisible) Color.White

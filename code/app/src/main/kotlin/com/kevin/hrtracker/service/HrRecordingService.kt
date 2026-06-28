@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import com.google.android.gms.wearable.Wearable
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.ble.HrBleManager
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
@@ -71,7 +72,7 @@ class HrRecordingService : BaseRecordingService() {
             hrFlow.collect { parsed: ParsedHr ->
                 lastBpm = parsed.bpm.toString()
                 val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpm, "%02d:%02d".format(elapsed / 60, elapsed % 60))
+                updateNotification(lastBpm, formatDuration(elapsed))
             }
         }
     }
