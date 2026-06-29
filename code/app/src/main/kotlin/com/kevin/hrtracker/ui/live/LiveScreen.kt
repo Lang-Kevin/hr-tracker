@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -38,9 +39,12 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.ZoomInMap
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.shared.StatItem
@@ -76,7 +80,7 @@ fun LiveScreen(
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
     val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
-    val visibleZones by viewModel.visibleZones.collectAsStateWithLifecycle()
+    val reachedZones by viewModel.reachedZones.collectAsStateWithLifecycle()
     val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
@@ -97,6 +101,7 @@ fun LiveScreen(
     var showStopDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showTargetZoneDialog by remember { mutableStateOf(false) }
+    var dynamicScale by rememberSaveable { mutableStateOf(true) }
 
     BackHandler(enabled = activeSessionId != null) { showLeaveDialog = true }
 
@@ -183,13 +188,37 @@ fun LiveScreen(
 
         Spacer(Modifier.height(8.dp))
 
+        // Chart header with scale toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(1f))
+            IconToggleButton(
+                checked = dynamicScale,
+                onCheckedChange = { dynamicScale = it },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = if (dynamicScale)
+                        Icons.Default.ZoomInMap else
+                        Icons.Default.ZoomOutMap,
+                    contentDescription = if (dynamicScale)
+                        "Dynamische Skalierung" else
+                        "Statische Skalierung"
+                )
+            }
+        }
+
         // BPM Zone Chart
         BpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = currentBpm,
             zoneBounds = zoneBounds,
             targetZone = targetZone,
-            visibleZones = visibleZones,
+            dynamicScale = dynamicScale,
+            reachedZones = reachedZones,
             milestones = milestones,
             elapsedSeconds = elapsed,
             modifier = Modifier
@@ -204,9 +233,7 @@ fun LiveScreen(
         ZeitInZoneSection(
             timeInZone = timeInZone,
             percentInTargetZone = percentInTargetZone,
-            targetZone = targetZone,
-            visibleZones = visibleZones,
-            onZoneClick = { viewModel.toggleZoneVisibility(it) }
+            targetZone = targetZone
         )
 
         Spacer(Modifier.height(12.dp))
@@ -308,7 +335,8 @@ private fun BpmZoneChart(
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
-    visibleZones: Set<Int>,
+    dynamicScale: Boolean = false,
+    reachedZones: Set<Int> = emptySet(),
     milestones: List<Long> = emptyList(),
     elapsedSeconds: Long = 0L,
     modifier: Modifier = Modifier
@@ -335,7 +363,7 @@ private fun BpmZoneChart(
         }
 
         // Zone separator lines and Y-axis labels
-        zoneBounds.filter { it.zone in visibleZones }.forEach { z ->
+        zoneBounds.forEach { z ->
             val y = bpmToY(z.lo)
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
@@ -352,7 +380,7 @@ private fun BpmZoneChart(
             )
         }
         // Top boundary line for highest zone
-        zoneBounds.lastOrNull()?.takeIf { it.zone in visibleZones }?.let { z ->
+        zoneBounds.lastOrNull()?.let { z ->
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, bpmToY(z.hi)),
@@ -478,9 +506,7 @@ private fun BpmZoneChart(
 private fun ZeitInZoneSection(
     timeInZone: Map<Int, Long>,
     percentInTargetZone: Float?,
-    targetZone: Int,
-    visibleZones: Set<Int>,
-    onZoneClick: (Int) -> Unit = {}
+    targetZone: Int
 ) {
     val pct = percentInTargetZone ?: 0f
     val total = timeInZone.values.sum().coerceAtLeast(1L)
@@ -538,12 +564,9 @@ private fun ZeitInZoneSection(
         ) {
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
-                val isVisible = z in visibleZones
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clickable { onZoneClick(z) }
-                        .alpha(if (isVisible) 1f else 0.35f)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -557,17 +580,13 @@ private fun ZeitInZoneSection(
                         Text(
                             "Z$z",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isVisible) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isVisible) Color.White
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White
                         )
                     }
                     Text(
                         formatDuration(secs),
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (isVisible) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isVisible) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White
                     )
                 }
             }

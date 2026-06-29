@@ -11,8 +11,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,6 +55,10 @@ fun DetailScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var reportJson by remember { mutableStateOf<String?>(null) }
+    var dynamicScale by rememberSaveable { mutableStateOf(true) }
+
+    // ponytail: compute reachedZones from existing timeInZone map (zones with duration > 0)
+    val reachedZones = timeInZone.filter { it.value > 0 }.keys
 
     if (showEditDialog) {
         LabelPickerDialog(
@@ -138,6 +144,35 @@ fun DetailScreen(
 
         Spacer(Modifier.height(8.dp))
 
+        // BPM Zone Chart Header with Toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Trainingszone",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            IconToggleButton(
+                checked = dynamicScale,
+                onCheckedChange = { dynamicScale = it },
+                modifier = Modifier.size(48.dp),
+                colors = IconButtonDefaults.iconToggleButtonColors(
+                    contentColor = PrimaryPurple
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FitScreen,
+                    contentDescription = "Diagramm-Skalierung",
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
         // BPM Zone Chart
         BpmZoneChart(
             bpmHistory = bpmHistory,
@@ -146,7 +181,9 @@ fun DetailScreen(
             targetZone = dominantZone,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
+                .height(220.dp),
+            dynamicScale = dynamicScale,
+            reachedZones = reachedZones
         )
 
         Spacer(Modifier.height(12.dp))

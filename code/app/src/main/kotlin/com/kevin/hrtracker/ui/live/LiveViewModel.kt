@@ -81,12 +81,9 @@ class LiveViewModel @Inject constructor(
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 
-    private val _visibleZones = MutableStateFlow(setOf(1, 2, 3, 4, 5))
-    val visibleZones: StateFlow<Set<Int>> = _visibleZones.asStateFlow()
-
-    fun toggleZoneVisibility(zone: Int) {
-        _visibleZones.update { if (zone in it) it - zone else it + zone }
-    }
+    val reachedZones: StateFlow<Set<Int>> = _timeInZone.map { tiz ->
+        tiz.filterValues { it > 0L }.keys
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val isPaused: StateFlow<Boolean> = sessionRepository.isPaused
 
@@ -154,7 +151,6 @@ class LiveViewModel @Inject constructor(
                 if (id != null && sessionStartMs == 0L) {
                     sessionStartMs = sessionRepository.activeSession.first()?.startedAt
                         ?: System.currentTimeMillis()
-                    _visibleZones.value = setOf(1, 2, 3, 4, 5)
                 }
                 if (id == null) {
                     sessionStartMs = 0L

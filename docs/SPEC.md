@@ -105,13 +105,20 @@ Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `C
 
 HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
 
-Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Klick auf eine **Zeit-in-Zone**-Spalte blendet diese Zone im Live-Chart ein/aus (`visibleZones`, rein lokaler State, kein Persistenz, Reset bei Sessionstart). Ziel-Band + "ZIEL"-Badge im Chart bleiben unabhängig davon immer sichtbar.
+Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
 ## Analytics (DetailScreen)
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
 - Zonenverteilung über Snapshot-Grenzen (Prio: `Session.zoneSnapshotJson`, sonst aktuelle Settings).
+
+## Charts / Visualisierung (BpmZoneChart)
+
+BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
+
+- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
+- **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
 
 ## Export
 

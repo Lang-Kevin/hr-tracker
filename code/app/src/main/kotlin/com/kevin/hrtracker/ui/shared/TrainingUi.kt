@@ -37,6 +37,7 @@ import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.chart.aggregateByChunks
 
 @Composable
 fun BpmZoneChart(
@@ -44,7 +45,9 @@ fun BpmZoneChart(
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dynamicScale: Boolean = false,
+    reachedZones: Set<Int> = emptySet()
 ) {
     val density = LocalDensity.current
 
@@ -54,9 +57,23 @@ fun BpmZoneChart(
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
 
-        val bpmMin = zoneBounds.minOf { it.lo } - 8
-        val bpmMax = zoneBounds.maxOf { it.hi } + 8
-        val bpmRange = (bpmMax - bpmMin).toFloat()
+        val bpmMin: Float
+        val bpmMax: Float
+
+        if (dynamicScale && bpmHistory.isNotEmpty()) {
+            // DYNAMIC: measured min/max with 10% padding
+            val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
+            val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
+            val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
+            bpmMin = actualMin - pad
+            bpmMax = actualMax + pad
+        } else {
+            // STATIC: keep current behavior
+            bpmMin = (zoneBounds.minOf { it.lo } - 8).toFloat()
+            bpmMax = (zoneBounds.maxOf { it.hi } + 8).toFloat()
+        }
+
+        val bpmRange = bpmMax - bpmMin
 
         fun bpmToY(bpm: Int): Float =
             size.height * (1f - (bpm - bpmMin).toFloat() / bpmRange)
@@ -67,7 +84,13 @@ fun BpmZoneChart(
             color = android.graphics.Color.argb(160, 255, 255, 255)
         }
 
-        zoneBounds.forEach { z ->
+        val zonesToDraw = if (dynamicScale && reachedZones.isNotEmpty()) {
+            zoneBounds.filter { it.zone in reachedZones }
+        } else {
+            zoneBounds
+        }
+
+        zonesToDraw.forEach { z ->
             val y = bpmToY(z.lo)
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
@@ -83,7 +106,7 @@ fun BpmZoneChart(
                 labelPaint
             )
         }
-        zoneBounds.lastOrNull()?.let { z ->
+        zonesToDraw.lastOrNull()?.let { z ->
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, bpmToY(z.hi)),
@@ -130,10 +153,19 @@ fun BpmZoneChart(
         }
 
         if (bpmHistory.size >= 2) {
+            // ponytail: downsample via aggregateByChunks when size > 300 in dynamic mode
+            val historyToUse = if (dynamicScale && bpmHistory.size > 300) {
+                val floatValues = bpmHistory.map { it.toFloat() }
+                val aggregated = aggregateByChunks(floatValues, maxPoints = 300)
+                aggregated.map { it.toInt() }
+            } else {
+                bpmHistory
+            }
+
             val path = Path()
-            bpmHistory.forEachIndexed { index, bpm ->
-                val x = leftPaddingPx + (index.toFloat() / (bpmHistory.size - 1)) * chartWidth
-                val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
+            historyToUse.forEachIndexed { index, bpm ->
+                val x = leftPaddingPx + (index.toFloat() / (historyToUse.size - 1)) * chartWidth
+                val y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             drawPath(
@@ -148,7 +180,7 @@ fun BpmZoneChart(
 
             val lastBpm = bpmHistory.last()
             val lastX = leftPaddingPx + chartWidth
-            val lastY = bpmToY(lastBpm.coerceIn(bpmMin, bpmMax))
+            val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
             drawCircle(
                 color = LightPurple,
