@@ -19,6 +19,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.luminance
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
@@ -152,19 +153,27 @@ fun SettingsScreen(
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     (1..5).forEach { z ->
                         val selected = settings.targetZone == z
                         val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
-                        FilterChip(
+                        val contentColor = if (zoneColor.luminance() > 0.5f)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            androidx.compose.ui.graphics.Color.White
+                        SegmentedButton(
                             selected = selected,
                             onClick = { viewModel.setTargetZone(z) },
-                            label = { Text("Z$z") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = zoneColor,
-                                selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                            shape = SegmentedButtonDefaults.itemShape(index = z - 1, count = 5),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = zoneColor,
+                                activeContentColor = contentColor
                             )
-                        )
+                        ) {
+                            Text("Z$z")
+                        }
                     }
                 }
             }
@@ -305,19 +314,30 @@ fun SettingsScreen(
                     "Herzfrequenzquelle für Aufzeichnungen",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = settings.hrSource == HrSource.BLE,
-                        onClick = { viewModel.setHrSource(HrSource.BLE) },
-                        label = { Text("BLE-Sensor") }
-                    )
-                    if (FeatureFlags.SMARTWATCH_ENABLED) {
-                        FilterChip(
+                if (FeatureFlags.SMARTWATCH_ENABLED) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SegmentedButton(
+                            selected = settings.hrSource == HrSource.BLE,
+                            onClick = { viewModel.setHrSource(HrSource.BLE) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text("BLE-Sensor")
+                        }
+                        SegmentedButton(
                             selected = settings.hrSource == HrSource.WATCH,
                             onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                            label = { Text("Galaxy Watch") }
-                        )
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text("Galaxy Watch")
+                        }
                     }
+                } else {
+                    Text(
+                        "HR-Quelle: BLE-Sensor",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
                 if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
                     Text(
