@@ -37,13 +37,20 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS milestones (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, sessionId INTEGER NOT NULL, atSeconds INTEGER NOT NULL, label TEXT NOT NULL DEFAULT '')")
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_milestones_sessionId ON milestones(sessionId)")
+        }
+    }
+
     private val predefinedLabels = listOf("Allg. Training", "Beachvolleyball", "Trainingsbike", "Volleyball")
 
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HrDatabase =
         Room.databaseBuilder(context, HrDatabase::class.java, "hr_tracker.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .addCallback(object : androidx.room.RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     predefinedLabels.forEach { name ->
@@ -64,4 +71,7 @@ object DatabaseModule {
 
     @Provides
     fun provideSportLabelDao(db: HrDatabase) = db.sportLabelDao()
+
+    @Provides
+    fun provideMilestoneDao(db: HrDatabase) = db.milestoneDao()
 }

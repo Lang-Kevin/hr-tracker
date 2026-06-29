@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.HrSample
+import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.SportLabel
 import com.kevin.hrtracker.domain.HrRecovery
@@ -122,12 +123,19 @@ class DetailViewModel @Inject constructor(
         else HrRecovery.computeHrRecovery(list, sess.maxHrUsed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val milestones: StateFlow<List<Milestone>> = db.milestoneDao().getBySession(sessionId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }
 
     fun updateNote(note: String) {
         viewModelScope.launch { db.sessionDao().updateNote(sessionId, note) }
+    }
+
+    fun updateMilestoneLabel(id: Long, label: String) {
+        viewModelScope.launch { db.milestoneDao().updateLabel(id, label.trim()) }
     }
 
     suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)

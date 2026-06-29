@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import com.kevin.hrtracker.data.entity.Milestone
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
 import com.kevin.hrtracker.ui.shared.StatItem
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
@@ -55,11 +57,14 @@ fun DetailScreen(
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
     val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
+    val milestones by viewModel.milestones.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var reportJson by remember { mutableStateOf<String?>(null) }
     var dynamicScale by rememberSaveable { mutableStateOf(true) }
+    var editingMilestoneId by remember { mutableStateOf<Long?>(null) }
+    var editingMilestoneLabel by remember { mutableStateOf("") }
 
     // ponytail: compute reachedZones from existing timeInZone map (zones with duration > 0)
     val reachedZones = timeInZone.filter { it.value > 0 }.keys
@@ -111,6 +116,34 @@ fun DetailScreen(
             },
             confirmButton = {
                 TextButton(onClick = { reportJson = null }) { Text("Schließen") }
+            }
+        )
+    }
+
+    if (editingMilestoneId != null) {
+        AlertDialog(
+            onDismissRequest = { editingMilestoneId = null },
+            title = { Text("Meilenstein-Name") },
+            text = {
+                OutlinedTextField(
+                    value = editingMilestoneLabel,
+                    onValueChange = { editingMilestoneLabel = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.updateMilestoneLabel(editingMilestoneId!!, editingMilestoneLabel)
+                        editingMilestoneId = null
+                    },
+                    enabled = editingMilestoneLabel.trim().isNotEmpty()
+                ) { Text("Speichern") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingMilestoneId = null }) { Text("Abbrechen") }
             }
         )
     }
@@ -185,6 +218,9 @@ fun DetailScreen(
         }
 
         // BPM Zone Chart
+        val totalSessionSeconds = session?.endedAt?.let { end ->
+            ((end - (session?.startedAt ?: end)) / 1000L)
+        }
         BpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = bpmHistory.lastOrNull(),
@@ -194,8 +230,70 @@ fun DetailScreen(
                 .fillMaxWidth()
                 .height(220.dp),
             dynamicScale = dynamicScale,
-            reachedZones = reachedZones
+            reachedZones = reachedZones,
+            detailMilestones = milestones,
+            totalSessionSeconds = totalSessionSeconds
         )
+
+        Spacer(Modifier.height(12.dp))
+
+        // Meilensteine
+        if (milestones.isNotEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Text(
+                    text = "Meilensteine",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    milestones.forEach { milestone ->
+                        val timeStr = formatDuration(milestone.atSeconds)
+                        OutlinedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    editingMilestoneId = milestone.id
+                                    editingMilestoneLabel = milestone.label
+                                },
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = milestone.label.ifBlank { "Meilenstein" },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = timeStr,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Bearbeiten",
+                                    tint = PrimaryPurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Spacer(Modifier.height(12.dp))
 

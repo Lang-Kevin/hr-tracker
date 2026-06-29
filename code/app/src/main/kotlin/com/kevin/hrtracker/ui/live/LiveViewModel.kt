@@ -1,9 +1,12 @@
 package com.kevin.hrtracker.ui.live
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.shared.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
+import com.kevin.hrtracker.data.db.MilestoneDao
+import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
@@ -12,9 +15,11 @@ import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.wearable.WearableHrSource
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -23,6 +28,7 @@ class LiveViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val settingsRepository: SettingsRepository,
     private val wearableHrSource: WearableHrSource,
+    private val milestoneDao: MilestoneDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -168,6 +174,36 @@ class LiveViewModel @Inject constructor(
                     delay(1_000)
                     if (!isPaused.value) _hrvCountdown.update { it?.minus(1) }
                 }
+            }
+        }
+        viewModelScope.launch {
+            var previousSessionId: Long? = null
+            activeSessionId.collect { id ->
+                if (previousSessionId != null && id == null) {
+                    // Session wurde gerade beendet — persistiere Milestones
+                    val milestonesList = _milestones.value
+                    if (milestonesList.isNotEmpty()) {
+                        val entities = milestonesList.mapIndexed { idx, seconds ->
+                            Milestone(
+                                sessionId = previousSessionId!!,
+                                atSeconds = seconds,
+                                label = "M${idx + 1}"
+                            )
+                        }
+                        // ponytail: NonCancellable, sonst gehen Milestones verloren wenn
+                        // die VM während des Inserts bei Session-Ende zerstört wird.
+                        withContext(NonCancellable) {
+                            try {
+                                milestoneDao.insertAll(entities)
+                                Log.d("HRTracker", "Milestones persistiert: ${entities.size}")
+                            } catch (e: Exception) {
+                                Log.e("HRTracker", "Milestone-Persistierung fehlgeschlagen", e)
+                            }
+                        }
+                    }
+                    _milestones.value = emptyList()
+                }
+                previousSessionId = id
             }
         }
     }

@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.LightPurple
@@ -47,7 +48,9 @@ fun BpmZoneChart(
     targetZone: Int,
     modifier: Modifier = Modifier,
     dynamicScale: Boolean = false,
-    reachedZones: Set<Int> = emptySet()
+    reachedZones: Set<Int> = emptySet(),
+    detailMilestones: List<Milestone> = emptyList(),
+    totalSessionSeconds: Long? = null
 ) {
     val density = LocalDensity.current
 
@@ -150,6 +153,34 @@ fun BpmZoneChart(
                 by + bh / 2 + zielPaint.textSize / 3f,
                 zielPaint
             )
+        }
+
+        // Milestone vertical lines for detail view
+        if (detailMilestones.isNotEmpty() && totalSessionSeconds != null && totalSessionSeconds > 0) {
+            val milestonePaint = Paint().apply {
+                isAntiAlias = true
+                textSize = with(density) { 9.sp.toPx() }
+                color = android.graphics.Color.argb(200, 255, 200, 80)
+                textAlign = Paint.Align.CENTER
+            }
+            detailMilestones.forEach { milestone ->
+                val posRatio = milestone.atSeconds.toFloat() / totalSessionSeconds.toFloat()
+                val x = leftPaddingPx + posRatio * chartWidth
+                if (x in leftPaddingPx..size.width) {
+                    drawLine(
+                        color = Color(0xFFFFC850).copy(alpha = 0.6f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = with(density) { 1.5.dp.toPx() }
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        milestone.label.ifBlank { "M" },
+                        x,
+                        with(density) { 12.sp.toPx() },
+                        milestonePaint
+                    )
+                }
+            }
         }
 
         if (bpmHistory.size >= 2) {

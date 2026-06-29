@@ -34,11 +34,17 @@ Session(id, label, startedAt, endedAt, maxHrUsed, restingHr, note,
 HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 
 SportLabel(id, name, isPredefined)
+
+Milestone(id, sessionId, atSeconds, label /* DB v5 */)
 ```
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 2 (Migration 1→2 für `zoneSnapshotJson`).
+DB-Version 5 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`).
+
+### Meilensteine
+
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Persistierung bei Session-Ende mit Default-Label `M{i+1}` in `NonCancellable` (kein Verlust bei VM-Zerstörung). Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Nur reguläres Session-Ende persistiert, nicht Force-Kill.
 
 ## BLE-Flow
 
