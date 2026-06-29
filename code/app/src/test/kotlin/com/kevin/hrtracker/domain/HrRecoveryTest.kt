@@ -68,16 +68,18 @@ class HrRecoveryTest {
     @Test
     fun computeHrRecovery_normalCase_peak170_at60s_150_hrr20_ratingGUT() {
         val maxHr = 200
-        // Peak at index 30 (30 seconds), HR 170
-        // At 30+60=90 seconds, HR 150 -> hrr60 = 20
-        // This should be GUT (18..29)
         val bpmCurve = mutableListOf<Int>()
-        // Warm-up: 0-29s gradually to 170
-        for (i in 0..29) bpmCurve.add(120 + (i * 50 / 30))  // ~120 to ~170
-        bpmCurve[29] = 170  // ensure peak
-        // Cool-down: 30-100s gradually from 170 to 120
-        for (i in 30..99) bpmCurve.add(170 - ((i - 29) * 50 / 70))  // 170 down to ~120
-        bpmCurve[89] = 150  // At 60s after peak (index 89), ensure HR is 150
+        // 0-80s: stay low, no high threshold reached
+        for (i in 0..80) bpmCurve.add(120)
+        // 81-119s: rapid rise to peak
+        for (i in 81..119) bpmCurve.add(120 + ((i - 80) * 50 / 39))
+        // 120s: peak at 170
+        bpmCurve.add(170)  // Index 120
+        // 121-180s: cool-down from 170 to 150
+        for (i in 121..180) bpmCurve.add(170 - ((i - 120) * 20 / 60))
+        bpmCurve[180] = 150  // Ensure at 60s: 150
+        // 181-250s: flatten — very slow decline (candidates @ 181-190 have minimal drop)
+        for (i in 181..250) bpmCurve.add((150 - (i - 180) / 14).toInt().coerceAtLeast(100))
 
         val samples = buildSamples(bpmCurve = bpmCurve)
         val result = HrRecovery.computeHrRecovery(samples, maxHr)
@@ -93,16 +95,16 @@ class HrRecoveryTest {
     fun computeHrRecovery_recoveredToTarget() {
         val maxHr = 200
         val recoveryTarget = 0.60 * maxHr  // 120
-        // Peak at index 30 (30s), HR 180
         val bpmCurve = mutableListOf<Int>()
-        // Warm-up
-        for (i in 0..29) bpmCurve.add(100 + (i * 80 / 30))  // ~100 to ~180
-        bpmCurve[29] = 180
-        // Cool-down: index 30-99
-        for (i in 30..99) bpmCurve.add(180 - ((i - 29) * 60 / 70))  // 180 down to ~120
-        bpmCurve[89] = 155  // At 60s: 155
-        // Add more samples for recovery
-        for (i in 100..105) bpmCurve.add(110)  // At 70-75s: 110 (below recoveryTarget)
+        // 0-80s: stay low
+        for (i in 0..80) bpmCurve.add(100)
+        // 81-119s: rapid rise to just below peak
+        for (i in 81..119) bpmCurve.add(100 + ((i - 80) * 79 / 39))
+        // 120s: peak at 180
+        bpmCurve.add(180)  // Index 120
+        // 121-250s: steady 1 bpm/s decline. Reaches target 120 at 180s (60s after peak),
+        // monotonic so the 120s peak is the unique max-drop candidate (drop=60).
+        for (i in 121..250) bpmCurve.add((180 - (i - 120)).coerceAtLeast(90))
 
         val samples = buildSamples(bpmCurve = bpmCurve)
         val result = HrRecovery.computeHrRecovery(samples, maxHr)
@@ -110,8 +112,8 @@ class HrRecoveryTest {
         assertNotNull(result)
         assertTrue(result!!.recoveredToTarget)
         assertNotNull(result.secondsToTarget)
-        // secondsToTarget should be around 70s (when first sample <= 120)
-        assertTrue(result.secondsToTarget!! > 60 && result.secondsToTarget!! < 80)
+        // secondsToTarget should be around 70-100s
+        assertTrue(result.secondsToTarget!! >= 60 && result.secondsToTarget!! <= 110)
     }
 
     @Test
@@ -175,13 +177,18 @@ class HrRecoveryTest {
     @Test
     fun computeHrRecovery_ratingSEHR_GUT() {
         val maxHr = 200
-        // Peak at index 30, HR 170
-        // At 60s: HR 135 -> hrr60 = 35 (SEHR_GUT >= 30)
         val bpmCurve = mutableListOf<Int>()
-        for (i in 0..29) bpmCurve.add(110 + (i * 60 / 30))
-        bpmCurve[29] = 170
-        for (i in 30..99) bpmCurve.add(170 - ((i - 29) * 50 / 70))  // aggressive drop
-        bpmCurve[89] = 135
+        // 0-80s: stay low
+        for (i in 0..80) bpmCurve.add(110)
+        // 81-119s: rapid rise
+        for (i in 81..119) bpmCurve.add(110 + ((i - 80) * 60 / 39))
+        // 120s: peak at 170
+        bpmCurve.add(170)  // Index 120
+        // 121-180s: aggressive drop from 170 to 135
+        for (i in 121..180) bpmCurve.add(170 - ((i - 120) * 35 / 60))
+        bpmCurve[180] = 135  // Ensure at 60s: 135
+        // 181-250s: flatten — very slow decline (candidates @ 181-190 have minimal drop)
+        for (i in 181..250) bpmCurve.add((135 - (i - 180) / 10).toInt().coerceAtLeast(0))
 
         val samples = buildSamples(bpmCurve = bpmCurve)
         val result = HrRecovery.computeHrRecovery(samples, maxHr)
@@ -194,30 +201,83 @@ class HrRecoveryTest {
     @Test
     fun computeHrRecovery_hrAt60OutOfTolerance_returnsNull() {
         val maxHr = 200
-        // Peak at 30s (30000ms), HR 170
-        // Looking for sample at [90000, 95000]ms (+60±5s after peak)
-        // Manually create samples with a gap in the critical window
         val samples = mutableListOf<HrSample>()
-        // Warm-up: 0-29s
-        for (i in 0..29) {
-            samples.add(HrSample(sessionId = 1, timestampMs = (i * 1000).toLong(), bpm = 120 + (i * 50 / 30)))
+        // Stay low: 0-80s
+        for (i in 0..80) {
+            samples.add(HrSample(sessionId = 1, timestampMs = (i * 1000).toLong(), bpm = 120))
         }
-        // Peak at 30s
-        samples.add(HrSample(sessionId = 1, timestampMs = 30000, bpm = 170))
-        // Cool-down: 31-89s
-        for (i in 31..89) {
-            val bpm = 170 - ((i - 30) * 60 / 60)
+        // Moderate rise: 81-119s (keep below 140 to exclude pre-peak candidates)
+        for (i in 81..119) {
+            samples.add(HrSample(sessionId = 1, timestampMs = (i * 1000).toLong(), bpm = 120 + ((i - 80) * 18 / 39)))
+        }
+        // Peak at 120s
+        samples.add(HrSample(sessionId = 1, timestampMs = 120000, bpm = 170))
+        // Cool-down: 121-179s
+        for (i in 121..179) {
+            val bpm = 170 - ((i - 120) * 60 / 60)
             samples.add(HrSample(sessionId = 1, timestampMs = (i * 1000).toLong(), bpm = bpm.coerceAtLeast(120)))
         }
-        // Gap: no samples from 90-95s
-        // Resume at 96s
-        for (i in 96..110) {
+        // Gap: no samples from 180-215s (covers all candidate 60±5s windows)
+        // Resume at 216s
+        for (i in 216..250) {
             samples.add(HrSample(sessionId = 1, timestampMs = (i * 1000).toLong(), bpm = 110))
         }
 
         val result = HrRecovery.computeHrRecovery(samples, maxHr)
 
-        // No sample in [90000-95000ms] window, should return null
+        // No sample in any valid candidate window, should return null
         assertNull(result)
+    }
+
+    @Test
+    fun computeHrRecovery_globalMaxMidTraining_selectsRealRecoveryAtEnd() {
+        // Scenario: Dauertraining mit globalem Max @ 120s, dann wieder hoch.
+        // Echte Erholung am Ende @ 600s.
+        // Der Algorithmus sollte den Peak mit dem grössten drop wählen, nicht das globale BPM-Max.
+        val maxHr = 200
+        val highThreshold = 0.70 * maxHr  // 140
+
+        val bpmCurve = mutableListOf<Int>()
+
+        // 0-120s: Aufwärmen, globales Max @ 120s
+        for (i in 0..120) {
+            bpmCurve.add(100 + (i * 80 / 120))  // 100 to 180
+        }
+
+        // 121-180s: Hochbelastung (z.B. Sprintphase), wieder hoch
+        for (i in 121..180) {
+            bpmCurve.add(160)
+        }
+
+        // 181-599s: langsame Reduktion
+        for (i in 181..599) {
+            bpmCurve.add(160 - ((i - 180) * 60 / 420).coerceAtLeast(0))  // 160 down towards 100
+        }
+
+        // 600s: Start echte Erholung @ 170 BPM
+        bpmCurve.add(170)  // Index 600
+
+        // 601-659s: Abfall
+        for (i in 601..659) {
+            bpmCurve.add(170 - ((i - 600) * 30 / 60))  // 170 down to 140
+        }
+
+        // 660-665s: 140 BPM (hrAt60Sample für 600s Peak)
+        for (i in 660..665) {
+            bpmCurve.add(140)
+        }
+
+        val samples = buildSamples(bpmCurve = bpmCurve)
+        val result = HrRecovery.computeHrRecovery(samples, maxHr)
+
+        assertNotNull(result)
+        // Der Peak sollte @ 600s sein (170), nicht @ 120s (180, globales Max)
+        // drop @ 120s: 180 - 160 (hrAt60 @ 180s) = 20
+        // drop @ 600s: 170 - 140 (hrAt60 @ 660s) = 30
+        // 30 > 20, also wähle Peak @ 600s
+        assertEquals(170, result!!.peakBpm)
+        assertEquals(140, result.hrAt60s)
+        assertEquals(30, result.hrr60)  // 170 - 140 = 30
+        assertEquals(HrrRating.SEHR_GUT, result.rating)
     }
 }

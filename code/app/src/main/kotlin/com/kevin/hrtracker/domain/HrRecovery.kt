@@ -29,21 +29,36 @@ object HrRecovery {
 
         val lastT = samples.last().timestampMs
 
-        // ponytail: peak = hoechste beobachtete bpm (kein onset-detection). upgrade-pfad: echte exercise-cessation-erkennung falls noetig
-        val peakCandidates = samples.filter { it.timestampMs <= lastT - 60_000 }
-        if (peakCandidates.isEmpty()) return null
+        // ponytail: max-drop candidate selection — wähle Peak mit grösstem Abfall zu hrAt60, nicht globales BPM-Max. O(n·window); onset-detection if false positives.
+        val candidates = samples.filter {
+            it.timestampMs <= lastT - 60_000 && it.bpm >= highThreshold
+        }
+        if (candidates.isEmpty()) return null
 
-        val peak = peakCandidates.maxByOrNull { it.bpm } ?: return null
-        if (peak.bpm < highThreshold) return null
+        var bestPeak: HrSample? = null
+        var bestDrop = -1
+        var bestHrAt60 = -1
 
-        // fenster [60s, 65s] nach peak — toleriert BLE-luecken, nimmt nie ein sample VOR 60s (das wuerde recovery unterschaetzen)
-        val hrAt60Sample = samples.firstOrNull {
-            it.timestampMs >= peak.timestampMs + 60_000 &&
-            it.timestampMs <= peak.timestampMs + 65_000
-        } ?: return null
+        for (candidate in candidates) {
+            val hrAt60Sample = samples.firstOrNull {
+                it.timestampMs >= candidate.timestampMs + 60_000 &&
+                it.timestampMs <= candidate.timestampMs + 65_000
+            } ?: continue
 
-        val hrAt60 = hrAt60Sample.bpm
-        val hrr60 = peak.bpm - hrAt60
+            val drop = candidate.bpm - hrAt60Sample.bpm
+            // ponytail: Tie → frühester (höchster) Peak gewinnt
+            if (drop > bestDrop) {
+                bestDrop = drop
+                bestPeak = candidate
+                bestHrAt60 = hrAt60Sample.bpm
+            }
+        }
+
+        if (bestPeak == null || bestDrop <= 0) return null
+
+        val peak = bestPeak
+        val hrAt60 = bestHrAt60
+        val hrr60 = bestDrop
 
         // Check if recovered to target, measure time to recovery
         val recoveryTarget_Int = (recoveryTarget).toInt()
