@@ -10,6 +10,8 @@ import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.SportLabel
+import com.kevin.hrtracker.domain.HrRecovery
+import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
@@ -113,6 +115,11 @@ class DetailViewModel @Inject constructor(
     val percentInTargetZone: StateFlow<Float?> = combine(timeInZone, dominantZone) { map, zone ->
         if (map.isEmpty()) null
         else map.getOrDefault(zone, 0L).toFloat() / map.values.sum().coerceAtLeast(1L)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val recovery: StateFlow<HrrResult?> = combine(samples, session) { list, sess ->
+        if (sess == null) null
+        else HrRecovery.computeHrRecovery(list, sess.maxHrUsed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     fun updateLabel(label: String) {

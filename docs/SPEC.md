@@ -120,7 +120,21 @@ BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschalt
 - **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
 - **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
 
-## Export
+## Erholung / Heart Rate Recovery (HRR)
+
+**HRR60-Kennzahl:** Automatisch nach Session-Ende berechnet, zeigt die Herzfrequenz-Erholungsrate an.
+
+- **Definition:** Peak-HF (höchste beobachtete BPM während Session) minus Herzfrequenz im Fenster [60–65 Sekunden] nach dem Peak.
+- **Peak-Kriterium:** Muss ≥ 70 % HRmax erreichen mit ≥ 60 Sekunden Nachlauf; toleriert kurze BLE-Lücken in der HF-Messung.
+- **Post-Workout-Zielzone:** 60 % HRmax — die App zeigt an, ob und wann dieser Erholungsbereich erreicht wurde.
+- **Rating-Kategorien (sportwissenschaftlicher Standard):**
+  - < 12 bpm: Niedrig
+  - 12–17 bpm: Normal
+  - 18–29 bpm: Gut
+  - ≥ 30 bpm: Sehr gut
+- **Berechnung:** On-read aus vorhandenen `HrSample`-Daten (timestampMs, bpm) — **keine Room-Migration erforderlich.** HRR-Card wird im Detail-Screen nur angezeigt, wenn Peak-Bedingungen erfüllt sind und HRR60 berechenbar ist.
+
+## Export / Report
 
 V1: **JSON**. CSV ist V2 (Batch 6 erledigt).
 
@@ -131,6 +145,8 @@ session    : Metadaten, HRmax, Ruhepuls, ZoneModel, Zonengrenzen
 summary    : avg_bpm, max_bpm, min_bpm, time_in_zone
 samples[]  : timestamp, elapsed, bpm, rr_ms, zone
 ```
+
+Der Detail-Screen bietet einen Report-Dialog mit einem "Kopieren"-Button, der den Report-JSON direkt via `LocalClipboardManager` in die Zwischenablage kopiert; Toast-Feedback "Report kopiert" bestätigt die Aktion.
 
 ## Permissions
 

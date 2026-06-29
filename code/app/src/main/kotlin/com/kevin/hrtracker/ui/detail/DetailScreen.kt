@@ -1,6 +1,7 @@
 package com.kevin.hrtracker.ui.detail
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,8 +19,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +53,7 @@ fun DetailScreen(
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
     val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
+    val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
@@ -90,6 +94,7 @@ fun DetailScreen(
     }
 
     if (reportJson != null) {
+        val clipboard = LocalClipboardManager.current
         AlertDialog(
             onDismissRequest = { reportJson = null },
             title = { Text("Report") },
@@ -97,6 +102,12 @@ fun DetailScreen(
                 SelectionContainer {
                     Text(reportJson!!)
                 }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    clipboard.setText(AnnotatedString(reportJson!!))
+                    Toast.makeText(context, "Report kopiert", Toast.LENGTH_SHORT).show()
+                }) { Text("Kopieren") }
             },
             confirmButton = {
                 TextButton(onClick = { reportJson = null }) { Text("Schließen") }
@@ -217,6 +228,74 @@ fun DetailScreen(
             StatItem("RMSSD", rmssd?.let { "${it}ms" } ?: "—", Modifier.weight(1f))
             StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
             StatItem("MIN BPM", stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Heart Rate Recovery Card
+        recovery?.let { hrr ->
+            val ratingColor = when (hrr.rating) {
+                com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> MaterialTheme.colorScheme.errorContainer
+                com.kevin.hrtracker.domain.HrrRating.NORMAL -> MaterialTheme.colorScheme.tertiary
+                com.kevin.hrtracker.domain.HrrRating.GUT -> MaterialTheme.colorScheme.primary
+                com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> MaterialTheme.colorScheme.primary
+            }
+            val ratingText = when (hrr.rating) {
+                com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> "Niedrig"
+                com.kevin.hrtracker.domain.HrrRating.NORMAL -> "Normal"
+                com.kevin.hrtracker.domain.HrrRating.GUT -> "Gut"
+                com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> "Sehr gut"
+            }
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        "Herzfrequenz-Erholung (1 min)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${hrr.hrr60} bpm",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+                        Surface(
+                            color = ratingColor,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                ratingText,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    if (hrr.recoveredToTarget && hrr.secondsToTarget != null) {
+                        Text(
+                            "Erholt auf Ruhebereich nach ${hrr.secondsToTarget}s",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(6.dp))
+                    }
+                    Text(
+                        "Peak ${hrr.peakBpm} → ${hrr.hrAt60s} bpm",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
