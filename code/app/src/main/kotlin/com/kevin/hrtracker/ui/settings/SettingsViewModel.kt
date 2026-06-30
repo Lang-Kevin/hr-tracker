@@ -40,6 +40,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setDebugMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDebugMode(enabled) }
 
+    fun setChartDynamicScale(enabled: Boolean) = viewModelScope.launch { settingsRepository.setChartDynamicScale(enabled) }
+
     fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
 
     fun setAge(age: Int) = viewModelScope.launch { settingsRepository.setAge(age) }

@@ -90,7 +90,7 @@ Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht
 
 ## HR-Quellen-Switch
 
-`UserSettings.hrSource: HrSource` (BLE | WATCH) im DataStore. `HrRecordingService` injiziert sowohl `HrBleManager` als auch `WearableHrSource` (Singleton `SharedFlow<ParsedHr>`) und wählt die Quelle reaktiv via `flatMapLatest(settingsRepository.userSettings)`.
+`UserSettings.hrSource: HrSource` (BLE | WATCH) im DataStore. `HrRecordingService` injiziert sowohl `HrBleManager` als auch `WearableHrSource` (Singleton `SharedFlow<ParsedHr>`) und wählt die Quelle reaktiv via `flatMapLatest(settingsRepository.userSettings)`. Die HR-Quelle-Card im Settings-Screen ist nur bei `BuildConfig.DEBUG == true` sichtbar (Development-Feature, nicht für Produktions-Nutzer gedacht).
 
 **Wichtig**: `notifyWatch(true/false)` nur senden, wenn `currentHrSource == WATCH`. Sonst Doppel-Stream.
 
@@ -103,6 +103,8 @@ Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht
 
 Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe Design-System).
 
+Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder. Beim Ändern einer Grenze werden Nachbargrenzen automatisch kaskadiert, sodass die Reihenfolge stets streng aufsteigend (30–220 BPM) bleibt. "Was bedeuten die Zonen?" öffnet sich über ein Fragezeichen-Icon als Dialog in der Zonen-Vorschau (ersetzt den bisherigen Inline-Hinweis).
+
 ## Screens
 
 | Screen   | Inhalt                                                                  |
@@ -111,7 +113,7 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
 | History  | Sessionliste, Summary-Card, Swipe-to-Delete                             |
 | Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
-| Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, HR-Quelle |
+| Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
 Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken.
@@ -134,6 +136,8 @@ BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschalt
 
 - **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
 - **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
+
+**Diagramm-Standard (Setting):** `UserSettings.chartDynamicScaleDefault: Boolean` (DataStore) steuert den initialen Modus im Detail-Screen. Der Nutzer kann den Modus pro Session über den IconToggleButton überschreiben; der Override gilt nur für die aktuelle Screen-Instanz.
 
 ## Erholung / Heart Rate Recovery (HRR)
 

@@ -6,7 +6,8 @@ data class UserSettings(
     val restingHr: Int? = null,
     val targetZone: Int = 2,
     val hrSource: HrSource = HrSource.BLE,
-    val customZones: List<ZoneBounds>? = null
+    val customZones: List<ZoneBounds>? = null,
+    val chartDynamicScale: Boolean = true
 ) {
     val maxHrUsed: Int get() = manualMaxHr ?: HrZoneCalculator.tanakaMaxHr(age)
     val effectiveZones: List<ZoneBounds>

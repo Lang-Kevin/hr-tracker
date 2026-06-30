@@ -58,11 +58,13 @@ fun DetailScreen(
     val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
+    val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var reportJson by remember { mutableStateOf<String?>(null) }
-    var dynamicScale by rememberSaveable { mutableStateOf(true) }
+    var dynamicScaleOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val dynamicScale = dynamicScaleOverride ?: chartDynamicScaleDefault
     var editingMilestoneId by remember { mutableStateOf<Long?>(null) }
     var editingMilestoneLabel by remember { mutableStateOf("") }
 
@@ -203,7 +205,7 @@ fun DetailScreen(
             )
             IconToggleButton(
                 checked = dynamicScale,
-                onCheckedChange = { dynamicScale = it },
+                onCheckedChange = { dynamicScaleOverride = it },
                 modifier = Modifier.size(48.dp),
                 colors = IconButtonDefaults.iconToggleButtonColors(
                     contentColor = PrimaryPurple

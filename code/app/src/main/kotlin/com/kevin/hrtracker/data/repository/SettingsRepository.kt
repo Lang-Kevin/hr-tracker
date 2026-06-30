@@ -35,6 +35,7 @@ class SettingsRepository @Inject constructor(
         val CUSTOM_ZONES     = stringPreferencesKey("custom_zones")
         val TUTORIAL_SEEN    = stringSetPreferencesKey("tutorial_seen_screens")
         val DEBUG_MODE       = booleanPreferencesKey("debug_mode")
+        val CHART_DYNAMIC_SCALE = booleanPreferencesKey("chart_dynamic_scale")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -48,7 +49,8 @@ class SettingsRepository @Inject constructor(
             } ?: HrSource.BLE,
             customZones  = prefs[Keys.CUSTOM_ZONES]?.let {
                 runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull()
-            }
+            },
+            chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true
         )
     }
 
@@ -142,5 +144,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setDebugMode(enabled: Boolean) {
         dataStore.edit { it[Keys.DEBUG_MODE] = enabled }
+    }
+
+    suspend fun setChartDynamicScale(enabled: Boolean) {
+        dataStore.edit { it[Keys.CHART_DYNAMIC_SCALE] = enabled }
     }
 }

@@ -1,11 +1,11 @@
 package com.kevin.hrtracker.ui.settings
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,7 +26,6 @@ import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.hrtracker.FeatureFlags
-import com.kevin.shared.domain.validateZoneTexts
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -67,6 +66,62 @@ fun SettingsScreen(
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
     val tutorialAnchors = rememberTutorialAnchors()
     val tutorialSeen by tutorialViewModel.seenState("settings").collectAsStateWithLifecycle()
+
+    // Task 4: debugMode hoisted before HR-Quelle Card
+    val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
+
+    // Task 2: boundaries-based custom zone state
+    var customZonesEnabled by remember(settings.customZones != null) {
+        mutableStateOf(settings.customZones != null)
+    }
+    val defaultBoundaries = HrZoneCalculator.zonesToBoundaries(
+        HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
+    )
+    var boundaries by remember(customZonesEnabled) {
+        mutableStateOf(
+            settings.customZones?.let { HrZoneCalculator.zonesToBoundaries(it) } ?: defaultBoundaries
+        )
+    }
+    var touched by remember(customZonesEnabled) { mutableStateOf(setOf<Int>()) }
+
+    // Task 3: zone info dialog state
+    var showZoneInfo by remember { mutableStateOf(false) }
+
+    if (showZoneInfo) {
+        AlertDialog(
+            onDismissRequest = { showZoneInfo = false },
+            title = { Text("Was bedeuten die Zonen?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ZONE_DESCRIPTIONS.forEach { (z, desc) ->
+                        val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                color = zoneColor,
+                                shape = MaterialTheme.shapes.extraSmall,
+                                modifier = Modifier.size(20.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "Z$z",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = androidx.compose.ui.graphics.Color.White
+                                    )
+                                }
+                            }
+                            Text(desc, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showZoneInfo = false }) { Text("Schließen") }
+            }
+        )
+    }
 
     Box(Modifier.fillMaxSize()) {
     Column(
@@ -179,17 +234,7 @@ fun SettingsScreen(
             }
         }
 
-        var customZonesEnabled by remember(settings.customZones != null) {
-            mutableStateOf(settings.customZones != null)
-        }
-        var zoneTexts by remember(customZonesEnabled) {
-            val base = settings.customZones
-                ?: HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
-            mutableStateOf(base.map { it.lo.toString() to it.hi.toString() })
-        }
-        val zoneErrors = validateZoneTexts(zoneTexts)
-        val zonesValid = zoneErrors.all { it == null }
-
+        // Task 2 + Task 3: Zonen-Vorschau Card with boundaries editor and HelpOutline icon
         Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_zones")) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -207,6 +252,13 @@ fun SettingsScreen(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                     )
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        // Task 3: HelpOutline button
+                        IconButton(onClick = { showZoneInfo = true }) {
+                            Icon(
+                                imageVector = Icons.Outlined.HelpOutline,
+                                contentDescription = "Was bedeuten die Zonen?"
+                            )
+                        }
                         Text("Eigene Werte", style = MaterialTheme.typography.bodySmall)
                         Switch(
                             checked = customZonesEnabled,
@@ -219,7 +271,8 @@ fun SettingsScreen(
                 }
                 HorizontalDivider()
                 if (customZonesEnabled) {
-                    zoneTexts.forEachIndexed { i, (loText, hiText) ->
+                    // Task 2: boundaries-based editor (5 zones, 6 boundaries)
+                    (0..4).forEach { i ->
                         val zoneColor = ZoneColors.getOrElse(i) { MaterialTheme.colorScheme.primary }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(
@@ -234,41 +287,64 @@ fun SettingsScreen(
                                 Text("Zone ${i + 1}", style = MaterialTheme.typography.labelMedium)
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Min field — boundary index i
                                 OutlinedTextField(
-                                    value = loText,
+                                    value = if (i in touched) boundaries[i].toString() else "",
                                     onValueChange = { v ->
-                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = v to hiText }
+                                        val idx = i
+                                        when {
+                                            v.isBlank() -> {
+                                                boundaries = boundaries.toMutableList().also { it[idx] = defaultBoundaries[idx] }
+                                                touched = touched - idx
+                                            }
+                                            v.toIntOrNull() != null -> {
+                                                val parsed = v.toInt()
+                                                val adjusted = HrZoneCalculator.adjustBoundary(boundaries, idx, parsed)
+                                                val changed = adjusted.indices.filter { adjusted[it] != boundaries[it] }.toSet()
+                                                touched = touched + changed + idx
+                                                boundaries = adjusted
+                                            }
+                                        }
                                     },
                                     label = { Text("Min BPM") },
+                                    placeholder = { Text(defaultBoundaries[i].toString()) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
-                                    isError = zoneErrors[i] != null,
                                     modifier = Modifier.weight(1f)
                                 )
+                                // Max field — boundary index i+1
                                 OutlinedTextField(
-                                    value = hiText,
+                                    value = if ((i + 1) in touched) boundaries[i + 1].toString() else "",
                                     onValueChange = { v ->
-                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = loText to v }
+                                        val idx = i + 1
+                                        when {
+                                            v.isBlank() -> {
+                                                boundaries = boundaries.toMutableList().also { it[idx] = defaultBoundaries[idx] }
+                                                touched = touched - idx
+                                            }
+                                            v.toIntOrNull() != null -> {
+                                                val parsed = v.toInt()
+                                                val adjusted = HrZoneCalculator.adjustBoundary(boundaries, idx, parsed)
+                                                val changed = adjusted.indices.filter { adjusted[it] != boundaries[it] }.toSet()
+                                                touched = touched + changed + idx
+                                                boundaries = adjusted
+                                            }
+                                        }
                                     },
                                     label = { Text("Max BPM") },
+                                    placeholder = { Text(defaultBoundaries[i + 1].toString()) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
-                                    isError = zoneErrors[i] != null,
                                     modifier = Modifier.weight(1f)
                                 )
-                            }
-                            zoneErrors[i]?.let {
-                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
                     Button(
                         onClick = {
-                            viewModel.setCustomZones(
-                                zoneTexts.mapIndexed { i, (lo, hi) -> ZoneBounds(i + 1, lo.toInt(), hi.toInt()) }
-                            )
+                            viewModel.setCustomZones(HrZoneCalculator.boundariesToZones(boundaries))
                         },
-                        enabled = zonesValid,
+                        enabled = true,
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("Speichern") }
                 } else {
@@ -297,59 +373,78 @@ fun SettingsScreen(
             }
         }
 
-        ZoneErklarungCard()
-
-        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        // Task 1: Chart dynamic scale switch
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "HR-Quelle",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = PrimaryPurple,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    "Diagramm: dynamische Skalierung (Standard)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
-                Text(
-                    "Herzfrequenzquelle für Aufzeichnungen",
-                    style = MaterialTheme.typography.bodySmall
+                Switch(
+                    checked = settings.chartDynamicScale,
+                    onCheckedChange = { viewModel.setChartDynamicScale(it) }
                 )
-                if (FeatureFlags.SMARTWATCH_ENABLED) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        SegmentedButton(
-                            selected = settings.hrSource == HrSource.BLE,
-                            onClick = { viewModel.setHrSource(HrSource.BLE) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+            }
+        }
+
+        // Task 4: HR-Quelle only in debug mode
+        if (debugMode) {
+            Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "HR-Quelle",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrimaryPurple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                    Text(
+                        "Herzfrequenzquelle für Aufzeichnungen",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (FeatureFlags.SMARTWATCH_ENABLED) {
+                        SingleChoiceSegmentedButtonRow(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("BLE-Sensor")
+                            SegmentedButton(
+                                selected = settings.hrSource == HrSource.BLE,
+                                onClick = { viewModel.setHrSource(HrSource.BLE) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                            ) {
+                                Text("BLE-Sensor")
+                            }
+                            SegmentedButton(
+                                selected = settings.hrSource == HrSource.WATCH,
+                                onClick = { viewModel.setHrSource(HrSource.WATCH) },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                            ) {
+                                Text("Galaxy Watch")
+                            }
                         }
-                        SegmentedButton(
-                            selected = settings.hrSource == HrSource.WATCH,
-                            onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                        ) {
-                            Text("Galaxy Watch")
-                        }
+                    } else {
+                        Text(
+                            "HR-Quelle: BLE-Sensor",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
-                } else {
-                    Text(
-                        "HR-Quelle: BLE-Sensor",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
-                    Text(
-                        "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
+                        Text(
+                            "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
 
-        val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -374,11 +469,11 @@ fun SettingsScreen(
     }
 
         TutorialOverlay(
-            steps = listOf(
-                TutorialStep("settings_hr", "Herzfrequenz", "Trage Alter und Ruhepuls ein — daraus berechnen wir deine Trainingszonen."),
-                TutorialStep("settings_zones", "Zonen-Vorschau", "Hier siehst du deine berechneten Zonen oder kannst eigene Werte eintragen."),
-                TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt.")
-            ),
+            steps = buildList {
+                add(TutorialStep("settings_hr", "Herzfrequenz", "Trage Alter und Ruhepuls ein — daraus berechnen wir deine Trainingszonen."))
+                add(TutorialStep("settings_zones", "Zonen-Vorschau", "Hier siehst du deine berechneten Zonen oder kannst eigene Werte eintragen."))
+                if (debugMode) add(TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt."))
+            },
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("settings") }
@@ -393,52 +488,6 @@ private val ZONE_DESCRIPTIONS = listOf(
     4 to "Anaerob — intensive Belastung, Laktatschwelle",
     5 to "VO₂max — maximale Intensität, kurze Intervalle"
 )
-
-@Composable
-private fun ZoneErklarungCard() {
-    var expanded by remember { mutableStateOf(false) }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { expanded = !expanded },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Was bedeuten die Zonen?", style = MaterialTheme.typography.titleMedium)
-                Text(if (expanded) "▲" else "▼", style = MaterialTheme.typography.bodySmall)
-            }
-            AnimatedVisibility(visible = expanded) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HorizontalDivider()
-                    ZONE_DESCRIPTIONS.forEach { (z, desc) ->
-                        val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
-                        Row(
-                            verticalAlignment = Alignment.Top,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Surface(
-                                color = zoneColor,
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(20.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        "Z$z",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = androidx.compose.ui.graphics.Color.White
-                                    )
-                                }
-                            }
-                            Text(desc, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun NumberField(

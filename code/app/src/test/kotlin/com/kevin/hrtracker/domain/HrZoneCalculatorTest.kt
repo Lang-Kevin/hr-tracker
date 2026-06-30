@@ -97,4 +97,72 @@ class HrZoneCalculatorTest {
         // Verify that time is distributed across zones (not all in one zone)
         assertTrue(result.size > 0)
     }
+
+    @Test
+    fun zonesToBoundaries_roundTrip_returnsOriginalZones() {
+        val zones = HrZoneCalculator.calculateZones(190, null)
+        val boundaries = HrZoneCalculator.zonesToBoundaries(zones)
+        val restored = HrZoneCalculator.boundariesToZones(boundaries)
+        assertEquals(zones, restored)
+    }
+
+    @Test
+    fun adjustBoundary_middleBoundaryUp_shiftsLaterBoundariesAndStrictlyAscending() {
+        val b = listOf(100, 120, 140, 160, 180, 200)
+        val result = HrZoneCalculator.adjustBoundary(b, 2, 175)
+        // index 2 must be 175
+        assertEquals(175, result[2])
+        // index 3 >= 176, index 4 >= 177, index 5 >= 178
+        assertTrue(result[3] >= 176)
+        assertTrue(result[4] >= 177)
+        assertTrue(result[5] >= 178)
+        // strictly ascending
+        for (i in 0 until result.size - 1) {
+            assertTrue("Not strictly ascending at $i: ${result[i]} >= ${result[i+1]}", result[i] < result[i + 1])
+        }
+    }
+
+    @Test
+    fun adjustBoundary_upperEdge_cascadeStaysIn220() {
+        val b = listOf(100, 120, 140, 160, 180, 200)
+        val result = HrZoneCalculator.adjustBoundary(b, 4, 219)
+        // b[4] clamped to max 219 (220 - 1 slot needed for b[5])
+        assertTrue(result[4] <= 219)
+        // all strictly ascending
+        for (i in 0 until result.size - 1) {
+            assertTrue("Not strictly ascending at $i", result[i] < result[i + 1])
+        }
+        // no value exceeds MAX_BPM
+        assertTrue("b[5] must be <= 220", result[5] <= 220)
+    }
+
+    @Test
+    fun adjustBoundary_lowerEdge_cascadeStaysAbove30() {
+        val b = listOf(100, 120, 140, 160, 180, 200)
+        val result = HrZoneCalculator.adjustBoundary(b, 1, 30)
+        // b[1] clamped to min 31 (30 + 1 slot needed for b[0])
+        assertTrue(result[1] >= 31)
+        // all strictly ascending
+        for (i in 0 until result.size - 1) {
+            assertTrue("Not strictly ascending at $i", result[i] < result[i + 1])
+        }
+        // no value goes below MIN_BPM
+        assertTrue("b[0] must be >= 30", result[0] >= 30)
+    }
+
+    @Test
+    fun adjustBoundary_boundaryDown_shiftsEarlierBoundariesAndStrictlyAscending() {
+        val b = listOf(100, 120, 140, 160, 180, 200)
+        val result = HrZoneCalculator.adjustBoundary(b, 3, 110)
+        // index 3 must be 110
+        assertEquals(110, result[3])
+        // index 2 <= 109, index 1 <= 108, index 0 <= 107
+        assertTrue(result[2] <= 109)
+        assertTrue(result[1] <= 108)
+        assertTrue(result[0] <= 107)
+        // strictly ascending
+        for (i in 0 until result.size - 1) {
+            assertTrue("Not strictly ascending at $i: ${result[i]} >= ${result[i+1]}", result[i] < result[i + 1])
+        }
+    }
 }

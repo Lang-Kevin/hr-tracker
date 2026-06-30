@@ -11,6 +11,7 @@ import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.SportLabel
+import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrRecovery
 import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
@@ -30,10 +31,15 @@ class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val db: HrDatabase,
     private val exporter: SessionExporter,
-    private val sportLabelDao: SportLabelDao
+    private val sportLabelDao: SportLabelDao,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
+
+    val chartDynamicScaleDefault: StateFlow<Boolean> =
+        settingsRepository.userSettings.map { it.chartDynamicScale }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     val trainingLabels: StateFlow<List<SportLabel>> = sportLabelDao.getAllLabels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

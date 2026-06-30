@@ -11,6 +11,28 @@ data class ZoneBounds(val zone: Int, val lo: Int, val hi: Int) {
 
 object HrZoneCalculator {
 
+    private const val MIN_BPM = 30
+    private const val MAX_BPM = 220
+
+    fun zonesToBoundaries(zones: List<ZoneBounds>): List<Int> =
+        listOf(zones.first().lo) + zones.map { it.hi }   // Größe 6
+
+    fun boundariesToZones(b: List<Int>): List<ZoneBounds> =
+        (0 until 5).map { ZoneBounds(it + 1, b[it], b[it + 1]) }
+
+    // ponytail: Grenze[index]=value auf [MIN_BPM+index, MAX_BPM-(lastIndex-index)] klemmen,
+    // damit Kaskade garantiert in 30..220 und streng aufsteigend bleibt.
+    fun adjustBoundary(boundaries: List<Int>, index: Int, value: Int): List<Int> {
+        val b = boundaries.toIntArray()
+        val lastIndex = b.size - 1
+        val lo = MIN_BPM + index
+        val hi = MAX_BPM - (lastIndex - index)
+        b[index] = value.coerceIn(lo, hi)
+        for (i in index - 1 downTo 0) if (b[i] >= b[i + 1]) b[i] = b[i + 1] - 1
+        for (i in index + 1 until b.size) if (b[i] <= b[i - 1]) b[i] = b[i - 1] + 1
+        return b.toList()
+    }
+
     private val zonePercentages = listOf(
         1 to (0.50 to 0.60),
         2 to (0.60 to 0.70),
