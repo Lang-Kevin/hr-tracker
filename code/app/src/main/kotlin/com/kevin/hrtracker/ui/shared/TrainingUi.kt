@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -50,7 +51,9 @@ fun BpmZoneChart(
     dynamicScale: Boolean = false,
     reachedZones: Set<Int> = emptySet(),
     detailMilestones: List<Milestone> = emptyList(),
-    totalSessionSeconds: Long? = null
+    totalSessionSeconds: Long? = null,
+    gaps: List<Pair<Float, Float>> = emptyList(),
+    meanBpm: Int? = null
 ) {
     val density = LocalDensity.current
 
@@ -178,6 +181,32 @@ fun BpmZoneChart(
                         x,
                         with(density) { 12.sp.toPx() },
                         milestonePaint
+                    )
+                }
+            }
+        }
+
+        // Gap mean-line: red dashed horizontal line over connection-loss gaps
+        if (meanBpm != null && gaps.isNotEmpty()) {
+            val gapLineY = bpmToY(meanBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
+            val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+            val gapLineColor = Color(0xFFE53935)
+            val gapStrokeWidth = with(density) { 2.dp.toPx() }
+            gaps.forEach { (startFraction, endFraction) ->
+                val xStart = leftPaddingPx + startFraction.coerceIn(0f, 1f) * chartWidth
+                val xEnd = leftPaddingPx + endFraction.coerceIn(0f, 1f) * chartWidth
+                if (xEnd > xStart) {
+                    val gapPath = Path().apply {
+                        moveTo(xStart, gapLineY)
+                        lineTo(xEnd, gapLineY)
+                    }
+                    drawPath(
+                        path = gapPath,
+                        color = gapLineColor,
+                        style = Stroke(
+                            width = gapStrokeWidth,
+                            pathEffect = dashPathEffect
+                        )
                     )
                 }
             }

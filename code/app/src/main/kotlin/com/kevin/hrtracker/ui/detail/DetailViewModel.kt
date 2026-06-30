@@ -132,6 +132,19 @@ class DetailViewModel @Inject constructor(
     val milestones: StateFlow<List<Milestone>> = db.milestoneDao().getBySession(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Gap-Lücken (Verbindungsverlust) als Bruchteil der Session-Dauer (0f..1f). */
+    val gapFractions: StateFlow<List<Pair<Float, Float>>> = combine(session, samples) { sess, list ->
+        if (sess == null || list.size < 2) return@combine emptyList()
+        val startedAt = sess.startedAt
+        val endedAt = sess.endedAt ?: list.maxOf { it.timestampMs }
+        val durationMs = (endedAt - startedAt).toFloat().coerceAtLeast(1f)
+        HrZoneCalculator.detectGaps(list).map { range ->
+            val startFraction = ((range.first - startedAt).toFloat() / durationMs).coerceIn(0f, 1f)
+            val endFraction = ((range.last - startedAt).toFloat() / durationMs).coerceIn(0f, 1f)
+            startFraction to endFraction
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }

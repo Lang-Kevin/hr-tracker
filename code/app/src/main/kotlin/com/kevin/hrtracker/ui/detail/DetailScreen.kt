@@ -59,6 +59,7 @@ fun DetailScreen(
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
+    val gapFractions by viewModel.gapFractions.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -234,7 +235,9 @@ fun DetailScreen(
             dynamicScale = dynamicScale,
             reachedZones = reachedZones,
             detailMilestones = milestones,
-            totalSessionSeconds = totalSessionSeconds
+            totalSessionSeconds = totalSessionSeconds,
+            gaps = gapFractions,
+            meanBpm = stats?.avgBpm
         )
 
         Spacer(Modifier.height(12.dp))

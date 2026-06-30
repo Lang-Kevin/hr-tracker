@@ -70,6 +70,25 @@ object HrZoneCalculator {
     }
 
     /**
+     * Erkennt Verbindungs-Lücken (BLE-Dropout) als Timestamp-Bereiche.
+     * Ein Bereich entsteht zwischen zwei aufeinanderfolgenden Samples mit Δt > MAX_SAMPLE_GAP_MS.
+     * @return Liste von LongRange(startMs..endMs), aufsteigend nach Zeit. Leer wenn keine Lücke.
+     */
+    fun detectGaps(samples: List<HrSample>): List<LongRange> {
+        if (samples.size < 2) return emptyList()
+        val sorted = samples.sortedBy { it.timestampMs }
+        val gaps = mutableListOf<LongRange>()
+        for (i in 0 until sorted.size - 1) {
+            val cur = sorted[i].timestampMs
+            val next = sorted[i + 1].timestampMs
+            if (next - cur > MAX_SAMPLE_GAP_MS) {
+                gaps += cur..next
+            }
+        }
+        return gaps
+    }
+
+    /**
      * Aggregates time spent in each zone from a list of HR samples.
      * Calculates duration between consecutive samples and assigns to the zone of the first sample.
      * Duration for the last sample is 1 second.

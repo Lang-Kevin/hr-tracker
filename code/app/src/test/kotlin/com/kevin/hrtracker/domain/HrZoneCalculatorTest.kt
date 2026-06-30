@@ -135,6 +135,55 @@ class HrZoneCalculatorTest {
     }
 
     @Test
+    fun detectGaps_oneGap_returnsCorrectRange() {
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,         bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 1000,  bpm = 80),
+            // 65s gap
+            HrSample(sessionId = 1, timestampMs = base + 66000, bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 67000, bpm = 80)
+        )
+        val gaps = HrZoneCalculator.detectGaps(samples)
+        assertEquals(1, gaps.size)
+        assertEquals(base + 1000, gaps[0].first)
+        assertEquals(base + 66000, gaps[0].last)
+    }
+
+    @Test
+    fun detectGaps_noGap_returnsEmptyList() {
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,        bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 1000, bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 2000, bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 3000, bpm = 80)
+        )
+        val gaps = HrZoneCalculator.detectGaps(samples)
+        assertTrue(gaps.isEmpty())
+    }
+
+    @Test
+    fun detectGaps_twoGaps_returnsTwoRangesInOrder() {
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,          bpm = 80),
+            // first gap: 30s
+            HrSample(sessionId = 1, timestampMs = base + 30000,  bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 31000,  bpm = 80),
+            // second gap: 20s
+            HrSample(sessionId = 1, timestampMs = base + 51000,  bpm = 80),
+            HrSample(sessionId = 1, timestampMs = base + 52000,  bpm = 80)
+        )
+        val gaps = HrZoneCalculator.detectGaps(samples)
+        assertEquals(2, gaps.size)
+        assertEquals(base,         gaps[0].first)
+        assertEquals(base + 30000, gaps[0].last)
+        assertEquals(base + 31000, gaps[1].first)
+        assertEquals(base + 51000, gaps[1].last)
+    }
+
+    @Test
     fun zonesToBoundaries_roundTrip_returnsOriginalZones() {
         val zones = HrZoneCalculator.calculateZones(190, null)
         val boundaries = HrZoneCalculator.zonesToBoundaries(zones)

@@ -132,6 +132,7 @@ History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzelt
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
 - Zonenverteilung über Snapshot-Grenzen (Prio: `Session.zoneSnapshotJson`, sonst aktuelle Settings).
 - **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
+- **Lücken-Visualisierung:** Der Detail-Chart markiert erkannte Dropout-Lücken als rote gestrichelte Linie auf avg-BPM-Höhe (display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
 
 ## Charts / Visualisierung (BpmZoneChart)
 
