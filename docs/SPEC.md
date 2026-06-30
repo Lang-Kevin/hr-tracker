@@ -111,7 +111,7 @@ Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder
 | -------- | ----------------------------------------------------------------------- |
 | Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label, HRV-Messung-Button |
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
-| History  | Sessionliste, Summary-Card, Swipe-to-Delete                             |
+| History  | Sessionliste, Summary-Card, Swipe-to-Delete, Label-Filter, Datumsbereich-Filter |
 | Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
 | Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
@@ -123,6 +123,8 @@ Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-
 HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
 
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
+
+History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert.
 
 ## Analytics (DetailScreen)
 

@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -37,8 +40,23 @@ class HistoryViewModel @Inject constructor(
         sessionList.map { it.label }.distinct().sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val filteredSessions: StateFlow<List<Session>> = combine(sessions, _selectedLabels) { all, selected ->
-        if (selected.isEmpty()) all else all.filter { it.label in selected }
+    private val _dateRange = MutableStateFlow<Pair<Long, Long>?>(null)
+    val dateRange: StateFlow<Pair<Long, Long>?> = _dateRange.asStateFlow()
+
+    val filteredSessions: StateFlow<List<Session>> = combine(
+        sessions,
+        _selectedLabels,
+        _dateRange
+    ) { all, selected, range ->
+        var result = if (selected.isEmpty()) all else all.filter { it.label in selected }
+        if (range != null) {
+            val (start, end) = range
+            val zone = ZoneId.systemDefault()
+            val endExclusive = Instant.ofEpochMilli(end).atZone(zone).toLocalDate()
+                .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            result = result.filter { it.startedAt in start until endExclusive }
+        }
+        result
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val trashSessions: StateFlow<List<Session>> = sessionRepository.getTrashFlow()
@@ -135,6 +153,25 @@ class HistoryViewModel @Inject constructor(
     fun toggleLabelFilter(label: String) {
         val current = _selectedLabels.value
         _selectedLabels.value = if (label in current) current - label else current + label
+    }
+
+    fun setDateRange(start: Long?, end: Long?) {
+        if (start == null || end == null) {
+            _dateRange.value = null
+            return
+        }
+        // DateRangePicker liefert UTC-Mitternacht-Millis; auf geräte-lokale Zeitzone re-ankern,
+        // damit das Filterfenster mit der lokalen Tages-Bucketing-Logik übereinstimmt.
+        val zone = ZoneId.systemDefault()
+        val localStart = Instant.ofEpochMilli(start).atZone(ZoneOffset.UTC).toLocalDate()
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        val localEnd = Instant.ofEpochMilli(end).atZone(ZoneOffset.UTC).toLocalDate()
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        _dateRange.value = localStart to localEnd
+    }
+
+    fun clearDateRange() {
+        _dateRange.value = null
     }
 
     fun startSelection(id: Long) {

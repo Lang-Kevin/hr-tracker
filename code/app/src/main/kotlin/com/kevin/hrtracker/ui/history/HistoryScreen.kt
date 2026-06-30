@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
@@ -20,6 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
@@ -46,6 +51,8 @@ fun HistoryScreen(
     val sessions by viewModel.filteredSessions.collectAsStateWithLifecycle()
     val availableLabels by viewModel.availableLabels.collectAsStateWithLifecycle()
     val selectedLabels by viewModel.selectedLabels.collectAsStateWithLifecycle()
+    val dateRange by viewModel.dateRange.collectAsStateWithLifecycle()
+    var showDateRangePicker by remember { mutableStateOf(false) }
     val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
@@ -65,6 +72,16 @@ fun HistoryScreen(
         },
         onDismiss = { pendingDeleteIds = null }
     )
+
+    if (showDateRangePicker) {
+        DateRangeFilterDialog(
+            onDismiss = { showDateRangePicker = false },
+            onConfirm = { start, end ->
+                viewModel.setDateRange(start, end)
+                showDateRangePicker = false
+            }
+        )
+    }
 
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
     val tutorialAnchors = rememberTutorialAnchors()
@@ -130,6 +147,34 @@ fun HistoryScreen(
                             selected = selectedLabels,
                             onToggle = { viewModel.toggleLabelFilter(it) }
                         )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (dateRange == null) {
+                            AssistChip(
+                                onClick = { showDateRangePicker = true },
+                                label = { Text("Zeitraum filtern") },
+                                leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
+                            )
+                        } else {
+                            val (start, end) = dateRange!!
+                            InputChip(
+                                selected = true,
+                                onClick = { showDateRangePicker = true },
+                                label = { Text("${start.toShortDateString()} – ${end.toShortDateString()}") },
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = { viewModel.clearDateRange() }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Zeitraum entfernen",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
                 if (sessions.isEmpty()) {
@@ -226,6 +271,40 @@ fun HistoryScreen(
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("history") }
+        )
+    }
+}
+
+private fun Long.toShortDateString(): String =
+    Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofPattern("dd.MM.yy"))
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateRangeFilterDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (start: Long, end: Long) -> Unit
+) {
+    val state = rememberDateRangePickerState()
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val start = state.selectedStartDateMillis
+                    val end = state.selectedEndDateMillis
+                    if (start != null && end != null) onConfirm(start, end)
+                },
+                enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null
+            ) { Text("Übernehmen") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+        }
+    ) {
+        DateRangePicker(
+            state = state,
+            title = { Text("Zeitraum auswählen", modifier = Modifier.padding(16.dp)) }
         )
     }
 }
