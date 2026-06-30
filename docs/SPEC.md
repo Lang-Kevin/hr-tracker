@@ -79,6 +79,15 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
+### BLE Auto-Pause / Auto-Resume
+
+Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht betroffen.
+
+- **Auto-Pause**: Wechselt der BLE-Verbindungsstatus auf `Disconnected`, `Reconnecting` oder `Error`, pausiert `HrRecordingService` die laufende Aufzeichnung automatisch und setzt das interne Flag `pausedByConnectionLoss = true`.
+- **Auto-Resume**: Erreicht der Status wieder `Ready`, wird die Aufzeichnung automatisch fortgesetzt — jedoch **nur**, wenn `pausedByConnectionLoss == true`. Eine vom Nutzer manuell gestartete Pause bleibt unberührt.
+- **Live-Screen**: Zeigt während der Auto-Pause ein Banner „Verbindung verloren — Messung pausiert".
+- **Cleanup**: Der `connectionStateJob` (Coroutine, die den BLE-Status beobachtet) wird in `onRecordingStop()` des Service gecancelt.
+
 ## HR-Quellen-Switch
 
 `UserSettings.hrSource: HrSource` (BLE | WATCH) im DataStore. `HrRecordingService` injiziert sowohl `HrBleManager` als auch `WearableHrSource` (Singleton `SharedFlow<ParsedHr>`) und wählt die Quelle reaktiv via `flatMapLatest(settingsRepository.userSettings)`.

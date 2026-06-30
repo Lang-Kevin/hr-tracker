@@ -82,6 +82,7 @@ fun LiveScreen(
     val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
     val reachedZones by viewModel.reachedZones.collectAsStateWithLifecycle()
     val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
+    val connectionLost by viewModel.connectionLost.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
 
@@ -292,6 +293,24 @@ fun LiveScreen(
             }
         }
     }
+
+        if (connectionLost) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 80.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = "Verbindung verloren — Messung pausiert",
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
+            }
+        }
 
         TutorialOverlay(
             steps = listOf(

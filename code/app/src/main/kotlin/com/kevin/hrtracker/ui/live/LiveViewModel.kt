@@ -92,6 +92,7 @@ class LiveViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
     val isPaused: StateFlow<Boolean> = sessionRepository.isPaused
+    val connectionLost: StateFlow<Boolean> = sessionRepository.pausedByConnectionLoss
 
     fun togglePause() = viewModelScope.launch {
         if (isPaused.value) sessionRepository.resume() else sessionRepository.pause()

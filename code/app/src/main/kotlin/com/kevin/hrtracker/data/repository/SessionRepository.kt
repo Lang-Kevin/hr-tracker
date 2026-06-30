@@ -45,6 +45,9 @@ class SessionRepository @Inject constructor(
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
 
+    private val _pausedByConnectionLoss = MutableStateFlow(false)
+    val pausedByConnectionLoss: StateFlow<Boolean> = _pausedByConnectionLoss.asStateFlow()
+
     init {
         scope.launch {
             db.sessionDao().closeOrphanedSessions(
@@ -106,8 +109,25 @@ class SessionRepository @Inject constructor(
     fun resume() {
         val id = _activeSessionId.value ?: return
         val flow = activeHrFlow ?: return
+        sampleJob?.cancel()
+        sampleJob = null
+        _pausedByConnectionLoss.value = false
         sampleJob = launchSampleJob(id, flow)
         _isPaused.value = false
+    }
+
+    /** Called by service on BLE disconnect — auto-pause, does not interfere with user-pause. */
+    fun autoPause() {
+        if (_isPaused.value) return // already paused (user or auto)
+        _pausedByConnectionLoss.value = true
+        pause()
+    }
+
+    /** Called by service on BLE reconnect — only resumes if WE caused the pause. */
+    fun autoResume() {
+        if (!_pausedByConnectionLoss.value) return
+        _pausedByConnectionLoss.value = false
+        resume()
     }
 
     suspend fun stopSession() {
@@ -116,6 +136,7 @@ class SessionRepository @Inject constructor(
         sampleJob = null
         _activeSessionId.value = null
         _isPaused.value = false
+        _pausedByConnectionLoss.value = false
         activeHrFlow = null
         db.sessionDao().closeSession(id, System.currentTimeMillis())
         Log.d("HRTracker", "Session $id stopped")
@@ -127,6 +148,7 @@ class SessionRepository @Inject constructor(
         sampleJob = null
         _activeSessionId.value = null
         _isPaused.value = false
+        _pausedByConnectionLoss.value = false
         activeHrFlow = null
         db.sessionDao().deleteById(id)
         Log.d("HRTracker", "Session $id discarded")

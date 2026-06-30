@@ -15,6 +15,7 @@ import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.wearable.WearableHrSource
+import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.service.BaseRecordingService
 import com.kevin.shared.service.RecordingServiceContract
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,6 +34,7 @@ class HrRecordingService : BaseRecordingService() {
     @Inject lateinit var wearableHrSource: WearableHrSource
 
     private var notificationJob: Job? = null
+    private var connectionStateJob: Job? = null
     private var currentHrSource: HrSource = HrSource.BLE
     private var lastBpm = "–"
 
@@ -67,6 +69,20 @@ class HrRecordingService : BaseRecordingService() {
             hrSamples = hrFlow, customZones = s.customZones
         )
         if (currentHrSource == HrSource.WATCH) notifyWatch(true)
+        if (currentHrSource == HrSource.BLE) {
+            connectionStateJob = serviceScope.launch {
+                bleManager.connectionState.collect { state ->
+                    if (sessionRepository.activeSessionId.value == null) return@collect
+                    when (state) {
+                        is ConnectionState.Disconnected,
+                        is ConnectionState.Reconnecting,
+                        is ConnectionState.Error -> sessionRepository.autoPause()
+                        is ConnectionState.Ready -> sessionRepository.autoResume()
+                        else -> Unit
+                    }
+                }
+            }
+        }
         val startMs = System.currentTimeMillis()
         notificationJob = serviceScope.launch {
             hrFlow.collect { parsed: ParsedHr ->
@@ -79,6 +95,9 @@ class HrRecordingService : BaseRecordingService() {
 
     override suspend fun onRecordingStop() {
         notificationJob?.cancel()
+        notificationJob = null
+        connectionStateJob?.cancel()
+        connectionStateJob = null
         if (currentHrSource == HrSource.WATCH) notifyWatch(false)
         sessionRepository.stopSession()
     }
