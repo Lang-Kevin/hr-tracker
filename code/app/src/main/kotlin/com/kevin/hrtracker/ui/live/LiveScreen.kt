@@ -99,7 +99,6 @@ fun LiveScreen(
         }
     }
 
-    var showStopDialog by remember { mutableStateOf(false) }
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showTargetZoneDialog by remember { mutableStateOf(false) }
     var dynamicScale by rememberSaveable { mutableStateOf(true) }
@@ -111,16 +110,6 @@ fun LiveScreen(
             onSave = { showLeaveDialog = false; onStopSession() },
             onDiscard = { showLeaveDialog = false; onAbortSession() },
             onDismiss = { showLeaveDialog = false }
-        )
-    }
-
-    if (showStopDialog) {
-        ConfirmDialog(
-            title = "Training abschließen?",
-            text = "Das Training wird beendet und die Daten werden gespeichert.",
-            confirmLabel = "Speichern",
-            onConfirm = { showStopDialog = false; onStopSession() },
-            onDismiss = { showStopDialog = false }
         )
     }
 
@@ -285,7 +274,7 @@ fun LiveScreen(
                 Icon(Icons.Default.Flag, contentDescription = "Meilenstein setzen")
             }
             FilledIconButton(
-                onClick = { showStopDialog = true },
+                onClick = { showLeaveDialog = true },
                 modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_stop"),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
             ) {
@@ -325,27 +314,6 @@ fun LiveScreen(
             onFinish = { tutorialViewModel.markSeen("live") }
         )
     }
-}
-
-@Composable
-private fun ConfirmDialog(
-    title: String,
-    text: String,
-    confirmLabel: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirmLabel) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Weiter messen") }
-        }
-    )
 }
 
 @Composable
