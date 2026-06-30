@@ -1,38 +1,51 @@
 package com.kevin.hrtracker.ui.history
 
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.kevin.shared.ui.session.CategoryFilterRow
+import com.kevin.shared.ui.session.SessionListItem
+import com.kevin.shared.ui.session.SummaryCard
+import com.kevin.shared.ui.session.TrashSessionItem
+import com.kevin.shared.ui.session.SoftDeleteConfirmationDialog
+import com.kevin.shared.ui.session.TrashTab
+import com.kevin.shared.ui.session.durationString
+import com.kevin.shared.ui.session.toDateString
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
-    onBack: () -> Unit,
     onSessionClick: (Long) -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val sessions by viewModel.sessions.collectAsStateWithLifecycle()
+    val sessions by viewModel.filteredSessions.collectAsStateWithLifecycle()
+    val availableLabels by viewModel.availableLabels.collectAsStateWithLifecycle()
+    val selectedLabels by viewModel.selectedLabels.collectAsStateWithLifecycle()
     val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
@@ -42,29 +55,22 @@ fun HistoryScreen(
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    pendingDeleteIds?.let { ids ->
-        AlertDialog(
-            onDismissRequest = { pendingDeleteIds = null },
-            title = { Text("In Papierkorb verschieben?") },
-            text = {
-                val count = ids.size
-                Text(
-                    "$count ${if (count == 1) "Eintrag wird" else "Einträge werden"} in den Papierkorb " +
-                        "verschoben und beim nächsten App-Start endgültig gelöscht."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.moveToTrash(ids)
-                    pendingDeleteIds = null
-                }) { Text("Verschieben") }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDeleteIds = null }) { Text("Abbrechen") }
-            }
-        )
-    }
+    BackHandler(enabled = isSelectionMode) { viewModel.clearSelection() }
 
+    SoftDeleteConfirmationDialog(
+        pendingIds = pendingDeleteIds,
+        onConfirm = { ids ->
+            viewModel.moveToTrash(ids)
+            pendingDeleteIds = null
+        },
+        onDismiss = { pendingDeleteIds = null }
+    )
+
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("history").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -76,9 +82,6 @@ fun HistoryScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                IconButton(onClick = { viewModel.clearSelection() }) {
-                    Icon(Icons.Default.Close, contentDescription = "Auswahl abbrechen")
-                }
                 Text(
                     "${selectedIds.size} ausgewählt",
                     style = MaterialTheme.typography.titleMedium,
@@ -92,15 +95,13 @@ fun HistoryScreen(
                 }
             }
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onBack) { Text("← Zurück") }
-                Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
-            }
+            Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
         }
 
         TabRow(
             selectedTabIndex = selectedTab,
-            contentColor = PrimaryPurple
+            contentColor = PrimaryPurple,
+            modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_tabs")
         ) {
             listOf("Verlauf", "Statistik", "Papierkorb").forEachIndexed { index, title ->
                 Tab(
@@ -116,17 +117,51 @@ fun HistoryScreen(
         when (selectedTab) {
             0 -> {
                 if (sessions.isNotEmpty()) {
-                    SummaryCard(summaryStats)
+                    SummaryCard(listOf(
+                        "TRAININGS" to summaryStats.sessionCount.toString(),
+                        "GESAMTDAUER" to durationString(summaryStats.totalDurationS),
+                        "Ø BPM" to (summaryStats.avgBpm?.toString() ?: "—"),
+                        "LÄNGSTE" to durationString(summaryStats.longestDurationS)
+                    ))
                     Spacer(Modifier.height(8.dp))
+                    Box(Modifier.tutorialAnchor(tutorialAnchors, "history_filter")) {
+                        CategoryFilterRow(
+                            categories = availableLabels,
+                            selected = selectedLabels,
+                            onToggle = { viewModel.toggleLabelFilter(it) }
+                        )
+                    }
                 }
                 if (sessions.isEmpty()) {
-                    Text("Noch keine Sessions aufgezeichnet.", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp).alpha(0.3f),
+                            tint = PrimaryPurple
+                        )
+                        Text(
+                            "Noch keine Trainings",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_list")
+                ) {
                     items(sessions, key = { it.id }) { session ->
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
@@ -157,7 +192,9 @@ fun HistoryScreen(
                             enableDismissFromStartToEnd = false
                         ) {
                             SessionListItem(
-                                session = session,
+                                label = session.label,
+                                startedAt = session.startedAt,
+                                endedAt = session.endedAt,
                                 isSelected = session.id in selectedIds,
                                 isSelectionMode = isSelectionMode,
                                 onClick = {
@@ -171,91 +208,25 @@ fun HistoryScreen(
                 }
             }
             1 -> StatistikTab(weeklyData, trimpHistory)
-            2 -> TrashTab(trashSessions, onRestore = { viewModel.restoreSessions(listOf(it)) })
+            2 -> {
+                val trashItems = remember(trashSessions) {
+                    trashSessions.map { TrashSessionItem(it.id, it.label, it.startedAt) }
+                }
+                TrashTab(items = trashItems, onRestore = { viewModel.restoreSessions(listOf(it)) })
+            }
         }
     }
-}
 
-@Composable
-private fun SummaryCard(stats: HistoryViewModel.SummaryStats) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            SummaryItem("TRAININGS", stats.sessionCount.toString())
-            SummaryItem("GESAMTDAUER", durationString(stats.totalDurationS))
-            SummaryItem("Ø BPM", stats.avgBpm?.toString() ?: "—")
-            SummaryItem("LÄNGSTE", durationString(stats.longestDurationS))
-        }
-    }
-}
-
-@Composable
-private fun SummaryItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("history_tabs", "Ansichten", "Wechsle zwischen Verlauf, Statistik und Papierkorb."),
+                TutorialStep("history_filter", "Filter", "Filtere deine Trainings nach Art."),
+                TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
+            ),
+            anchors = tutorialAnchors,
+            visible = tutorialSeen == false,
+            onFinish = { tutorialViewModel.markSeen("history") }
         )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun SessionListItem(
-    session: Session,
-    isSelected: Boolean,
-    isSelectionMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    val containerColor = if (isSelected)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surface
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = { onClick() },
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(session.label, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    session.startedAt.toDateString(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                session.endedAt?.let { end ->
-                    Text(
-                        "Dauer: ${durationString((end - session.startedAt) / 1000)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } ?: Text(
-                    "läuft noch…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
@@ -265,6 +236,56 @@ private fun StatistikTab(
     trimpHistory: List<HistoryViewModel.SessionTrimpEntry>
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            val maxDur = weeklyData.maxOfOrNull { it.totalDurationMin }?.coerceAtLeast(1) ?: 1
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Dauer pro Woche (min)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        weeklyData.forEach { week ->
+                            val fraction = (week.totalDurationMin.toFloat() / maxDur).coerceIn(0f, 1f)
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                verticalArrangement = Arrangement.Bottom
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .fillMaxHeight(fraction.coerceAtLeast(0.03f))
+                                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                        .background(
+                                            if (fraction > 0f) PrimaryPurple
+                                            else PrimaryPurple.copy(alpha = 0.15f)
+                                        )
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        weeklyData.forEach { week ->
+                            Text(
+                                week.weekLabel.take(5),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
         item {
             Text(
                 "Letzte 6 Wochen",
@@ -277,7 +298,7 @@ private fun StatistikTab(
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text("WOCHE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                        Text("EINH.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
+                        Text("ANZ.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
                         Text("MIN", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
                         Text("Ø BPM", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
                     }
@@ -359,71 +380,4 @@ private fun StatistikTab(
     }
 }
 
-@Composable
-private fun TrashTab(
-    trashSessions: List<Session>,
-    onRestore: (Long) -> Unit
-) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        item {
-            if (trashSessions.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Text(
-                        "Elemente werden beim nächsten App-Start endgültig gelöscht.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-        if (trashSessions.isEmpty()) {
-            item {
-                Text(
-                    "Papierkorb ist leer.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(trashSessions, key = { it.id }) { session ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(session.label, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                session.startedAt.toDateString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        TextButton(onClick = { onRestore(session.id) }) {
-                            Text("Wiederherstellen")
-                        }
-                    }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(16.dp)) }
-    }
-}
 
-private fun Long.toDateString(): String =
-    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(this))
-
-internal fun durationString(seconds: Long): String {
-    val h = seconds / 3600
-    val m = (seconds % 3600) / 60
-    val s = seconds % 60
-    return if (h > 0) "%02d:%02d:%02d".format(h, m, s)
-    else "%02d:%02d".format(m, s)
-}

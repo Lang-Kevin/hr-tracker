@@ -2,6 +2,7 @@ package com.kevin.hrtracker.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.kevin.shared.domain.SoftDeletable
 
 @Entity
 data class Session(
@@ -13,5 +14,5 @@ data class Session(
     val restingHr: Int?,
     val note: String? = null,
     val zoneSnapshotJson: String? = null,
-    val deletedAt: Long? = null
-)
+    override val deletedAt: Long? = null
+) : SoftDeletable

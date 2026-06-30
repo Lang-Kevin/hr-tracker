@@ -34,11 +34,17 @@ Session(id, label, startedAt, endedAt, maxHrUsed, restingHr, note,
 HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 
 SportLabel(id, name, isPredefined)
+
+Milestone(id, sessionId, atSeconds, label /* DB v5 */)
 ```
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 2 (Migration 1→2 für `zoneSnapshotJson`).
+DB-Version 5 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`).
+
+### Meilensteine
+
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Persistierung bei Session-Ende mit Default-Label `M{i+1}` in `NonCancellable` (kein Verlust bei VM-Zerstörung). Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Nur reguläres Session-Ende persistiert, nicht Force-Kill.
 
 ## BLE-Flow
 
@@ -69,7 +75,9 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 - BLE-Verbindung halten
 - Samples inkrementell speichern
-- BPM + Laufzeit in der Notification anzeigen
+- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatDuration`, immer `HH:MM:SS`)
+
+Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
 ## HR-Quellen-Switch
 
@@ -90,13 +98,20 @@ Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe 
 
 | Screen   | Inhalt                                                                  |
 | -------- | ----------------------------------------------------------------------- |
-| Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label  |
+| Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label, HRV-Messung-Button |
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
 | History  | Sessionliste, Summary-Card, Swipe-to-Delete                             |
 | Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
 | Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, HR-Quelle |
+| Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
-Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `ConfirmDialog` vor Aktion.
+Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken.
+
+Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `ConfirmDialog` vor Aktion. System-Back öffnet bei aktiver Session zusätzlich einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen). Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
+
+HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
+
+Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
 ## Analytics (DetailScreen)
 
@@ -104,7 +119,28 @@ Live-Screen-Buttons: **Abbrechen** und **Abschließen** öffnen jeweils einen `C
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
 - Zonenverteilung über Snapshot-Grenzen (Prio: `Session.zoneSnapshotJson`, sonst aktuelle Settings).
 
-## Export
+## Charts / Visualisierung (BpmZoneChart)
+
+BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
+
+- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
+- **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
+
+## Erholung / Heart Rate Recovery (HRR)
+
+**HRR60-Kennzahl:** Automatisch nach Session-Ende berechnet, zeigt die Herzfrequenz-Erholungsrate an.
+
+- **Definition:** Peak-HF (höchste beobachtete BPM während Session) minus Herzfrequenz im Fenster [60–65 Sekunden] nach dem Peak.
+- **Peak-Kriterium:** Muss ≥ 70 % HRmax erreichen mit ≥ 60 Sekunden Nachlauf; toleriert kurze BLE-Lücken in der HF-Messung.
+- **Post-Workout-Zielzone:** 60 % HRmax — die App zeigt an, ob und wann dieser Erholungsbereich erreicht wurde.
+- **Rating-Kategorien (sportwissenschaftlicher Standard):**
+  - < 12 bpm: Niedrig
+  - 12–17 bpm: Normal
+  - 18–29 bpm: Gut
+  - ≥ 30 bpm: Sehr gut
+- **Berechnung:** On-read aus vorhandenen `HrSample`-Daten (timestampMs, bpm) — **keine Room-Migration erforderlich.** HRR-Card wird im Detail-Screen nur angezeigt, wenn Peak-Bedingungen erfüllt sind und HRR60 berechenbar ist.
+
+## Export / Report
 
 V1: **JSON**. CSV ist V2 (Batch 6 erledigt).
 
@@ -115,6 +151,8 @@ session    : Metadaten, HRmax, Ruhepuls, ZoneModel, Zonengrenzen
 summary    : avg_bpm, max_bpm, min_bpm, time_in_zone
 samples[]  : timestamp, elapsed, bpm, rr_ms, zone
 ```
+
+Der Detail-Screen bietet einen Report-Dialog mit einem "Kopieren"-Button, der den Report-JSON direkt via `LocalClipboardManager` in die Zwischenablage kopiert; Toast-Feedback "Report kopiert" bestätigt die Aktion.
 
 ## Permissions
 
@@ -138,6 +176,18 @@ Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML
 | LightPurple   | `#CBBCFF`   | Zone 3, onSurface       |
 
 Font: **Space Grotesk** (via `ui-text-google-fonts`, `Type.kt`, `HrTrackerTypography`). Material3 darkColorScheme.
+
+## Shared Library (shared-android-lib)
+
+Gradle Composite Build, eingebunden via `includeBuild("../../shared-android-lib")` in `settings.gradle.kts`. Repo getrennt unter `C:\Code\Android\shared-android-lib`, ebenfalls eingebunden in ArmSwing (`C:\Code\Arduino\ArmSwingProject`). Kein Maven/AAR-Publishing — Solo-Dev, manuelles Deployment.
+
+Geteilter Code (`com.kevin.shared.*`):
+- `ble`: `BleConstants`, `ConnectionState`
+- `domain`: `SavedDevice`, `DeviceType`, `SoftDeletable`, `DiscoveredDevice`
+- `settings`: `BleDevicePrefKeys`, `BleDevicePreferences`
+- `service`: `RecordingServiceContract`, `BaseRecordingService`
+
+Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `LiveViewModel`, `ScanViewModel`, `ScanScreen`, `DetailScreen`, `HistoryScreen`, `Session`.
 
 ## Architektur-Entscheidungen
 

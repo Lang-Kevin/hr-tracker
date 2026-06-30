@@ -26,14 +26,19 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.chart.aggregateByChunks
 
 @Composable
 fun BpmZoneChart(
@@ -41,7 +46,11 @@ fun BpmZoneChart(
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dynamicScale: Boolean = false,
+    reachedZones: Set<Int> = emptySet(),
+    detailMilestones: List<Milestone> = emptyList(),
+    totalSessionSeconds: Long? = null
 ) {
     val density = LocalDensity.current
 
@@ -51,9 +60,23 @@ fun BpmZoneChart(
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
 
-        val bpmMin = zoneBounds.minOf { it.lo } - 8
-        val bpmMax = zoneBounds.maxOf { it.hi } + 8
-        val bpmRange = (bpmMax - bpmMin).toFloat()
+        val bpmMin: Float
+        val bpmMax: Float
+
+        if (dynamicScale && bpmHistory.isNotEmpty()) {
+            // DYNAMIC: measured min/max with 10% padding
+            val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
+            val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
+            val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
+            bpmMin = actualMin - pad
+            bpmMax = actualMax + pad
+        } else {
+            // STATIC: keep current behavior
+            bpmMin = (zoneBounds.minOf { it.lo } - 8).toFloat()
+            bpmMax = (zoneBounds.maxOf { it.hi } + 8).toFloat()
+        }
+
+        val bpmRange = bpmMax - bpmMin
 
         fun bpmToY(bpm: Int): Float =
             size.height * (1f - (bpm - bpmMin).toFloat() / bpmRange)
@@ -64,7 +87,13 @@ fun BpmZoneChart(
             color = android.graphics.Color.argb(160, 255, 255, 255)
         }
 
-        zoneBounds.forEach { z ->
+        val zonesToDraw = if (dynamicScale && reachedZones.isNotEmpty()) {
+            zoneBounds.filter { it.zone in reachedZones }
+        } else {
+            zoneBounds
+        }
+
+        zonesToDraw.forEach { z ->
             val y = bpmToY(z.lo)
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
@@ -80,7 +109,7 @@ fun BpmZoneChart(
                 labelPaint
             )
         }
-        zoneBounds.lastOrNull()?.let { z ->
+        zonesToDraw.lastOrNull()?.let { z ->
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, bpmToY(z.hi)),
@@ -126,11 +155,48 @@ fun BpmZoneChart(
             )
         }
 
+        // Milestone vertical lines for detail view
+        if (detailMilestones.isNotEmpty() && totalSessionSeconds != null && totalSessionSeconds > 0) {
+            val milestonePaint = Paint().apply {
+                isAntiAlias = true
+                textSize = with(density) { 9.sp.toPx() }
+                color = android.graphics.Color.argb(200, 255, 200, 80)
+                textAlign = Paint.Align.CENTER
+            }
+            detailMilestones.forEach { milestone ->
+                val posRatio = milestone.atSeconds.toFloat() / totalSessionSeconds.toFloat()
+                val x = leftPaddingPx + posRatio * chartWidth
+                if (x in leftPaddingPx..size.width) {
+                    drawLine(
+                        color = Color(0xFFFFC850).copy(alpha = 0.6f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = with(density) { 1.5.dp.toPx() }
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        milestone.label.ifBlank { "M" },
+                        x,
+                        with(density) { 12.sp.toPx() },
+                        milestonePaint
+                    )
+                }
+            }
+        }
+
         if (bpmHistory.size >= 2) {
+            // ponytail: downsample via aggregateByChunks when size > 300 in dynamic mode
+            val historyToUse = if (dynamicScale && bpmHistory.size > 300) {
+                val floatValues = bpmHistory.map { it.toFloat() }
+                val aggregated = aggregateByChunks(floatValues, maxPoints = 300)
+                aggregated.map { it.toInt() }
+            } else {
+                bpmHistory
+            }
+
             val path = Path()
-            bpmHistory.forEachIndexed { index, bpm ->
-                val x = leftPaddingPx + (index.toFloat() / (bpmHistory.size - 1)) * chartWidth
-                val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
+            historyToUse.forEachIndexed { index, bpm ->
+                val x = leftPaddingPx + (index.toFloat() / (historyToUse.size - 1)) * chartWidth
+                val y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             drawPath(
@@ -145,7 +211,7 @@ fun BpmZoneChart(
 
             val lastBpm = bpmHistory.last()
             val lastX = leftPaddingPx + chartWidth
-            val lastY = bpmToY(lastBpm.coerceIn(bpmMin, bpmMax))
+            val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
             drawCircle(
                 color = LightPurple,
@@ -231,9 +297,12 @@ fun ZeitInZoneSection(
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
                 val isTarget = z == targetZone
+                val label = "Zone $z: ${formatDuration(secs)}${if (isTarget) ", Zielzone" else ""}"
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onZoneClick(z) }
+                    modifier = Modifier
+                        .clickable { onZoneClick(z) }
+                        .semantics { contentDescription = label }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -253,7 +322,7 @@ fun ZeitInZoneSection(
                         )
                     }
                     Text(
-                        "%02d:%02d".format(secs / 60, secs % 60),
+                        formatDuration(secs),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
                         color = if (isTarget) Color.White
@@ -270,7 +339,8 @@ fun StatItem(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.White
+    valueColor: Color = Color.White,
+    onClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier,
@@ -280,6 +350,7 @@ fun StatItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
                 .padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.kevin.hrtracker"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.kevin.hrtracker"
@@ -59,6 +59,7 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.datastore.preferences)
+    implementation("com.kevin.shared:shared")
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.vico.compose)
@@ -69,4 +70,6 @@ dependencies {
     implementation(libs.play.services.wearable)
 
     debugImplementation(libs.compose.ui.tooling)
+
+    testImplementation("junit:junit:4.13.2")
 }

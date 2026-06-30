@@ -2,14 +2,10 @@ package com.kevin.hrtracker.ui.scan
 
 import android.Manifest
 import android.os.Build
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,24 +15,28 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.kevin.hrtracker.ble.ConnectionState
-import com.kevin.hrtracker.ble.ConnectionState.Reconnecting
+import com.kevin.shared.ble.ConnectionState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
-import com.kevin.hrtracker.domain.DiscoveredDevice
-import com.kevin.hrtracker.domain.DeviceType
-import com.kevin.hrtracker.domain.SavedDevice
+import com.kevin.shared.domain.DeviceType
+import com.kevin.shared.domain.DiscoveredDevice
+import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.FeatureFlags
-import com.kevin.hrtracker.ui.theme.ConnectedGreen
-import com.kevin.hrtracker.ui.theme.ErrorRed
 import com.kevin.hrtracker.ui.theme.LightPurple
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
+import com.kevin.shared.ui.scan.BleStatusCard
+import com.kevin.shared.ui.scan.DiscoveredDeviceItem
+import com.kevin.shared.ui.scan.SavedDeviceItem
+import com.kevin.shared.ui.LabelPickerDialog
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -44,8 +44,10 @@ import com.kevin.hrtracker.ui.theme.SurfaceDark
 fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
     onSessionStarted: (label: String) -> Unit = {},
+    onHrvSessionStarted: (seconds: Int) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {},
+    onResumeSession: () -> Unit = {}
 ) {
     val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -56,21 +58,38 @@ fun ScanScreen(
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
 
     var showStartDialog by remember { mutableStateOf(false) }
+    var showHrvDialog by remember { mutableStateOf(false) }
     var showSmartWatchHelp by remember { mutableStateOf(false) }
     var isStarting by remember { mutableStateOf(false) }
     // Reset isStarting once session is confirmed active
     LaunchedEffect(activeSessionId) { if (activeSessionId != null) isStarting = false }
 
     if (showStartDialog) {
-        StartTrainingDialog(
-            labels = trainingLabels,
-            onAddLabel = viewModel::addTrainingLabel,
-            onStart = { label ->
-                showStartDialog = false
+        LabelPickerDialog(
+            title = "Trainingstyp wählen",
+            items = trainingLabels,
+            initialSelection = null,
+            confirmText = "Starten",
+            onConfirm = { label ->
                 isStarting = true
                 onSessionStarted(label)
+                showStartDialog = false
             },
-            onDismiss = { showStartDialog = false }
+            onDismiss = { showStartDialog = false },
+            dismissText = null,
+            addFieldLabel = "Neue Art",
+            onAdd = viewModel::addTrainingLabel,
+            onDelete = null
+        )
+    }
+    if (showHrvDialog) {
+        HrvDurationDialog(
+            onSelect = { seconds ->
+                showHrvDialog = false
+                isStarting = true
+                onHrvSessionStarted(seconds)
+            },
+            onDismiss = { showHrvDialog = false }
         )
     }
     if (FeatureFlags.SMARTWATCH_ENABLED && showSmartWatchHelp) {
@@ -88,6 +107,11 @@ fun ScanScreen(
         if (permissionState.allPermissionsGranted) viewModel.startScan()
     }
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("scan").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -108,66 +132,22 @@ fun ScanScreen(
             TextButton(onClick = onNavigateToHistory) {
                 Text("Verlauf", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            TextButton(onClick = onNavigateToSettings) {
-                Text("⚙", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        val statusText = when (connectionState) {
-            is Reconnecting -> "Verbindung verloren — reconnecting…"
-            is ConnectionState.Error -> "Fehler: ${(connectionState as ConnectionState.Error).reason}"
-            else -> connectionState::class.simpleName ?: ""
-        }
-        val statusColor = if (connectionState is ConnectionState.Error)
-            MaterialTheme.colorScheme.error
-        else
-            MaterialTheme.colorScheme.onSurface
-        val dotColor = when {
-            connectionState is ConnectionState.Ready -> ConnectedGreen
-            connectionState is ConnectionState.Error -> ErrorRed
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
-        }
-        val statusCardBorder = if (connectionState is ConnectionState.Ready)
-            BorderStroke(1.dp, PrimaryPurple) else null
-        val statusCardBg = if (connectionState is ConnectionState.Error)
-            ErrorRed.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Card(
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = statusCardBg),
-                border = statusCardBorder
+            IconButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier.tutorialAnchor(tutorialAnchors, "scan_settings")
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.size(8.dp).background(dotColor, CircleShape))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "Status: $statusText",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = statusColor,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (connectionState !is ConnectionState.Disconnected) {
-                        TextButton(onClick = { viewModel.disconnect() }) { Text("Trennen") }
-                    }
-                }
+                Icon(Icons.Default.Settings, contentDescription = "Einstellungen",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Auto-Connect", style = MaterialTheme.typography.bodySmall)
-                Spacer(Modifier.width(4.dp))
-                Switch(
-                    checked = autoConnect,
-                    onCheckedChange = { viewModel.toggleAutoConnect() }
-                )
-            }
+        }
+
+        Box(Modifier.tutorialAnchor(tutorialAnchors, "scan_status")) {
+            BleStatusCard(
+                connectionState = connectionState,
+                autoConnect = autoConnect,
+                onDisconnect = { viewModel.disconnect() },
+                onToggleAutoConnect = { viewModel.toggleAutoConnect() }
+            )
         }
 
         if (!permissionState.allPermissionsGranted) {
@@ -185,13 +165,28 @@ fun ScanScreen(
                     ) {
                         Text(if (isStarting) "Starte…" else "Training starten")
                     }
-                } else {
-                    Button(
-                        onClick = { viewModel.stopSession() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    OutlinedButton(
+                        onClick = { if (!isStarting) showHrvDialog = true },
+                        enabled = !isStarting,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Session stoppen  (ID: $activeSessionId)")
+                        Text("HRV messen")
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onResumeSession,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Fortsetzen")
+                        }
+                        Button(
+                            onClick = { viewModel.stopSession() },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Stoppen")
+                        }
                     }
                 }
                 HorizontalDivider()
@@ -234,7 +229,9 @@ fun ScanScreen(
             Button(
                 onClick = { viewModel.startScan() },
                 enabled = !isScanning,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .tutorialAnchor(tutorialAnchors, "scan_start")
             ) {
                 Text(if (isScanning) "Suche läuft…" else "Suche starten")
             }
@@ -243,115 +240,34 @@ fun ScanScreen(
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(discoveredDevices, key = { it.address }) { device ->
-                    DeviceItem(device = device) { viewModel.connectToDiscovered(device) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SavedDeviceItem(device: SavedDevice, onClick: () -> Unit, onForget: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f).clickable(onClick = onClick)) {
-                Text(device.name, style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    device.address,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            TextButton(onClick = onForget) { Text("Vergessen") }
-        }
-    }
-}
-
-@Composable
-private fun DeviceItem(device: DiscoveredDevice, onClick: () -> Unit) {
-    val (icon, subtitle) = when {
-        device is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
-        FeatureFlags.SMARTWATCH_ENABLED && device.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
-        device.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
-        else -> Icons.Default.Bluetooth to device.address
-    }
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(12.dp)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(icon, contentDescription = null)
-            Column {
-                Text(device.displayName, style = MaterialTheme.typography.bodyLarge)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StartTrainingDialog(
-    labels: List<String>,
-    onAddLabel: (String) -> Unit,
-    onStart: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selected by remember(labels) { mutableStateOf(labels.firstOrNull() ?: "") }
-    var newLabelText by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Trainingstyp wählen") },
-        text = {
-            Column {
-                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                    items(labels) { type ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selected = type }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = selected == type, onClick = { selected = type })
-                            Spacer(Modifier.width(8.dp))
-                            Text(type, style = MaterialTheme.typography.bodyMedium)
+                    DiscoveredDeviceItem(
+                        device = device,
+                        onClick = { viewModel.connectToDiscovered(device) },
+                        iconAndSubtitle = { d ->
+                            when {
+                                d is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
+                                FeatureFlags.SMARTWATCH_ENABLED && d.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
+                                d.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
+                                else -> Icons.Default.Bluetooth to d.address
+                            }
                         }
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = newLabelText,
-                        onValueChange = { newLabelText = it },
-                        label = { Text("Neue Art") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
                     )
-                    IconButton(
-                        onClick = {
-                            onAddLabel(newLabelText)
-                            newLabelText = ""
-                        },
-                        enabled = newLabelText.isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Hinzufügen")
-                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onStart(selected) }, enabled = selected.isNotEmpty()) { Text("Starten") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
         }
-    )
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("scan_status", "Verbindungsstatus", "Hier siehst du, ob dein Brustgurt verbunden ist."),
+                TutorialStep("scan_start", "Geräte suchen", "Starte hier die Bluetooth-Suche nach deinem Brustgurt."),
+                TutorialStep("scan_settings", "Einstellungen", "Hier passt du Alter, Ruhepuls und HR-Zonen an.")
+            ),
+            anchors = tutorialAnchors,
+            visible = tutorialSeen == false,
+            onFinish = { tutorialViewModel.markSeen("scan") }
+        )
+    }
 }
 
 @Composable
@@ -383,4 +299,30 @@ private fun BrandHint(brand: String, hint: String) {
         Text(brand, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         Text(hint, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun HrvDurationDialog(onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("HRV-Messung") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("Super Short", "30 Sek.", 30),
+                    Triple("Short", "1 Min.", 60),
+                    Triple("Full", "5 Min.", 300),
+                ).forEach { (name, duration, seconds) ->
+                    OutlinedButton(
+                        onClick = { onSelect(seconds) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("$name · $duration")
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
+    )
 }

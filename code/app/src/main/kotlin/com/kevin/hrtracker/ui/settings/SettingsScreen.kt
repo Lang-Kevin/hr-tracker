@@ -19,15 +19,22 @@ import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.luminance
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.hrtracker.FeatureFlags
+import com.kevin.shared.domain.validateZoneTexts
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -57,6 +64,11 @@ fun SettingsScreen(
     val effectiveMaxHr = settings.maxHrUsed
     val model = if (settings.restingHr != null) "Karvonen (HRR)" else "%HRmax"
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("settings").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,12 +76,9 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("← Zurück") }
-            Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
-        }
+        Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_hr")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -144,57 +153,145 @@ fun SettingsScreen(
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     (1..5).forEach { z ->
                         val selected = settings.targetZone == z
                         val zoneColor = ZoneColors.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
-                        FilterChip(
+                        val contentColor = if (zoneColor.luminance() > 0.5f)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            androidx.compose.ui.graphics.Color.White
+                        SegmentedButton(
                             selected = selected,
                             onClick = { viewModel.setTargetZone(z) },
-                            label = { Text("Z$z") },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = zoneColor,
-                                selectedLabelColor = androidx.compose.ui.graphics.Color.White
+                            shape = SegmentedButtonDefaults.itemShape(index = z - 1, count = 5),
+                            colors = SegmentedButtonDefaults.colors(
+                                activeContainerColor = zoneColor,
+                                activeContentColor = contentColor
                             )
-                        )
+                        ) {
+                            Text("Z$z")
+                        }
                     }
                 }
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        var customZonesEnabled by remember(settings.customZones != null) {
+            mutableStateOf(settings.customZones != null)
+        }
+        var zoneTexts by remember(customZonesEnabled) {
+            val base = settings.customZones
+                ?: HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
+            mutableStateOf(base.map { it.lo.toString() to it.hi.toString() })
+        }
+        val zoneErrors = validateZoneTexts(zoneTexts)
+        val zonesValid = zoneErrors.all { it == null }
+
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_zones")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    "Zonen-Vorschau",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = PrimaryPurple,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Zonen-Vorschau",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrimaryPurple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Eigene Werte", style = MaterialTheme.typography.bodySmall)
+                        Switch(
+                            checked = customZonesEnabled,
+                            onCheckedChange = { enabled ->
+                                customZonesEnabled = enabled
+                                if (!enabled) viewModel.setCustomZones(null)
+                            }
+                        )
+                    }
+                }
                 HorizontalDivider()
-                val zones = com.kevin.hrtracker.domain.HrZoneCalculator
-                    .calculateZones(effectiveMaxHr, settings.restingHr)
-                zones.forEach { z ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            val zoneColor = ZoneColors.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
-                            Surface(
-                                color = zoneColor,
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(16.dp)
-                            ) {}
-                            Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                if (customZonesEnabled) {
+                    zoneTexts.forEachIndexed { i, (loText, hiText) ->
+                        val zoneColor = ZoneColors.getOrElse(i) { MaterialTheme.colorScheme.primary }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Surface(
+                                    color = zoneColor,
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.size(12.dp)
+                                ) {}
+                                Text("Zone ${i + 1}", style = MaterialTheme.typography.labelMedium)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(
+                                    value = loText,
+                                    onValueChange = { v ->
+                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = v to hiText }
+                                    },
+                                    label = { Text("Min BPM") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    isError = zoneErrors[i] != null,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = hiText,
+                                    onValueChange = { v ->
+                                        zoneTexts = zoneTexts.toMutableList().also { it[i] = loText to v }
+                                    },
+                                    label = { Text("Max BPM") },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    singleLine = true,
+                                    isError = zoneErrors[i] != null,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            zoneErrors[i]?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                            }
                         }
-                        Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.setCustomZones(
+                                zoneTexts.mapIndexed { i, (lo, hi) -> ZoneBounds(i + 1, lo.toInt(), hi.toInt()) }
+                            )
+                        },
+                        enabled = zonesValid,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Speichern") }
+                } else {
+                    settings.effectiveZones.forEach { z ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val zoneColor = ZoneColors.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
+                                Surface(
+                                    color = zoneColor,
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    modifier = Modifier.size(16.dp)
+                                ) {}
+                                Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }
@@ -202,7 +299,7 @@ fun SettingsScreen(
 
         ZoneErklarungCard()
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -217,19 +314,30 @@ fun SettingsScreen(
                     "Herzfrequenzquelle für Aufzeichnungen",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = settings.hrSource == HrSource.BLE,
-                        onClick = { viewModel.setHrSource(HrSource.BLE) },
-                        label = { Text("BLE-Sensor") }
-                    )
-                    if (FeatureFlags.SMARTWATCH_ENABLED) {
-                        FilterChip(
+                if (FeatureFlags.SMARTWATCH_ENABLED) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SegmentedButton(
+                            selected = settings.hrSource == HrSource.BLE,
+                            onClick = { viewModel.setHrSource(HrSource.BLE) },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Text("BLE-Sensor")
+                        }
+                        SegmentedButton(
                             selected = settings.hrSource == HrSource.WATCH,
                             onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                            label = { Text("Galaxy Watch") }
-                        )
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Text("Galaxy Watch")
+                        }
                     }
+                } else {
+                    Text(
+                        "HR-Quelle: BLE-Sensor",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
                 if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
                     Text(
@@ -240,6 +348,41 @@ fun SettingsScreen(
                 }
             }
         }
+
+        val debugMode by viewModel.debugMode.collectAsStateWithLifecycle()
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        "Debug-Modus",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = PrimaryPurple,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                    )
+                    Text(
+                        "Schaltet Test-Funktionen frei (z. B. Pseudo-Sensor beim Scan)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(checked = debugMode, onCheckedChange = { viewModel.setDebugMode(it) })
+            }
+        }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("settings_hr", "Herzfrequenz", "Trage Alter und Ruhepuls ein — daraus berechnen wir deine Trainingszonen."),
+                TutorialStep("settings_zones", "Zonen-Vorschau", "Hier siehst du deine berechneten Zonen oder kannst eigene Werte eintragen."),
+                TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt.")
+            ),
+            anchors = tutorialAnchors,
+            visible = tutorialSeen == false,
+            onFinish = { tutorialViewModel.markSeen("settings") }
+        )
     }
 }
 

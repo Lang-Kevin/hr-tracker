@@ -33,11 +33,12 @@ import dagger.hilt.android.AndroidEntryPoint
 private object Route {
     const val ONBOARDING = "onboarding"
     const val SCAN     = "scan"
-    const val LIVE     = "live"
+    const val LIVE     = "live?hrv={hrv}"
     const val HISTORY  = "history"
     const val DETAIL   = "detail/{sessionId}"
     const val SETTINGS = "settings"
     fun detail(id: Long) = "detail/$id"
+    fun live(hrv: Int = 0) = "live?hrv=$hrv"
 }
 
 @AndroidEntryPoint
@@ -64,8 +65,9 @@ class MainActivity : ComponentActivity() {
         val onboardingDone by onboardingViewModel.onboardingDone.collectAsStateWithLifecycle()
 
         LaunchedEffect(activeSessionId) {
-            if (activeSessionId != null) {
-                navController.navigate(Route.LIVE) { launchSingleTop = true }
+            if (activeSessionId != null &&
+                navController.currentDestination?.route?.startsWith("live") != true) {
+                navController.navigate(Route.live()) { launchSingleTop = true }
             }
         }
 
@@ -91,22 +93,36 @@ class MainActivity : ComponentActivity() {
                 ScanScreen(
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
+                    onHrvSessionStarted = { seconds ->
+                        startRecordingService("HRV RMSSD")
+                        navController.navigate(Route.live(seconds)) { launchSingleTop = true }
+                    },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
-                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
+                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) },
+                    onResumeSession = { navController.navigate(Route.live()) { launchSingleTop = true } }
                 )
             }
 
-            composable(Route.LIVE) {
-                LiveScreen(onStopSession = {
-                    scanViewModel.stopSession()
-                    stopService(HrRecordingService.stopIntent(this@MainActivity))
-                    navController.popBackStack()
-                })
+            composable(
+                route = Route.LIVE,
+                arguments = listOf(navArgument("hrv") { type = NavType.IntType; defaultValue = 0 })
+            ) {
+                LiveScreen(
+                    onStopSession = {
+                        scanViewModel.stopSession()
+                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        navController.popBackStack()
+                    },
+                    onAbortSession = {
+                        scanViewModel.discardSession()
+                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        navController.popBackStack()
+                    }
+                )
             }
 
             composable(Route.HISTORY) {
                 HistoryScreen(
-                    onBack = { navController.popBackStack() },
                     onSessionClick = { id -> navController.navigate(Route.detail(id)) }
                 )
             }
@@ -115,11 +131,11 @@ class MainActivity : ComponentActivity() {
                 route = Route.DETAIL,
                 arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
             ) {
-                DetailScreen(onBack = { navController.popBackStack() })
+                DetailScreen()
             }
 
             composable(Route.SETTINGS) {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen()
             }
         }
     }

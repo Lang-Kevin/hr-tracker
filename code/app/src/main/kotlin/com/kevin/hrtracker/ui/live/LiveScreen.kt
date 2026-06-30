@@ -9,8 +9,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -26,21 +28,40 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.ZoomInMap
+import androidx.compose.material.icons.filled.ZoomOutMap
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.ui.shared.StatItem
+import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.OnPrimary
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.TertiaryPink
 import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.session.LeaveSessionDialog
+import com.kevin.shared.ui.zone.TargetZoneDialog
+import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
+import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 
 @Composable
 fun LiveScreen(
@@ -58,6 +79,15 @@ fun LiveScreen(
     val zoneBounds by viewModel.zoneBounds.collectAsStateWithLifecycle()
     val sessionLabel by viewModel.sessionLabel.collectAsStateWithLifecycle()
     val lastRrMs by viewModel.lastRrMs.collectAsStateWithLifecycle()
+    val activeSessionId by viewModel.activeSessionId.collectAsStateWithLifecycle()
+    val reachedZones by viewModel.reachedZones.collectAsStateWithLifecycle()
+    val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
+    val milestones by viewModel.milestones.collectAsStateWithLifecycle()
+    val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
+
+    LaunchedEffect(hrvCountdown) {
+        if (hrvCountdown == 0) onStopSession()
+    }
 
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
@@ -68,16 +98,18 @@ fun LiveScreen(
         }
     }
 
-    var showAbortDialog by remember { mutableStateOf(false) }
     var showStopDialog by remember { mutableStateOf(false) }
+    var showLeaveDialog by remember { mutableStateOf(false) }
+    var showTargetZoneDialog by remember { mutableStateOf(false) }
+    var dynamicScale by rememberSaveable { mutableStateOf(true) }
 
-    if (showAbortDialog) {
-        ConfirmDialog(
-            title = "Training abbrechen?",
-            text = "Die aufgezeichneten Daten werden verworfen und nicht gespeichert.",
-            confirmLabel = "Abbrechen",
-            onConfirm = { showAbortDialog = false; onAbortSession() },
-            onDismiss = { showAbortDialog = false }
+    BackHandler(enabled = activeSessionId != null) { showLeaveDialog = true }
+
+    if (showLeaveDialog) {
+        LeaveSessionDialog(
+            onSave = { showLeaveDialog = false; onStopSession() },
+            onDiscard = { showLeaveDialog = false; onAbortSession() },
+            onDismiss = { showLeaveDialog = false }
         )
     }
 
@@ -91,9 +123,24 @@ fun LiveScreen(
         )
     }
 
+    if (showTargetZoneDialog) {
+        TargetZoneDialog(
+            targetZone = targetZone,
+            onSelect = { viewModel.setTargetZone(it); showTargetZoneDialog = false },
+            onDismiss = { showTargetZoneDialog = false },
+            zoneCount = 5,
+            zoneColors = ZoneColors
+        )
+    }
+
     val mm = elapsed / 60
     val ss = elapsed % 60
 
+    val tutorialViewModel: TutorialViewModel = hiltViewModel()
+    val tutorialAnchors = rememberTutorialAnchors()
+    val tutorialSeen by tutorialViewModel.seenState("live").collectAsStateWithLifecycle()
+
+    Box(Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -123,10 +170,10 @@ fun LiveScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
-                        contentDescription = null,
+                        contentDescription = "Herzschlag",
                         tint = TertiaryPink,
                         modifier = Modifier
-                            .size(14.dp)
+                            .size(20.dp)
                             .scale(pulseScale.value)
                     )
                     Text(
@@ -141,15 +188,43 @@ fun LiveScreen(
 
         Spacer(Modifier.height(8.dp))
 
+        // Chart header with scale toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(1f))
+            IconToggleButton(
+                checked = dynamicScale,
+                onCheckedChange = { dynamicScale = it },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    imageVector = if (dynamicScale)
+                        Icons.Default.ZoomInMap else
+                        Icons.Default.ZoomOutMap,
+                    contentDescription = if (dynamicScale)
+                        "Dynamische Skalierung" else
+                        "Statische Skalierung"
+                )
+            }
+        }
+
         // BPM Zone Chart
         BpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = currentBpm,
             zoneBounds = zoneBounds,
             targetZone = targetZone,
+            dynamicScale = dynamicScale,
+            reachedZones = reachedZones,
+            milestones = milestones,
+            elapsedSeconds = elapsed,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .tutorialAnchor(tutorialAnchors, "live_chart")
         )
 
         Spacer(Modifier.height(12.dp))
@@ -158,8 +233,7 @@ fun LiveScreen(
         ZeitInZoneSection(
             timeInZone = timeInZone,
             percentInTargetZone = percentInTargetZone,
-            targetZone = targetZone,
-            onZoneClick = { viewModel.setTargetZone(it) }
+            targetZone = targetZone
         )
 
         Spacer(Modifier.height(12.dp))
@@ -167,8 +241,24 @@ fun LiveScreen(
         // Stats Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("BPM Ø", averageBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem("ZIEL-ZONE", "Zone $targetZone", Modifier.weight(1f), valueColor = PrimaryPurple)
-            StatItem("GESAMTZEIT", "%02d:%02d".format(mm, ss), Modifier.weight(1f))
+            StatItem(
+                "ZIEL-ZONE",
+                "Zone $targetZone",
+                Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_zone_stat"),
+                valueColor = PrimaryPurple,
+                onClick = { showTargetZoneDialog = true }
+            )
+            if (hrvCountdown != null) {
+                val cr = hrvCountdown ?: 0
+                StatItem(
+                    "VERBLEIBEND",
+                    "%02d:%02d".format(cr / 60, cr % 60),
+                    Modifier.weight(1f),
+                    valueColor = TertiaryPink
+                )
+            } else {
+                StatItem("GESAMTZEIT", formatDuration(elapsed), Modifier.weight(1f))
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -176,27 +266,45 @@ fun LiveScreen(
         // Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            OutlinedButton(
-                onClick = { showAbortDialog = true },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp, MaterialTheme.colorScheme.error
+            FilledTonalIconButton(
+                onClick = { viewModel.togglePause() },
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_pause")
+            ) {
+                Icon(
+                    if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                    contentDescription = if (isPaused) "Fortsetzen" else "Pause"
                 )
-            ) { Text("Abbrechen") }
-            Button(
+            }
+            FilledTonalIconButton(
+                onClick = { viewModel.addMilestone() },
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_milestone")
+            ) {
+                Icon(Icons.Default.Flag, contentDescription = "Meilenstein setzen")
+            }
+            FilledIconButton(
                 onClick = { showStopDialog = true },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PrimaryPurple,
-                    contentColor = OnPrimary
-                )
-            ) { Text("Abschließen") }
+                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_stop"),
+                colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = "Abschließen")
+            }
         }
+    }
+
+        TutorialOverlay(
+            steps = listOf(
+                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone."),
+                TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
+                TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
+                TutorialStep("live_milestone", "Meilenstein", "Setzt eine Markierung im Chart — z. B. für Intervallwechsel oder besondere Momente."),
+                TutorialStep("live_stop", "Abschließen", "Beendet das Training und speichert die aufgezeichneten Daten.")
+            ),
+            anchors = tutorialAnchors,
+            visible = tutorialSeen == false,
+            onFinish = { tutorialViewModel.markSeen("live") }
+        )
     }
 }
 
@@ -227,6 +335,10 @@ private fun BpmZoneChart(
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
     targetZone: Int,
+    dynamicScale: Boolean = false,
+    reachedZones: Set<Int> = emptySet(),
+    milestones: List<Long> = emptyList(),
+    elapsedSeconds: Long = 0L,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -316,6 +428,35 @@ private fun BpmZoneChart(
             )
         }
 
+        // Milestone vertical lines — anchored to their timestamp, scroll left as new data arrives
+        if (bpmHistory.size >= 2 && milestones.isNotEmpty()) {
+            val milestonePaint = Paint().apply {
+                isAntiAlias = true
+                textSize = with(density) { 9.sp.toPx() }
+                color = android.graphics.Color.argb(200, 255, 200, 80)
+                textAlign = Paint.Align.CENTER
+            }
+            milestones.forEachIndexed { idx, ms ->
+                val secondsAgo = elapsedSeconds - ms
+                val posFromLeft = (bpmHistory.size - 1) - secondsAgo.toInt()
+                if (posFromLeft in 0 until bpmHistory.size) {
+                    val x = leftPaddingPx + (posFromLeft.toFloat() / (bpmHistory.size - 1)) * chartWidth
+                    drawLine(
+                        color = Color(0xFFFFC850).copy(alpha = 0.6f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = with(density) { 1.5.dp.toPx() }
+                    )
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "M${idx + 1}",
+                        x,
+                        with(density) { 12.sp.toPx() },
+                        milestonePaint
+                    )
+                }
+            }
+        }
+
         // BPM history line
         if (bpmHistory.size >= 2) {
             val path = Path()
@@ -365,8 +506,7 @@ private fun BpmZoneChart(
 private fun ZeitInZoneSection(
     timeInZone: Map<Int, Long>,
     percentInTargetZone: Float?,
-    targetZone: Int,
-    onZoneClick: (Int) -> Unit = {}
+    targetZone: Int
 ) {
     val pct = percentInTargetZone ?: 0f
     val total = timeInZone.values.sum().coerceAtLeast(1L)
@@ -424,10 +564,9 @@ private fun ZeitInZoneSection(
         ) {
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
-                val isTarget = z == targetZone
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.clickable { onZoneClick(z) }
+                    modifier = Modifier
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -441,53 +580,16 @@ private fun ZeitInZoneSection(
                         Text(
                             "Z$z",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isTarget) Color.White
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White
                         )
                     }
                     Text(
-                        "%02d:%02d".format(secs / 60, secs % 60),
+                        formatDuration(secs),
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isTarget) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueColor: Color = Color.White
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineSmall,
-                color = valueColor,
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }

@@ -20,20 +20,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.kevin.shared.ble.BleConstants
+import com.kevin.shared.ble.ConnectionState
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.PI
 import kotlin.math.sin
-
-sealed class ConnectionState {
-    object Disconnected : ConnectionState()
-    object Connecting : ConnectionState()
-    object Connected : ConnectionState()
-    object Ready : ConnectionState()
-    object Reconnecting : ConnectionState()
-    data class Error(val reason: String) : ConnectionState()
-}
 
 @Singleton
 class HrBleManager @Inject constructor(
@@ -43,12 +36,8 @@ class HrBleManager @Inject constructor(
         private const val TAG = "HRTracker"
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
         val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
-        val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
         // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
-        // Fake device — valid MAC format so it survives getRemoteDevice() if ever reached,
-        // but intercepted before BLE API calls in connectToAddress().
-        const val FAKE_DEVICE_ADDRESS = "FA:CE:00:00:00:01"
         const val FAKE_DEVICE_NAME = "Pseudo-Sensor [Test]"
     }
 
@@ -114,7 +103,7 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connectToAddress(address: String) {
-        if (address == FAKE_DEVICE_ADDRESS) {
+        if (address == BleConstants.FAKE_DEVICE_ADDRESS) {
             connectFake()
             return
         }
@@ -122,6 +111,7 @@ class HrBleManager @Inject constructor(
         connect(adapter.getRemoteDevice(address))
     }
 
+    @SuppressLint("MissingPermission")
     fun connectFake() {
         reconnectEnabled = false
         reconnectJob?.cancel()
@@ -261,7 +251,7 @@ class HrBleManager @Inject constructor(
             }
             gatt.setCharacteristicNotification(hrChar, true)
 
-            val cccd = hrChar.getDescriptor(CCCD_UUID)
+            val cccd = hrChar.getDescriptor(BleConstants.CCCD_UUID)
             if (cccd == null) {
                 Log.e(TAG, "CCCD descriptor (0x2902) not found")
                 return
@@ -280,7 +270,7 @@ class HrBleManager @Inject constructor(
         override fun onDescriptorWrite(
             gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
         ) {
-            if (descriptor.uuid != CCCD_UUID) return
+            if (descriptor.uuid != BleConstants.CCCD_UUID) return
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "CCCD write confirmed — HR notifications active")
                 _connectionState.value = ConnectionState.Ready

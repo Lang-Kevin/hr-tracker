@@ -143,6 +143,27 @@ Samsung Galaxy Watch liefert keine RR-Intervalle über SensorManager → Watch-S
 
 **Problem**: BPM-Wert wechselte im BLE-Modus zwischen zwei Werten (2-stellig HR8, 3-stellig Watch). Trat erst nach Smartwatch-Feature auf.
 
+---
+
+## Resume-Session + Back-Button-Warnung (2026-06-17)
+
+In-app-Resume: solange der Prozess lebt, führt ein neuer "Fortsetzen"-Button auf `ScanScreen` zurück zur laufenden `LiveScreen`. Kein Process-Death-Recovery, kein BLE-Auto-Reconnect-on-Cold-Start.
+
+System-Back auf `LiveScreen` öffnet bei aktiver Session einen 3-Wege-Dialog (Speichern / Verwerfen / Weiter messen) statt die Session stillschweigend zu verlassen.
+
+**Bugfix**: bestehender "Abbrechen"-Button in `LiveScreen` verwarf die Session nicht wirklich — `MainActivity` verdrahtete kein eigenes `onAbortSession`, fiel auf `onStopSession` zurück (speicherte statt zu verwerfen). Jetzt korrekt verdrahtet, nutzt denselben Discard-Pfad wie der Back-Dialog (Hard-Delete inkl. `HrSample`-Cascade).
+
+Geänderte/neue Dateien:
+- `data/db/SessionDao.kt` → `deleteById(id)`
+- `data/repository/SessionRepository.kt` → `discardSession()`
+- `ui/scan/ScanViewModel.kt` → `discardSession()`-Wrapper
+- `ui/scan/ScanScreen.kt` → `onResumeSession`-Parameter, "Fortsetzen"-Button
+- `ui/live/LiveScreen.kt` → `BackHandler`, `LeaveSessionDialog`
+- `ui/live/LiveViewModel.kt` → `sessionStartMs` aus persistiertem `Session.startedAt` statt Wanduhr-Zeit (korrekte Elapsed-Time nach Re-Entry)
+- `MainActivity.kt` → Navigation für Resume + `onAbortSession`-Verdrahtung
+
+`timeInZone` (Sekunden pro Zone) bleibt beim Re-Entry erhalten: wird beim Resume aus den persistierten `HrSample`s rekonstruiert (`HrZoneCalculator.aggregateTimeInZone`) statt auf leer zurückgesetzt. Gesamt-Elapsed-Zeit ist korrekt.
+
 **Ursache**: Samsung BLE-Stack-Bug. Google Play Services verbindet sich über BLE mit der Galaxy Watch (die ebenfalls `0x2A37` exponiert). Samsungs Routing-Tabelle nutzt das Characteristic-UUID als Key statt das `(device, handle)`-Tupel — Watch-HR landete in `HrBleManager.gattCallback` und mischte sich mit HR8-Daten.
 
 ### Fixes
@@ -152,6 +173,117 @@ Samsung Galaxy Watch liefert keine RR-Intervalle über SensorManager → Watch-S
 - `ui/live/LiveViewModel.kt` — `flatMapLatest` auf `settingsRepository.userSettings` wählt reaktiv die richtige HR-Quelle.
 
 ---
+
+## Toolchain-Upgrade Android Studio 2026.1.1 (2026-06-15)
+
+Aligns both `:app` and `:wear` with the versions already in use in `shared-android-lib`.
+
+### Versionen
+
+| Artefakt | Alt | Neu |
+| --- | --- | --- |
+| Gradle wrapper | 8.13 | 9.4.1 |
+| AGP | 8.13.2 | 9.2.1 |
+| Kotlin | 2.0.20 | 2.1.0 |
+| KSP | 2.0.20-1.0.25 | 2.1.0-1.0.29 |
+| Compose BOM | 2024.11.00 | 2026.05.01 |
+| compileSdk | 35 | 37 (beide Module) |
+| Hilt | 2.53 | 2.57.1 |
+| Room | 2.6.1 | 2.8.3 |
+| Lifecycle | 2.8.7 | 2.9.2 |
+| Navigation | 2.8.5 | 2.9.7 |
+| Coroutines | 1.9.0 | 1.11.0 |
+| Vico | 2.0.1 | 3.0.3 |
+| Health Connect | 1.1.0-alpha06 | 1.1.0 |
+| Wear Compose | 1.3.1 | 1.6.2 |
+
+### AGP 9.x Kompatibilität
+
+AGP 9.x registriert die `kotlin`-Extension automatisch (built-in Kotlin support). Da Hilt 2.57.1 noch `BaseExtension` aus dem alten AGP-Pfad referenziert, wird der neue Modus über `gradle.properties` deaktiviert:
+
+```properties
+android.builtInKotlin=false
+android.newDsl=false
+```
+
+Gilt für beide `gradle.properties` (`:app` und `:wear`). Kann entfernt werden, sobald Hilt AGP 9.x nativ unterstützt.
+
+### Vico 3.x API-Migration
+
+`vico:compose:3.x` ist ein KMP-Artefakt. Die Klassen `CartesianChartModelProducer` und `lineSeries` sind von `com.patrykandpatrick.vico.core.cartesian.data.*` nach `com.patrykandpatrick.vico.compose.cartesian.data.*` gewandert.
+
+Geändert: `ui/shared/BpmLineChart.kt` (2 Imports).
+
+### Sonstige Fixes
+
+- `ui/detail/DetailScreen.kt` — `Locale.getDefault()` in Composable durch `LocalConfiguration.current.locales[0]` ersetzt (Lint `NonObservableLocale`).
+
+---
+
+## Ziel-Zone-Picker + Zonen-Sichtbarkeits-Toggle (2026-06-17)
+
+Bisher setzte ein Klick auf eine "Zeit in Zone"-Spalte die Ziel-Zone — unintuitiv, da ein Statistik-Element den Recording-Zustand änderte.
+
+- Ziel-Zone wird jetzt über Klick auf die **"ZIEL-ZONE"**-Stat ausgewählt (öffnet Dialog mit FilterChips Z1–Z5).
+- "Zeit in Zone"-Klicks blenden die jeweilige Zone stattdessen im Live-Chart ein/aus (`visibleZones: Set<Int>`, rein lokaler UI-State, kein DataStore).
+- Ziel-Band + "ZIEL"-Badge im Chart ignorieren den Sichtbarkeits-Toggle bewusst — bleiben immer sichtbar.
+- `visibleZones` wird bei Sessionstart auf alle 5 Zonen zurückgesetzt.
+
+Geänderte Dateien:
+- `ui/live/LiveViewModel.kt` → `visibleZones`-StateFlow, `toggleZoneVisibility()`, Reset in `activeSessionId.collect`
+- `ui/live/LiveScreen.kt` → `StatItem` mit optionalem `onClick`, `TargetZoneDialog`, `ZeitInZoneSection`/`BpmZoneChart` mit `visibleZones`-Parameter
+
+## Shared-Lib-Migration-Lücke: LeaveSessionDialog (2026-06-22)
+
+`LiveScreen.kt` war bereits lokal auf `com.kevin.shared.ui.session.LeaveSessionDialog` umgestellt (Teil einer laufenden Migration nach `shared-android-lib`), aber die Composable fehlte im Ziel-Modul — Build-Fehler (`Unresolved reference`). `TargetZoneDialog` war korrekt migriert, `LeaveSessionDialog` nicht.
+
+Fix: `LeaveSessionDialog` (unverändert aus `LiveScreen.kt` übernommen) in `shared-android-lib/shared/.../ui/session/SessionComponents.kt` ergänzt.
+
+## Onboarding-Flow erweitert (2026-06-22)
+
+Bestehender Wizard (Alter → Ruhepuls → Zusammenfassung) auf 7 Steps erweitert, erklärt jetzt Kernfunktionen statt nur Setup. Jederzeit über globalen "Überspringen"-Button abbrechbar (außer letzter Step).
+
+Neue Steps (0, 3–5): Willkommen, BLE-Brustgurt verbinden, Live-Tracking & Zonen, Verlauf & Export — reine Info-Steps, gleiches Pattern wie bestehende Steps.
+
+Geänderte Dateien:
+- `ui/onboarding/OnboardingScreen.kt` → Dot-Indicator `(0..6)`, globaler Skip-`TextButton`, 4 neue private Composables (`StepWelcome`, `StepBleInfo`, `StepLiveInfo`, `StepHistoryInfo`)
+- `ui/onboarding/OnboardingViewModel.kt` → `skip()` setzt nur `onboardingDone = true`, ohne Alter/Ruhepuls zu erzwingen
+
+## Fix: Verlauf-Crash durch Compose-BOM-Skew (2026-06-22)
+
+Verlauf crashte (`NoSuchMethodError: FlowRow(...FlowRowOverflow...)`) sobald Sessions mit Labels existierten — `CategoryFilterRow` in `shared-android-lib` returnt früh bei leerer Liste, daher trat der Fehler erst mit echten Daten auf. Ursache: `shared-android-lib` war auf `compose-bom 2024.11.00` gepinnt, App auf `2026.05.01` — binär inkompatible `FlowRow`-Signatur im finalen APK.
+
+Fix: `shared-android-lib/gradle/libs.versions.toml` → `compose-bom` auf `2026.05.01` angehoben (Kotlin/AGP waren bereits identisch).
+
+## HRV-Messung (2026-06-24)
+
+Schnelle Ruhemessung zur RMSSD-Ermittlung direkt aus dem Scan-Screen.
+
+- **"HRV messen"-Button** im Scan-Screen (OutlinedButton unterhalb "Training starten").
+- **HrvDurationDialog**: Auswahl Super Short (30s) / Short (1 min) / Full (5 min).
+- Session wird automatisch mit Label `"HRV RMSSD"` gestartet (kein Label-Dialog).
+- HRV-Dauer als Nav-Arg (`hrv`) an LiveScreen übergeben.
+- `LiveViewModel` liest `hrv` aus `SavedStateHandle`, führt Countdown (pausierbar) via `hrvCountdown: StateFlow<Int?>`.
+- LiveScreen zeigt statt "GESAMTZEIT" ein rosa "VERBLEIBEND"-Countdown; stoppt Session automatisch bei 0.
+- RMSSD-Berechnung in `DetailViewModel`: globales `zipWithNext` über alle RR-Werte der Session, Range-Filter 300–2000 ms gegen Artefakte.
+
+Geänderte Dateien:
+- `ui/scan/ScanScreen.kt` → `onHrvSessionStarted`-Callback, `HrvDurationDialog`, "HRV messen"-Button
+- `ui/live/LiveViewModel.kt` → `SavedStateHandle`-Injektion, `hrvCountdown`-StateFlow + Countdown-Coroutine
+- `ui/live/LiveScreen.kt` → `hrvCountdown`-Collectierung, Auto-Stop, VERBLEIBEND-Anzeige
+- `MainActivity.kt` → Route `"live?hrv={hrv}"`, `onHrvSessionStarted`-Wiring, LaunchedEffect-Guard
+
+## Fix: Duration-Overflow (Zeit über 60 Minuten) (2026-06-28)
+
+**Problem**: Trainingsdauer und Zeit-in-Zone liefen nach 60 Minuten über (z. B. 1:23:45 zeigte sich als 23:45), da der Formatter `mm:ss` keine Stunden unterstützte.
+
+**Lösung**: Neue zentrale `formatDuration(totalSeconds: Long): String` in `ui/Format.kt`, liefert immer `HH:MM:SS`. Alle Call-Sites aktualisiert.
+
+Geänderte/neue Dateien:
+- `ui/Format.kt` — neu (zentrale `formatDuration`)
+- `ui/live/LiveScreen.kt` — Gesamtdauer + Zone-Zeit via `formatDuration`
+- `service/HrRecordingService.kt` — Notification via `formatDuration`
+- `ui/shared/TrainingUi.kt` — Zone-Detail + a11y-Label via `formatDuration`
 
 ## Offen
 

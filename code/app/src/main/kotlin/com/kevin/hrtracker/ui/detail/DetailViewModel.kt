@@ -6,8 +6,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.db.HrDatabase
+import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.HrSample
+import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.data.entity.SportLabel
+import com.kevin.hrtracker.domain.HrRecovery
+import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
@@ -24,10 +29,14 @@ import kotlin.math.sqrt
 class DetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val db: HrDatabase,
-    private val exporter: SessionExporter
+    private val exporter: SessionExporter,
+    private val sportLabelDao: SportLabelDao
 ) : ViewModel() {
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
+
+    val trainingLabels: StateFlow<List<SportLabel>> = sportLabelDao.getAllLabels()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val session: StateFlow<Session?> = db.sessionDao().getByIdFlow(sessionId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -59,9 +68,15 @@ class DetailViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rmssd: StateFlow<Int?> = samples.map { list ->
+        // Collect all RR values in order (each BLE sample = one heartbeat notification,
+        // consecutive samples are consecutive beats — no gap between them).
+        // 300–2000 ms range filter removes ectopic beats and sensor noise before diffing.
         val allRrs = list.flatMap { sample ->
-            sample.rrIntervalsMs?.split(",")
-                ?.mapNotNull { it.trim().toIntOrNull() } ?: emptyList()
+            sample.rrIntervalsMs
+                ?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.filter { it in 300..2000 }
+                ?: emptyList()
         }
         if (allRrs.size < 2) null
         else {
@@ -90,16 +105,7 @@ class DetailViewModel @Inject constructor(
         if (sess == null || list.isEmpty()) emptyMap()
         else {
             val zones = HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
-            val sorted = list.sortedBy { it.timestampMs }
-            val result = mutableMapOf<Int, Long>()
-            for (i in 0 until sorted.size - 1) {
-                val zone = HrZoneCalculator.zoneFor(sorted[i].bpm, zones)
-                val durS = (sorted[i + 1].timestampMs - sorted[i].timestampMs) / 1000L
-                result[zone] = (result[zone] ?: 0L) + durS.coerceAtLeast(0L)
-            }
-            val lastZone = HrZoneCalculator.zoneFor(sorted.last().bpm, zones)
-            result[lastZone] = (result[lastZone] ?: 0L) + 1L
-            result
+            HrZoneCalculator.aggregateTimeInZone(list, zones)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -112,6 +118,14 @@ class DetailViewModel @Inject constructor(
         else map.getOrDefault(zone, 0L).toFloat() / map.values.sum().coerceAtLeast(1L)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val recovery: StateFlow<HrrResult?> = combine(samples, session) { list, sess ->
+        if (sess == null) null
+        else HrRecovery.computeHrRecovery(list, sess.maxHrUsed)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val milestones: StateFlow<List<Milestone>> = db.milestoneDao().getBySession(sessionId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }
@@ -120,7 +134,22 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { db.sessionDao().updateNote(sessionId, note) }
     }
 
+    fun updateMilestoneLabel(id: Long, label: String) {
+        viewModelScope.launch { db.milestoneDao().updateLabel(id, label.trim()) }
+    }
+
     suspend fun export(context: Context): Intent? = exporter.buildShareIntent(context, sessionId)
 
     suspend fun exportCsv(context: Context): Intent? = exporter.buildCsvShareIntent(context, sessionId)
+
+    fun generateReport(): String {
+        val s = stats.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
+        val sess = session.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
+        val zones = timeInZone.value
+        val durationS = if (sess.endedAt != null) (sess.endedAt - sess.startedAt) / 1000L else 0L
+        val zonesJson = zones.entries
+            .sortedBy { it.key }
+            .joinToString(",") { "\"${it.key}\":${it.value}" }
+        return """{"avgHf":${s.avgBpm},"maxHf":${s.maxBpm},"dauerSekunden":$durationS,"zeitInZonen":{$zonesJson}}"""
+    }
 }

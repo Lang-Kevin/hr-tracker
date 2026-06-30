@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kevin.hrtracker.ble.ConnectionState
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.db.SportLabelDao
 import com.kevin.hrtracker.data.entity.SportLabel
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
-import com.kevin.hrtracker.domain.DiscoveredDevice
-import com.kevin.hrtracker.domain.SavedDevice
+import com.kevin.shared.ble.ConnectionState
+import com.kevin.shared.domain.DiscoveredDevice
+import com.kevin.shared.domain.SavedDevice
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -33,19 +34,20 @@ class ScanViewModel @Inject constructor(
     private val sportLabelDao: SportLabelDao
 ) : ViewModel() {
 
-    val trainingLabels: StateFlow<List<String>> = sportLabelDao.getAllLabels()
-        .map { it.map(SportLabel::name) }
+    val trainingLabels: StateFlow<List<SportLabel>> = sportLabelDao.getAllLabels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun addTrainingLabel(name: String) = viewModelScope.launch {
         if (name.isNotBlank()) sportLabelDao.insert(SportLabel(name = name.trim(), isPredefined = false))
     }
 
-    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = bleManager.scanResults
-        .map { results ->
-            listOf(DiscoveredDevice.Fake) + results.map { DiscoveredDevice.Real(it) }
-        }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(DiscoveredDevice.Fake))
+    val discoveredDevices: StateFlow<List<DiscoveredDevice>> = combine(
+        bleManager.scanResults,
+        settingsRepository.debugMode
+    ) { results, debugMode ->
+        val real = results.map { DiscoveredDevice.Real(it) }
+        if (debugMode) listOf(DiscoveredDevice.Fake(HrBleManager.FAKE_DEVICE_NAME)) + real else real
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
@@ -138,10 +140,12 @@ class ScanViewModel @Inject constructor(
 
     fun startSession(label: String = "Training") = viewModelScope.launch {
         val s = settingsRepository.userSettings.first()
-        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr)
+        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, customZones = s.customZones)
     }
 
     fun stopSession() = viewModelScope.launch { sessionRepository.stopSession() }
+
+    fun discardSession() = viewModelScope.launch { sessionRepository.discardSession() }
 
     override fun onCleared() {
         super.onCleared()

@@ -25,4 +25,10 @@ class OnboardingViewModel @Inject constructor(
             settingsRepository.setOnboardingDone(true)
         }
     }
+
+    fun skip() {
+        viewModelScope.launch {
+            settingsRepository.setOnboardingDone(true)
+        }
+    }
 }

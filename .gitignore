@@ -10,3 +10,8 @@ code/**/build/
 
 # Local config
 local.properties
+
+# graphify: cache + dated snapshots are regenerable, only top-level graph is tracked
+graphify-out/cache/
+graphify-out/2*/
+code/graphify-out/

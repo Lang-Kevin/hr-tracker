@@ -42,4 +42,7 @@ interface SessionDao {
 
     @Query("DELETE FROM Session WHERE deletedAt IS NOT NULL")
     suspend fun permanentlyDeleteTrashed()
+
+    @Query("DELETE FROM Session WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
