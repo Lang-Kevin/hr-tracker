@@ -13,6 +13,9 @@ object HrZoneCalculator {
 
     private const val MIN_BPM = 30
     private const val MAX_BPM = 220
+    // ponytail: Lücke > MAX_SAMPLE_GAP_MS = BLE-Dropout, Dauer zählt nicht in Zeit-in-Zone.
+    // Wert ggf. an Auto-Pause-Schwelle angleichen, falls die abweicht.
+    private const val MAX_SAMPLE_GAP_MS = 5000L
 
     fun zonesToBoundaries(zones: List<ZoneBounds>): List<Int> =
         listOf(zones.first().lo) + zones.map { it.hi }   // Größe 6
@@ -81,9 +84,11 @@ object HrZoneCalculator {
         val sorted = samples.sortedBy { it.timestampMs }
         val result = mutableMapOf<Int, Long>()
         for (i in 0 until sorted.size - 1) {
+            val gapMs = sorted[i + 1].timestampMs - sorted[i].timestampMs
+            if (gapMs > MAX_SAMPLE_GAP_MS) continue
             val zone = zoneFor(sorted[i].bpm, zones)
-            val durS = (sorted[i + 1].timestampMs - sorted[i].timestampMs) / 1000L
-            result[zone] = (result[zone] ?: 0L) + durS.coerceAtLeast(0L)
+            val durS = gapMs / 1000L
+            result[zone] = (result[zone] ?: 0L) + durS
         }
         val lastZone = zoneFor(sorted.last().bpm, zones)
         result[lastZone] = (result[lastZone] ?: 0L) + 1L

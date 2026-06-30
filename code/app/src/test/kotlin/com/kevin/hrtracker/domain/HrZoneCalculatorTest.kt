@@ -99,6 +99,42 @@ class HrZoneCalculatorTest {
     }
 
     @Test
+    fun aggregateTimeInZone_bleDropout_gapNotCountedInZone() {
+        // Normal samples at 1s intervals in zone A, then a 65s BLE dropout, then one more sample.
+        val zones = HrZoneCalculator.calculateZones(200, 60)
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,          bpm = 100),
+            HrSample(sessionId = 1, timestampMs = base + 1000,   bpm = 100),
+            HrSample(sessionId = 1, timestampMs = base + 2000,   bpm = 100),
+            // 65s gap — BLE dropout, must NOT be counted
+            HrSample(sessionId = 1, timestampMs = base + 67000,  bpm = 100),
+            HrSample(sessionId = 1, timestampMs = base + 68000,  bpm = 100)
+        )
+        val result = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+        // Counted: 1s + 1s (normal) + (gap skipped) + 1s + 1s last = 4s total
+        assertEquals(4L, result.values.sum())
+        // All bpm=100 land in zone 1 (Karvonen, maxHr=200, resting=60 → Z1 hi=144).
+        // A broken zoneFor that maps everything to zone 0 would fail this assert.
+        assertEquals(4L, result[1])
+    }
+
+    @Test
+    fun aggregateTimeInZone_noGap_regressionUnchanged() {
+        // Four consecutive 1s-interval samples — verifies no regression for normal data.
+        val zones = HrZoneCalculator.calculateZones(200, 60)
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = 0L,    bpm = 100),
+            HrSample(sessionId = 1, timestampMs = 1000L, bpm = 100),
+            HrSample(sessionId = 1, timestampMs = 2000L, bpm = 100),
+            HrSample(sessionId = 1, timestampMs = 3000L, bpm = 100)
+        )
+        val result = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+        // 1s + 1s + 1s (intervals) + 1s (last) = 4s
+        assertEquals(4L, result.values.sum())
+    }
+
+    @Test
     fun zonesToBoundaries_roundTrip_returnsOriginalZones() {
         val zones = HrZoneCalculator.calculateZones(190, null)
         val boundaries = HrZoneCalculator.zonesToBoundaries(zones)

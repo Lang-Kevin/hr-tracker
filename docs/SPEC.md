@@ -129,6 +129,7 @@ Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
 - Zonenverteilung über Snapshot-Grenzen (Prio: `Session.zoneSnapshotJson`, sonst aktuelle Settings).
+- **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 
 ## Charts / Visualisierung (BpmZoneChart)
 
