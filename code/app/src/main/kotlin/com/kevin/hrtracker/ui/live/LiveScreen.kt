@@ -368,12 +368,24 @@ private fun BpmZoneChart(
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
 
-        val bpmMin = zoneBounds.minOf { it.lo } - 8
-        val bpmMax = zoneBounds.maxOf { it.hi } + 8
-        val bpmRange = (bpmMax - bpmMin).toFloat()
+        val bpmMin: Float
+        val bpmMax: Float
 
-        fun bpmToY(bpm: Int): Float =
-            size.height * (1f - (bpm - bpmMin).toFloat() / bpmRange)
+        if (dynamicScale && bpmHistory.isNotEmpty()) {
+            val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
+            val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
+            val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
+            bpmMin = actualMin - pad
+            bpmMax = actualMax + pad
+        } else {
+            bpmMin = (zoneBounds.minOf { it.lo } - 8).toFloat()
+            bpmMax = (zoneBounds.maxOf { it.hi } + 8).toFloat()
+        }
+
+        val bpmRange = bpmMax - bpmMin
+
+        fun bpmToY(bpm: Float): Float =
+            size.height * (1f - (bpm - bpmMin) / bpmRange)
 
         val labelPaint = Paint().apply {
             isAntiAlias = true
@@ -383,14 +395,14 @@ private fun BpmZoneChart(
 
         // Zone separator lines and Y-axis labels
         zoneBounds.forEach { z ->
-            val y = bpmToY(z.lo)
+            val y = bpmToY(z.lo.toFloat())
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
                 start = Offset(leftPaddingPx, y),
                 end = Offset(size.width, y),
                 strokeWidth = with(density) { 1.dp.toPx() }
             )
-            val yCentre = bpmToY((z.lo + z.hi) / 2)
+            val yCentre = bpmToY(((z.lo + z.hi) / 2).toFloat())
             drawContext.canvas.nativeCanvas.drawText(
                 "Z${z.zone} ${z.lo}",
                 4f,
@@ -402,16 +414,16 @@ private fun BpmZoneChart(
         zoneBounds.lastOrNull()?.let { z ->
             drawLine(
                 color = Color.White.copy(alpha = 0.10f),
-                start = Offset(leftPaddingPx, bpmToY(z.hi)),
-                end = Offset(size.width, bpmToY(z.hi)),
+                start = Offset(leftPaddingPx, bpmToY(z.hi.toFloat())),
+                end = Offset(size.width, bpmToY(z.hi.toFloat())),
                 strokeWidth = with(density) { 1.dp.toPx() }
             )
         }
 
         // Target zone highlight band
         zoneBounds.getOrNull(targetZone - 1)?.let { zBound ->
-            val yTop = bpmToY(zBound.hi)
-            val yBottom = bpmToY(zBound.lo)
+            val yTop = bpmToY(zBound.hi.toFloat())
+            val yBottom = bpmToY(zBound.lo.toFloat())
             drawRect(
                 color = ZoneColors[targetZone - 1].copy(alpha = 0.18f),
                 topLeft = Offset(leftPaddingPx, yTop),
@@ -421,7 +433,7 @@ private fun BpmZoneChart(
 
         // ZIEL badge at target zone lower boundary
         zoneBounds.getOrNull(targetZone - 1)?.let { zBound ->
-            val yZiel = bpmToY(zBound.lo)
+            val yZiel = bpmToY(zBound.lo.toFloat())
             val bw = with(density) { 34.dp.toPx() }
             val bh = with(density) { 15.dp.toPx() }
             val br = with(density) { 4.dp.toPx() }
@@ -481,7 +493,7 @@ private fun BpmZoneChart(
             val path = Path()
             bpmHistory.forEachIndexed { index, bpm ->
                 val x = leftPaddingPx + (index.toFloat() / (bpmHistory.size - 1)) * chartWidth
-                val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
+                val y = bpmToY(bpm.toFloat().coerceIn(bpmMin, bpmMax))
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
             drawPath(
@@ -497,7 +509,7 @@ private fun BpmZoneChart(
             // Current BPM dot and label at last point
             val lastBpm = bpmHistory.last()
             val lastX = leftPaddingPx + chartWidth
-            val lastY = bpmToY(lastBpm.coerceIn(bpmMin, bpmMax))
+            val lastY = bpmToY(lastBpm.toFloat().coerceIn(bpmMin, bpmMax))
 
             drawCircle(
                 color = LightPurple,
