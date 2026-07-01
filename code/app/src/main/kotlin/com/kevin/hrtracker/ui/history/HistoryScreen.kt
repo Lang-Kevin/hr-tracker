@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,6 +54,7 @@ fun HistoryScreen(
     val selectedLabels by viewModel.selectedLabels.collectAsStateWithLifecycle()
     val dateRange by viewModel.dateRange.collectAsStateWithLifecycle()
     var showDateRangePicker by remember { mutableStateOf(false) }
+    var showCategoryFilter by remember { mutableStateOf(false) }
     val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
@@ -81,6 +83,37 @@ fun HistoryScreen(
                 showDateRangePicker = false
             }
         )
+    }
+
+    if (showCategoryFilter) {
+        ModalBottomSheet(onDismissRequest = { showCategoryFilter = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    "Trainingseinheiten filtern",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                if (availableLabels.isEmpty()) {
+                    Text(
+                        "Keine Labels vorhanden.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                } else {
+                    CategoryFilterRow(
+                        categories = availableLabels,
+                        selected = selectedLabels,
+                        onToggle = { viewModel.toggleLabelFilter(it) }
+                    )
+                }
+            }
+        }
     }
 
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
@@ -142,11 +175,24 @@ fun HistoryScreen(
                     ))
                     Spacer(Modifier.height(8.dp))
                     Box(Modifier.tutorialAnchor(tutorialAnchors, "history_filter")) {
-                        CategoryFilterRow(
-                            categories = availableLabels,
-                            selected = selectedLabels,
-                            onToggle = { viewModel.toggleLabelFilter(it) }
-                        )
+                        if (selectedLabels.isEmpty()) {
+                            AssistChip(
+                                onClick = { showCategoryFilter = true },
+                                label = { Text("Trainingseinheiten") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FilterList, contentDescription = null)
+                                }
+                            )
+                        } else {
+                            FilterChip(
+                                selected = true,
+                                onClick = { showCategoryFilter = true },
+                                label = { Text("Trainingseinheiten (${selectedLabels.size})") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FilterList, contentDescription = null)
+                                }
+                            )
+                        }
                     }
                     Spacer(Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
