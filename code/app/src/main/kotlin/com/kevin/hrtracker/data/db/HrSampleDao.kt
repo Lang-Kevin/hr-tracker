@@ -25,4 +25,7 @@ interface HrSampleDao {
 
     @Query("SELECT sessionId, CAST(AVG(bpm) AS INTEGER) AS avgBpm FROM HrSample GROUP BY sessionId")
     fun getSessionAvgBpms(): Flow<List<SessionAvgBpm>>
+
+    @Query("SELECT AVG(bpm) FROM HrSample WHERE sessionId IN (:sessionIds)")
+    suspend fun getAvgBpmForSessions(sessionIds: List<Long>): Double?
 }

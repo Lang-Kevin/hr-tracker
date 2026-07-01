@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -69,6 +71,9 @@ class HistoryViewModel @Inject constructor(
         .map { it.isNotEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    private val sessionAvgBpms = db.hrSampleDao().getSessionAvgBpms()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     data class SummaryStats(
         val sessionCount: Int,
         val totalDurationS: Long,
@@ -76,18 +81,22 @@ class HistoryViewModel @Inject constructor(
         val avgBpm: Int?
     )
 
-    val summaryStats: StateFlow<SummaryStats> = combine(
-        sessions,
-        db.hrSampleDao().getGlobalAvgBpm()
-    ) { sessionList, avgBpm ->
-        val durations = sessionList.filter { it.endedAt != null }
-            .map { (it.endedAt!! - it.startedAt) / 1000L }
-        SummaryStats(
-            sessionCount = sessionList.size,
-            totalDurationS = durations.sum(),
-            longestDurationS = durations.maxOrNull() ?: 0L,
-            avgBpm = avgBpm
-        )
+    val summaryStats: StateFlow<SummaryStats> = filteredSessions.flatMapLatest { sessionList ->
+        val completed = sessionList.filter { it.endedAt != null }
+        val durations = completed.map { (it.endedAt!! - it.startedAt) / 1000L }
+        val ids = completed.map { it.id }
+        flow {
+            val avgBpm = if (ids.isEmpty()) null
+                         else db.hrSampleDao().getAvgBpmForSessions(ids)?.toInt()
+            emit(
+                SummaryStats(
+                    sessionCount = sessionList.size,
+                    totalDurationS = durations.sum(),
+                    longestDurationS = durations.maxOrNull() ?: 0L,
+                    avgBpm = avgBpm
+                )
+            )
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SummaryStats(0, 0L, 0L, null))
 
     data class WeekStats(
@@ -103,9 +112,6 @@ class HistoryViewModel @Inject constructor(
         val startedAt: Long,
         val trimp: Int
     )
-
-    private val sessionAvgBpms = db.hrSampleDao().getSessionAvgBpms()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val weeklyData: StateFlow<List<WeekStats>> = combine(sessions, sessionAvgBpms) { sessionList, bpmStats ->
         val bpmMap = bpmStats.associateBy { it.sessionId }
