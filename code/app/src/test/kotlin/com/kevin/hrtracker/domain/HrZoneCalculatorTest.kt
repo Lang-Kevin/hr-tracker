@@ -1,6 +1,8 @@
 package com.kevin.hrtracker.domain
 
 import com.kevin.hrtracker.data.entity.HrSample
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -181,6 +183,49 @@ class HrZoneCalculatorTest {
         assertEquals(base + 30000, gaps[0].last)
         assertEquals(base + 31000, gaps[1].first)
         assertEquals(base + 51000, gaps[1].last)
+    }
+
+    // --- resolveZones ---
+
+    @Test
+    fun resolveZones_validSnapshot_returnsSnapshotZones() {
+        val maxHr = 180
+        val restingHr = 55
+        val snapshotZones = listOf(
+            ZoneBounds(1, 90, 108),
+            ZoneBounds(2, 108, 126),
+            ZoneBounds(3, 126, 144),
+            ZoneBounds(4, 144, 162),
+            ZoneBounds(5, 162, 180)
+        )
+        val json = Json.encodeToString(snapshotZones)
+        val result = HrZoneCalculator.resolveZones(json, maxHr, restingHr)
+        assertEquals(snapshotZones, result)
+        assertNotEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+    }
+
+    @Test
+    fun resolveZones_nullSnapshot_fallsBackToCalculate() {
+        val maxHr = 185
+        val restingHr = 60
+        val result = HrZoneCalculator.resolveZones(null, maxHr, restingHr)
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+    }
+
+    @Test
+    fun resolveZones_emptyArray_fallsBackToCalculate() {
+        val maxHr = 185
+        val restingHr = 60
+        val result = HrZoneCalculator.resolveZones("[]", maxHr, restingHr)
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+    }
+
+    @Test
+    fun resolveZones_brokenJson_fallsBackToCalculateWithoutThrow() {
+        val maxHr = 185
+        val restingHr = 60
+        val result = HrZoneCalculator.resolveZones("{nonsense", maxHr, restingHr)
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
     }
 
     @Test

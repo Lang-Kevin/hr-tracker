@@ -20,8 +20,6 @@ import com.kevin.hrtracker.export.SessionExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 import javax.inject.Inject
 import kotlin.math.exp
 import kotlin.math.sqrt
@@ -68,9 +66,7 @@ class DetailViewModel @Inject constructor(
 
     val zoneBounds: StateFlow<List<ZoneBounds>> = session.map { sess ->
         if (sess == null) emptyList()
-        else sess.zoneSnapshotJson
-            ?.let { runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull() }
-            ?: HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
+        else HrZoneCalculator.resolveZones(sess.zoneSnapshotJson, sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val rmssd: StateFlow<Int?> = samples.map { list ->
@@ -110,7 +106,7 @@ class DetailViewModel @Inject constructor(
     val timeInZone: StateFlow<Map<Int, Long>> = combine(session, samples) { sess, list ->
         if (sess == null || list.isEmpty()) emptyMap()
         else {
-            val zones = HrZoneCalculator.calculateZones(sess.maxHrUsed, sess.restingHr)
+            val zones = HrZoneCalculator.resolveZones(sess.zoneSnapshotJson, sess.maxHrUsed, sess.restingHr)
             HrZoneCalculator.aggregateTimeInZone(list, zones)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())

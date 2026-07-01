@@ -35,7 +35,7 @@ class SessionExporter @Inject constructor(
         }
 
     private fun buildJson(session: Session, samples: List<HrSample>): String {
-        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+        val zones = HrZoneCalculator.resolveZones(session.zoneSnapshotJson, session.maxHrUsed, session.restingHr)
         val zoneModel = if (session.restingHr != null) "karvonen" else "percent_hrmax"
         val durationS = session.endedAt?.let { (it - session.startedAt) / 1000 } ?: 0L
         val bpms = samples.map { it.bpm }
@@ -93,7 +93,7 @@ class SessionExporter @Inject constructor(
         }
 
     private fun buildCsv(session: Session, samples: List<HrSample>): String {
-        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+        val zones = HrZoneCalculator.resolveZones(session.zoneSnapshotJson, session.maxHrUsed, session.restingHr)
         val sb = StringBuilder("timestamp,elapsed_s,bpm,rr_ms,zone\n")
         samples.forEach { s ->
             val elapsed = (s.timestampMs - session.startedAt) / 1000

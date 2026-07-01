@@ -130,7 +130,7 @@ History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzelt
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
-- Zonenverteilung über Snapshot-Grenzen (Prio: `Session.zoneSnapshotJson`, sonst aktuelle Settings).
+- Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Lücken-Visualisierung:** Der Detail-Chart markiert erkannte Dropout-Lücken als rote gestrichelte Linie auf avg-BPM-Höhe (display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
 
@@ -160,6 +160,8 @@ BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschalt
 ## Export / Report
 
 V1: **JSON**. CSV ist V2 (Batch 6 erledigt).
+
+Zonengrenzen in JSON und CSV werden über `HrZoneCalculator.resolveZones` aus dem persistierten `zoneSnapshotJson` gelesen (Custom-Zonen-konsistent); Fallback auf Neuberechnung nur bei fehlendem oder ungültigem Snapshot.
 
 Struktur:
 

@@ -1,6 +1,8 @@
 package com.kevin.hrtracker.domain
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import com.kevin.shared.domain.validateZoneTexts
 import com.kevin.hrtracker.data.entity.HrSample
 
@@ -63,6 +65,17 @@ object HrZoneCalculator {
             }
             ZoneBounds(zone, lo, hi)
         }
+
+    /**
+     * Liefert die Zonen einer Session: bevorzugt den persistierten Snapshot
+     * (zoneSnapshotJson, enthält ggf. Custom-Zonen), Fallback auf Neuberechnung
+     * via calculateZones bei NULL oder Parse-Fehler.
+     */
+    fun resolveZones(zoneSnapshotJson: String?, maxHr: Int, restingHr: Int?): List<ZoneBounds> =
+        zoneSnapshotJson
+            ?.let { runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull() }
+            ?.takeIf { it.isNotEmpty() }
+            ?: calculateZones(maxHr, restingHr)
 
     fun zoneFor(bpm: Int, zones: List<ZoneBounds>): Int {
         for (z in zones) { if (bpm <= z.hi) return z.zone }
