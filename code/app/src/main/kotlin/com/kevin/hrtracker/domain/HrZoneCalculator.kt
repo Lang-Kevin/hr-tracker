@@ -105,6 +105,8 @@ object HrZoneCalculator {
      * Aggregates time spent in each zone from a list of HR samples.
      * Calculates duration between consecutive samples and assigns to the zone of the first sample.
      * Duration for the last sample is 1 second.
+     * Accumulates milliseconds per zone and divides by 1000 only once at the end,
+     * to avoid systematic loss of sub-second remainders on BLE jitter.
      *
      * @param samples List of HR samples, must be sorted by timestamp
      * @param zones Zone bounds (typically from calculateZones)
@@ -114,16 +116,15 @@ object HrZoneCalculator {
         if (samples.isEmpty()) return emptyMap()
 
         val sorted = samples.sortedBy { it.timestampMs }
-        val result = mutableMapOf<Int, Long>()
+        val msPerZone = mutableMapOf<Int, Long>()
         for (i in 0 until sorted.size - 1) {
             val gapMs = sorted[i + 1].timestampMs - sorted[i].timestampMs
             if (gapMs > MAX_SAMPLE_GAP_MS) continue
             val zone = zoneFor(sorted[i].bpm, zones)
-            val durS = gapMs / 1000L
-            result[zone] = (result[zone] ?: 0L) + durS
+            msPerZone[zone] = (msPerZone[zone] ?: 0L) + gapMs
         }
         val lastZone = zoneFor(sorted.last().bpm, zones)
-        result[lastZone] = (result[lastZone] ?: 0L) + 1L
-        return result
+        msPerZone[lastZone] = (msPerZone[lastZone] ?: 0L) + 1000L
+        return msPerZone.mapValues { it.value / 1000L }
     }
 }

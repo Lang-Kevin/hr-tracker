@@ -185,6 +185,81 @@ class HrZoneCalculatorTest {
         assertEquals(base + 51000, gaps[1].last)
     }
 
+    @Test
+    fun aggregateTimeInZone_longSessionWithJitter_sumMatchesDuration() {
+        // ~2.5h session with alternating 900ms/1100ms jitter (avg 1000ms), all samples in one zone.
+        val zones = HrZoneCalculator.calculateZones(185, null)
+        val samples = mutableListOf<HrSample>()
+        var t = 0L
+        var toggle = true
+        val targetCount = 9000
+        repeat(targetCount) {
+            samples += HrSample(sessionId = 1, timestampMs = t, bpm = 150)
+            t += if (toggle) 900L else 1100L
+            toggle = !toggle
+        }
+
+        val result = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+        val totalS = result.values.sum()
+        val expectedS = samples.last().timestampMs / 1000L + 1L
+
+        // Old (buggy) per-interval integer division would yield roughly half of expectedS.
+        val diffRatio = kotlin.math.abs(totalS - expectedS).toDouble() / expectedS
+        assertTrue(
+            "Expected total ($totalS) within 2% of session duration ($expectedS), diffRatio=$diffRatio",
+            diffRatio <= 0.02
+        )
+    }
+
+    @Test
+    fun aggregateTimeInZone_gapExcluded() {
+        val zones = HrZoneCalculator.calculateZones(200, 60)
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,         bpm = 100),
+            HrSample(sessionId = 1, timestampMs = base + 1000,  bpm = 100),
+            // > 5000ms gap — must not count
+            HrSample(sessionId = 1, timestampMs = base + 10000, bpm = 100),
+            HrSample(sessionId = 1, timestampMs = base + 11000, bpm = 100)
+        )
+        val result = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+        // 1s (0->1) + gap skipped + 1s (10s->11s) + 1s (last) = 3s
+        assertEquals(3L, result.values.sum())
+    }
+
+    @Test
+    fun aggregateTimeInZone_multiZone_distributesCorrectly() {
+        val maxHr = 200
+        val restingHr = 60
+        val zones = HrZoneCalculator.calculateZones(maxHr, restingHr)
+
+        val base = 0L
+        val samples = listOf(
+            HrSample(sessionId = 1, timestampMs = base,          bpm = 90),   // low zone
+            HrSample(sessionId = 1, timestampMs = base + 2000,   bpm = 90),
+            HrSample(sessionId = 1, timestampMs = base + 4000,   bpm = 150),  // mid zone
+            HrSample(sessionId = 1, timestampMs = base + 7000,   bpm = 150),
+            HrSample(sessionId = 1, timestampMs = base + 9000,   bpm = 190),  // high zone
+            HrSample(sessionId = 1, timestampMs = base + 11000,  bpm = 190)
+        )
+        val result = HrZoneCalculator.aggregateTimeInZone(samples, zones)
+
+        val lowZone = HrZoneCalculator.zoneFor(90, zones)
+        val midZone = HrZoneCalculator.zoneFor(150, zones)
+        val highZone = HrZoneCalculator.zoneFor(190, zones)
+        check(lowZone != midZone && midZone != highZone && lowZone != highZone) {
+            "Test setup invalid: zones must differ (low=$lowZone mid=$midZone high=$highZone)"
+        }
+
+        // low: 0->2000 (2s) + 2000->4000 (2s) = 4s
+        assertEquals(4L, result[lowZone])
+        // mid: 4000->7000 (3s) + 7000->9000 (2s) = 5s
+        assertEquals(5L, result[midZone])
+        // high: 9000->11000 (2s) + last sample (1s) = 3s
+        assertEquals(3L, result[highZone])
+        assertEquals(12L, result.values.sum())
+    }
+
     // --- resolveZones ---
 
     @Test
