@@ -1,6 +1,7 @@
 package com.kevin.hrtracker.ui.tutorial
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -17,11 +20,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -32,6 +38,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -43,12 +50,18 @@ data class TutorialStep(val key: String, val title: String, val text: String)
 /** Tracks on-screen bounds of tagged UI elements so the overlay can spotlight them. */
 class TutorialAnchors {
     private val rects = mutableStateMapOf<String, Rect>()
+    private val requesters = mutableMapOf<String, BringIntoViewRequester>()
 
-    fun modifierFor(key: String): Modifier = Modifier.onGloballyPositioned { coords ->
-        rects[key] = coords.boundsInRoot()
-    }
+    @OptIn(ExperimentalFoundationApi::class)
+    fun modifierFor(key: String): Modifier = Modifier
+        .onGloballyPositioned { coords -> rects[key] = coords.boundsInRoot() }
+        .bringIntoViewRequester(requesterFor(key))
 
     fun rectOf(key: String): Rect? = rects[key]
+
+    @OptIn(ExperimentalFoundationApi::class)
+    fun requesterFor(key: String): BringIntoViewRequester =
+        requesters.getOrPut(key) { BringIntoViewRequester() }
 }
 
 @Composable
@@ -71,7 +84,13 @@ fun TutorialOverlay(
     if (!visible || steps.isEmpty()) return
     var index by remember(visible) { mutableIntStateOf(0) }
     val step = steps[index]
-    val rect = anchors.rectOf(step.key)
+    var frozenRect by remember { mutableStateOf<Rect?>(null) }
+
+    LaunchedEffect(index) {
+        anchors.requesterFor(step.key).bringIntoView()
+        withFrameNanos { } // ponytail: one frame to let layout settle; bump only if rect isn't ready on slow devices
+        frozenRect = anchors.rectOf(step.key) // null if target not composed → dim + centered card fallback
+    }
 
     val density = LocalDensity.current
 
@@ -79,15 +98,21 @@ fun TutorialOverlay(
         val screenHeightPx = with(density) { maxHeight.toPx() }
         // Card is ~180dp tall; put it on whichever half the highlighted rect doesn't occupy.
         val cardHeightPx = with(density) { 180.dp.toPx() }
-        val cardAtTop = rect != null && rect.bottom > screenHeightPx - cardHeightPx
+        val fr = frozenRect
+        val cardAtTop = fr != null && fr.bottom > screenHeightPx - cardHeightPx
 
         Canvas(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) { awaitPointerEvent().changes.forEach { it.consume() } }
+                    }
+                }
         ) {
             drawRect(Color.Black.copy(alpha = 0.78f))
-            rect?.let {
+            fr?.let {
                 val pad = 8.dp.toPx()
                 drawRoundRect(
                     color = Color.Transparent,

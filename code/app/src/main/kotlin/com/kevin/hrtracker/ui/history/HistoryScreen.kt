@@ -315,7 +315,7 @@ fun HistoryScreen(
                 TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
             ),
             anchors = tutorialAnchors,
-            visible = tutorialSeen == false,
+            visible = tutorialSeen == false && sessions.isNotEmpty() && selectedTab == 0,
             onFinish = { tutorialViewModel.markSeen("history") }
         )
     }
