@@ -85,6 +85,10 @@ class LiveViewModel @Inject constructor(
         .map { it.effectiveZones }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val chartDynamicScaleDefault: StateFlow<Boolean> = settingsRepository.userSettings
+        .map { it.chartDynamicScale }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 
     val reachedZones: StateFlow<Set<Int>> = _timeInZone.map { tiz ->

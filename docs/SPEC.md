@@ -142,7 +142,7 @@ BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschalt
 - **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
 - **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
 
-**Diagramm-Standard (Setting):** `UserSettings.chartDynamicScaleDefault: Boolean` (DataStore) steuert den initialen Modus im Detail-Screen. Der Nutzer kann den Modus pro Session über den IconToggleButton überschreiben; der Override gilt nur für die aktuelle Screen-Instanz.
+**Diagramm-Standard (Setting):** `UserSettings.chartDynamicScale: Boolean` (DataStore, Default `true`) steuert den initialen Modus auf **Live- und Detail-Screen**. Beide Screens halten einen lokalen `dynamicScaleOverride: Boolean?` (`null` = Setting gilt); der IconToggleButton setzt nur diesen Override, gültig für die aktuelle Screen-Instanz. Screens dürfen den Modus nicht hartkodiert initialisieren.
 
 ## Erholung / Heart Rate Recovery (HRR)
 

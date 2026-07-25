@@ -85,6 +85,7 @@ fun LiveScreen(
     val connectionLost by viewModel.connectionLost.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
+    val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
 
     LaunchedEffect(hrvCountdown) {
         if (hrvCountdown == 0) onStopSession()
@@ -101,7 +102,9 @@ fun LiveScreen(
 
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showTargetZoneDialog by remember { mutableStateOf(false) }
-    var dynamicScale by rememberSaveable { mutableStateOf(true) }
+    // Lokaler Toggle überschreibt nur die laufende Session, sonst gilt der Settings-Default
+    var dynamicScaleOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    val dynamicScale = dynamicScaleOverride ?: chartDynamicScaleDefault
 
     BackHandler(enabled = activeSessionId != null) { showLeaveDialog = true }
 
@@ -187,7 +190,7 @@ fun LiveScreen(
             Box(Modifier.weight(1f))
             IconToggleButton(
                 checked = dynamicScale,
-                onCheckedChange = { dynamicScale = it },
+                onCheckedChange = { dynamicScaleOverride = it },
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
