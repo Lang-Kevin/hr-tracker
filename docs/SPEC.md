@@ -197,6 +197,8 @@ Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML
 
 Font: **Space Grotesk** (via `ui-text-google-fonts`, `Type.kt`, `HrTrackerTypography`). Material3 darkColorScheme.
 
+Statistik-Kachel-Werte (`StatItem`, `ui/shared/TrainingUi.kt`): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
+
 ## Shared Library (shared-android-lib)
 
 Gradle Composite Build, eingebunden via `includeBuild("../../shared-android-lib")` in `settings.gradle.kts`. Repo getrennt unter `C:\Code\Android\shared-android-lib`, ebenfalls eingebunden in ArmSwing (`C:\Code\Arduino\ArmSwingProject`). Kein Maven/AAR-Publishing — Solo-Dev, manuelles Deployment.

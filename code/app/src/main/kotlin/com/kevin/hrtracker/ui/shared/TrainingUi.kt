@@ -12,6 +12,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -392,7 +393,13 @@ fun StatItem(
                 value,
                 style = MaterialTheme.typography.headlineSmall,
                 color = valueColor,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = 14.sp,
+                    maxFontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                    stepSize = 0.5.sp
+                )
             )
         }
     }
