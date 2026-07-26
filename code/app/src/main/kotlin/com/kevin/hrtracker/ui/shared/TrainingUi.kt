@@ -3,7 +3,6 @@ package com.kevin.hrtracker.ui.shared
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -265,8 +264,7 @@ fun BpmZoneChart(
 fun ZeitInZoneSection(
     timeInZone: Map<Int, Long>,
     percentInTargetZone: Float?,
-    targetZone: Int,
-    onZoneClick: (Int) -> Unit = {}
+    targetZone: Int
 ) {
     val pct = percentInTargetZone ?: 0f
     val total = timeInZone.values.sum().coerceAtLeast(1L)
@@ -327,7 +325,6 @@ fun ZeitInZoneSection(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
-                        .clickable { onZoneClick(z) }
                         .semantics { contentDescription = label }
                 ) {
                     Row(

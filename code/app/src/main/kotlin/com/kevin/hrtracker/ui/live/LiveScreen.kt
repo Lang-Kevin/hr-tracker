@@ -5,7 +5,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +47,7 @@ import androidx.compose.material3.IconToggleButton
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.shared.ui.StatItem
+import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple
@@ -205,7 +205,7 @@ fun LiveScreen(
         }
 
         // BPM Zone Chart
-        BpmZoneChart(
+        LiveBpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = currentBpm,
             zoneBounds = zoneBounds,
@@ -319,8 +319,19 @@ fun LiveScreen(
     }
 }
 
+/**
+ * Live-Chart für die Aufzeichnung. Bewusst NICHT [com.kevin.hrtracker.ui.shared.BpmZoneChart]:
+ * 1. Positionierung: hier Index ins rollende 120s-Fenster ([bpmHistory] ist `takeLast(120)` im
+ *    [LiveViewModel]), dort anteilig zur Gesamt-Sessiondauer. Identisch nur bis `elapsed = 120`.
+ * 2. `Milestone` braucht `label` + `sessionId`; live existieren nur Sekunden-Timestamps,
+ *    persistiert wird erst am Session-Ende (LiveViewModel.kt:189-191).
+ * 3. Die öffentliche Variante filtert bei `dynamicScale` auf `reachedZones` — live sollen alle
+ *    Zonenlinien stehenbleiben, auch die noch nicht erreichten.
+ *
+ * ponytail: kein Adapter, keine Umwandlung — dieser Fork bleibt bestehen.
+ */
 @Composable
-private fun BpmZoneChart(
+private fun LiveBpmZoneChart(
     bpmHistory: List<Int>,
     currentBpm: Int?,
     zoneBounds: List<ZoneBounds>,
@@ -500,98 +511,6 @@ private fun BpmZoneChart(
                 lastY - with(density) { 8.dp.toPx() },
                 bpmLabelPaint
             )
-        }
-    }
-}
-
-@Composable
-private fun ZeitInZoneSection(
-    timeInZone: Map<Int, Long>,
-    percentInTargetZone: Float?,
-    targetZone: Int
-) {
-    val pct = percentInTargetZone ?: 0f
-    val total = timeInZone.values.sum().coerceAtLeast(1L)
-    val hasData = timeInZone.values.any { it > 0L }
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                "ZEIT IN ZONE",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "${(pct * 100).toInt()}% in Ziel-Zone",
-                color = PrimaryPurple,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-
-        // Proportional zone distribution bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-        ) {
-            if (hasData) {
-                (1..5).forEach { z ->
-                    val w = (timeInZone[z] ?: 0L).toFloat() / total
-                    if (w > 0f) {
-                        Box(
-                            modifier = Modifier
-                                .weight(w)
-                                .fillMaxHeight()
-                                .background(ZoneColors[z - 1])
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.White.copy(alpha = 0.08f))
-                )
-            }
-        }
-
-        // Zone time columns
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            (1..5).forEach { z ->
-                val secs = timeInZone[z] ?: 0L
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .background(ZoneColors[z - 1], CircleShape)
-                        )
-                        Text(
-                            "Z$z",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White
-                        )
-                    }
-                    Text(
-                        formatDuration(secs),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White
-                    )
-                }
-            }
         }
     }
 }
