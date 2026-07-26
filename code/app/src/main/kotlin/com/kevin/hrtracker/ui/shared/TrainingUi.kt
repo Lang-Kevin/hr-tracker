@@ -7,12 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +35,6 @@ import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.shared.ui.chart.aggregateByChunks
 
@@ -360,47 +356,6 @@ fun ZeitInZoneSection(
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun StatItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    valueColor: Color = Color.White,
-    onClick: (() -> Unit)? = null
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceDark)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-                .padding(vertical = 10.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineSmall,
-                color = valueColor,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 14.sp,
-                    maxFontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                    stepSize = 0.5.sp
-                )
-            )
         }
     }
 }

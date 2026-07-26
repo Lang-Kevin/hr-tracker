@@ -47,7 +47,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.ui.draw.scale
 import com.kevin.hrtracker.domain.ZoneBounds
-import com.kevin.hrtracker.ui.shared.StatItem
+import com.kevin.shared.ui.StatItem
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.LightPurple

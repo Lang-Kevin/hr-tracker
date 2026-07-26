@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
-import com.kevin.hrtracker.ui.shared.StatItem
+import com.kevin.shared.ui.StatItem
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.OnPrimary
