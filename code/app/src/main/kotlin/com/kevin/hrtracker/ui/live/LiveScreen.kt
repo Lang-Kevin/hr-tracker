@@ -44,8 +44,8 @@ import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButton
 import androidx.compose.ui.draw.scale
+import com.kevin.shared.ui.chart.ChartToggleButton
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.shared.ui.StatItem
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
@@ -191,20 +191,14 @@ fun LiveScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.weight(1f))
-            IconToggleButton(
+            ChartToggleButton(
                 checked = dynamicScale,
                 onCheckedChange = { dynamicScaleOverride = it },
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = if (dynamicScale)
-                        Icons.Default.ZoomInMap else
-                        Icons.Default.ZoomOutMap,
-                    contentDescription = if (dynamicScale)
-                        "Dynamische Skalierung" else
-                        "Statische Skalierung"
-                )
-            }
+                icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
+                contentDescription = if (dynamicScale)
+                    "Dynamische Skalierung" else
+                    "Statische Skalierung"
+            )
         }
 
         // BPM Zone Chart

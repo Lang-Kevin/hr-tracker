@@ -12,7 +12,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.ZoomInMap
+import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,6 +32,7 @@ import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
 import com.kevin.shared.ui.StatItem
+import com.kevin.shared.ui.chart.ChartToggleButton
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
 import com.kevin.hrtracker.ui.theme.BackgroundDark
 import com.kevin.hrtracker.ui.theme.OnPrimary
@@ -204,20 +206,15 @@ fun DetailScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            IconToggleButton(
+            ChartToggleButton(
                 checked = dynamicScale,
                 onCheckedChange = { dynamicScaleOverride = it },
-                modifier = Modifier.size(48.dp),
-                colors = IconButtonDefaults.iconToggleButtonColors(
-                    contentColor = PrimaryPurple
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FitScreen,
-                    contentDescription = "Diagramm-Skalierung",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+                icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
+                contentDescription = if (dynamicScale)
+                    "Dynamische Skalierung" else
+                    "Statische Skalierung",
+                contentColor = PrimaryPurple
+            )
         }
 
         // BPM Zone Chart
