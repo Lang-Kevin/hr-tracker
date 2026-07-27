@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -36,6 +37,8 @@ import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.shared.ui.chart.aggregateByChunks
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun BpmZoneChart(
@@ -53,11 +56,12 @@ fun BpmZoneChart(
 ) {
     val density = LocalDensity.current
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.clipToBounds()) {
         if (zoneBounds.isEmpty()) return@Canvas
 
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
+        val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
         val bpmMin: Float
         val bpmMax: Float
@@ -67,8 +71,10 @@ fun BpmZoneChart(
             val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
             val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
             val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
-            bpmMin = actualMin - pad
-            bpmMax = actualMax + pad
+            // Zielband/ZIEL-Badge rechnen mit zoneBounds — Skala muss die Zielzone einschließen,
+            // sonst landet bpmToY() für das Band außerhalb [0, size.height].
+            bpmMin = if (targetBound != null) min(actualMin - pad, targetBound.lo.toFloat()) else actualMin - pad
+            bpmMax = if (targetBound != null) max(actualMax + pad, targetBound.hi.toFloat()) else actualMax + pad
         } else {
             // STATIC: keep current behavior
             bpmMin = (zoneBounds.minOf { it.lo } - 8).toFloat()
@@ -101,12 +107,15 @@ fun BpmZoneChart(
                 strokeWidth = with(density) { 1.dp.toPx() }
             )
             val yCentre = bpmToY((z.lo + z.hi) / 2)
-            drawContext.canvas.nativeCanvas.drawText(
-                "Z${z.zone} ${z.lo}",
-                4f,
-                yCentre + labelPaint.textSize / 3f,
-                labelPaint
-            )
+            val labelBaselineY = yCentre + labelPaint.textSize / 3f
+            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= size.height) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    "Z${z.zone} ${z.lo}",
+                    4f,
+                    labelBaselineY,
+                    labelPaint
+                )
+            }
         }
         zonesToDraw.lastOrNull()?.let { z ->
             drawLine(
@@ -117,7 +126,7 @@ fun BpmZoneChart(
             )
         }
 
-        zoneBounds.getOrNull(targetZone - 1)?.let { zBound ->
+        targetBound?.let { zBound ->
             val yTop = bpmToY(zBound.hi)
             val yBottom = bpmToY(zBound.lo)
             drawRect(
@@ -127,7 +136,7 @@ fun BpmZoneChart(
             )
         }
 
-        zoneBounds.getOrNull(targetZone - 1)?.let { zBound ->
+        targetBound?.let { zBound ->
             val yZiel = bpmToY(zBound.lo)
             val bw = with(density) { 34.dp.toPx() }
             val bh = with(density) { 15.dp.toPx() }
