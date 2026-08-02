@@ -16,9 +16,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.kevin.shared.ble.BleConstants
 import com.kevin.shared.ble.ConnectionState
@@ -51,6 +53,10 @@ class HrBleManager @Inject constructor(
 
     private val _hrSamples = MutableSharedFlow<ParsedHr>(replay = 0, extraBufferCapacity = 64)
     val hrSamples: SharedFlow<ParsedHr> = _hrSamples.asSharedFlow()
+
+    // ponytail: replay=0 bleibt — SessionRepository.launchSampleJob würde sonst
+    // bei jedem startSession/resume den gecachten Vorgänger als Duplikat in Room schreiben.
+    val lastHr: StateFlow<ParsedHr?> = _hrSamples.stateIn(scope, SharingStarted.Eagerly, null)
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var scanCallback: ScanCallback? = null
