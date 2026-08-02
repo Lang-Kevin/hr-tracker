@@ -1,0 +1,49 @@
+package com.kevin.hrtracker.ui.pip
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kevin.hrtracker.ble.HrBleManager
+import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.wearable.WearableHrSource
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.*
+import javax.inject.Inject
+
+@HiltViewModel
+class PipViewModel @Inject constructor(
+    bleManager: HrBleManager,
+    sessionRepository: SessionRepository,
+    settingsRepository: SettingsRepository,
+    wearableHrSource: WearableHrSource
+) : ViewModel() {
+
+    private val ticker: Flow<Long> = flow {
+        while (true) {
+            emit(System.currentTimeMillis())
+            delay(1_000)
+        }
+    }
+
+    private val bpm: Flow<Int?> = settingsRepository.userSettings
+        .flatMapLatest { s ->
+            if (s.hrSource == HrSource.WATCH) wearableHrSource.lastHr else bleManager.lastHr
+        }
+        .map { it?.bpm }
+
+    val uiState: StateFlow<PipUiState> = combine(
+        bpm,
+        settingsRepository.userSettings.map { it.effectiveZones },
+        sessionRepository.activeSession.map { it?.startedAt },
+        sessionRepository.isPaused,
+        ticker
+    ) { currentBpm, zones, startedAt, paused, now ->
+        buildPipUiState(currentBpm, zones, startedAt, now, paused)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        PipUiState(bpm = null, zone = null, elapsedText = "00:00:00", paused = false)
+    )
+}
