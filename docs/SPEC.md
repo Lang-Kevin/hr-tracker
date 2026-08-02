@@ -92,6 +92,8 @@ Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht
 
 `UserSettings.hrSource: HrSource` (BLE | WATCH) im DataStore. `HrRecordingService` injiziert sowohl `HrBleManager` als auch `WearableHrSource` (Singleton `SharedFlow<ParsedHr>`) und wählt die Quelle reaktiv via `flatMapLatest(settingsRepository.userSettings)`. Die HR-Quelle-Card im Settings-Screen ist nur bei `BuildConfig.DEBUG == true` sichtbar (Development-Feature, nicht für Produktions-Nutzer gedacht).
 
+`hrSamples: SharedFlow<ParsedHr>` bleibt bewusst bei `replay = 0` — würde `replay = 1` gesetzt, bekäme `SessionRepository.launchSampleJob` bei jedem `startSession()`/`resume()` den zwischengespeicherten Vorgänger-Sample erneut geliefert und schriebe ihn als Phantom-Sample in Room. Für prozessweiten Zugriff auf den letzten Messwert (z. B. PiP-Widget) existiert stattdessen zusätzlich `lastHr: StateFlow<ParsedHr?>` auf beiden Singletons (`HrBleManager`, `WearableHrSource`), per `stateIn` aus dem jeweiligen Flow abgeleitet.
+
 **Wichtig**: `notifyWatch(true/false)` nur senden, wenn `currentHrSource == WATCH`. Sonst Doppel-Stream.
 
 ## Zonen-Modell
@@ -125,6 +127,17 @@ HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Sup
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
 History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Sessions; Ø-BPM ist sample-gewichtet (DAO-Query über HrSample).
+
+## Picture-in-Picture (PiP-BPM-Widget)
+
+Beim Minimieren während einer aktiven Session wechselt die App automatisch in natives Android-Picture-in-Picture — **kein** `SYSTEM_ALERT_WINDOW`-Overlay, keine zusätzliche Berechtigung nötig. Ohne aktive Session minimiert die App normal.
+
+- **Trigger:** gegated auf `SessionRepository.activeSessionId != null`. API 31+: `PictureInPictureParams.Builder().setAutoEnterEnabled(true)`, nahtlos beim Home-Swipe. API 26–30: kein Auto-Enter verfügbar, Fallback über `onUserLeaveHint()` — bei Gesten-Navigation nicht immer zuverlässig (Best Effort).
+- **Aspect Ratio:** 4:3.
+- **Inhalt (`PipContent`):** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
+- **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr` / `WearableHrSource.lastHr` (je nach `hrSource`), `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
+- **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
+- **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
 
 ## Analytics (DetailScreen)
 
