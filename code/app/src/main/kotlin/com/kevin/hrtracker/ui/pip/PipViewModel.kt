@@ -6,11 +6,18 @@ import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.domain.WidgetVariant
+import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.wearable.WearableHrSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
+
+private data class PipSettings(
+    val zones: List<ZoneBounds>,
+    val variant: WidgetVariant
+)
 
 @HiltViewModel
 class PipViewModel @Inject constructor(
@@ -33,17 +40,27 @@ class PipViewModel @Inject constructor(
         }
         .map { it?.bpm }
 
+    private val pipSettings: Flow<PipSettings> = settingsRepository.userSettings
+        .map { PipSettings(it.effectiveZones, it.widgetVariant) }
+        .distinctUntilChanged()
+
     val uiState: StateFlow<PipUiState> = combine(
         bpm,
-        settingsRepository.userSettings.map { it.effectiveZones },
+        pipSettings,
         sessionRepository.activeSession.map { it?.startedAt },
         sessionRepository.isPaused,
         ticker
-    ) { currentBpm, zones, startedAt, paused, now ->
-        buildPipUiState(currentBpm, zones, startedAt, now, paused)
+    ) { currentBpm, settings, startedAt, paused, now ->
+        buildPipUiState(currentBpm, settings.zones, startedAt, now, paused, settings.variant)
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        PipUiState(bpm = null, zone = null, elapsedText = "00:00:00", paused = false)
+        PipUiState(
+            bpm = null,
+            zone = null,
+            elapsedText = "00:00:00",
+            paused = false,
+            variant = WidgetVariant.STANDARD
+        )
     )
 }

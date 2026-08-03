@@ -1,5 +1,6 @@
 package com.kevin.hrtracker.ui.pip
 
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -61,5 +62,24 @@ class PipUiStateTest {
         val state = buildPipUiState(142, zones, 1_000_000L, 1_060_000L, true)
         assertEquals(true, state.paused)
         assertEquals("00:01:00", state.elapsedText)
+    }
+
+    @Test
+    fun `variante wird durchgereicht`() {
+        val state = buildPipUiState(
+            bpm = 142,
+            zones = zones,
+            startedAtMs = 1_000_000L,
+            nowMs = 1_060_000L,
+            paused = false,
+            variant = WidgetVariant.ZONE
+        )
+        assertEquals(WidgetVariant.ZONE, state.variant)
+    }
+
+    @Test
+    fun `ohne angabe ist die variante standard`() {
+        val state = buildPipUiState(142, zones, 1_000_000L, 1_060_000L, false)
+        assertEquals(WidgetVariant.STANDARD, state.variant)
     }
 }
