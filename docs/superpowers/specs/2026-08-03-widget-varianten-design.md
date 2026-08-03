@@ -86,9 +86,10 @@ unverändert.
 `when (state.variant)` verzweigt auf vier private Composables. Geteilt bleiben die
 Akzentfarbe aus `ZoneColors` und das Herz-Icon.
 
-**Pause-Regel, einheitlich über alle Varianten:** bei `paused` ersetzt eine kleine
-`PAUSE`-Zeile die untere Info-Zeile. In `MINIMAL`, das sonst keine zweite Zeile
-hat, erscheint sie unter der Zahl.
+**Pause-Regel:** bei `paused` ersetzt `PAUSE` die Zeile, die sonst die Dauer zeigt —
+in `STANDARD` die untere Info-Zeile, in `TIMER` die große Zahl. In `MINIMAL` und
+`ZONE`, die keine Dauer zeigen, kommt `PAUSE` als kleine Zeile unten dazu. So steht
+nie eine weiterlaufende Dauer neben einer pausierten Session.
 
 ### 7. `service/HrRecordingService.kt`
 
@@ -104,8 +105,10 @@ Der Job wird in `onRecordingStop` genauso abgebrochen wie `notificationJob` und
 
 ### 8. `ui/settings/SettingsScreen.kt`
 
-Ein Dropdown „Widget-Anzeige" mit den vier Varianten, platziert bei den
-bestehenden Anzeige-Einstellungen.
+Eine `SingleChoiceSegmentedButtonRow` „Widget-Anzeige" mit den vier Varianten,
+platziert bei den bestehenden Anzeige-Einstellungen. Segmented Buttons statt
+Dropdown, weil Ziel-Zone (`SettingsScreen.kt:211`) und HR-Quelle
+(`SettingsScreen.kt:413`) dieses Muster schon nutzen.
 
 ## Datenfluss
 
