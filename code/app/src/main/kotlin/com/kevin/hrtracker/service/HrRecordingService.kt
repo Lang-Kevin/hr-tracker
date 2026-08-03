@@ -14,6 +14,10 @@ import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.WidgetVariant
+import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.widgetNotificationText
 import com.kevin.hrtracker.wearable.WearableHrSource
 import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.service.BaseRecordingService
@@ -35,8 +39,12 @@ class HrRecordingService : BaseRecordingService() {
 
     private var notificationJob: Job? = null
     private var connectionStateJob: Job? = null
+    private var settingsJob: Job? = null
     private var currentHrSource: HrSource = HrSource.BLE
     private var lastBpm = "–"
+    private var lastBpmValue: Int? = null
+    private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
+    private var currentZones: List<ZoneBounds> = emptyList()
 
     override val notificationChannelId = "hr_recording"
     override val notificationChannelName = "HR Aufzeichnung"
@@ -50,10 +58,13 @@ class HrRecordingService : BaseRecordingService() {
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE
         )
+        val zone = lastBpmValue
+            ?.takeIf { currentZones.isNotEmpty() }
+            ?.let { HrZoneCalculator.zoneFor(it, currentZones) }
         return NotificationCompat.Builder(this, notificationChannelId)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle("HR Tracker läuft")
-            .setContentText("$lastBpm BPM  •  $elapsed")
+            .setContentText(widgetNotificationText(currentVariant, lastBpmValue, zone, elapsed))
             .setContentIntent(tapIntent)
             .setOngoing(true)
             .build()
@@ -68,6 +79,12 @@ class HrRecordingService : BaseRecordingService() {
             label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr,
             hrSamples = hrFlow, customZones = s.customZones
         )
+        settingsJob = serviceScope.launch {
+            settingsRepository.userSettings.collect {
+                currentVariant = it.widgetVariant
+                currentZones = it.effectiveZones
+            }
+        }
         if (currentHrSource == HrSource.WATCH) notifyWatch(true)
         if (currentHrSource == HrSource.BLE) {
             connectionStateJob = serviceScope.launch {
@@ -86,6 +103,7 @@ class HrRecordingService : BaseRecordingService() {
         val startMs = System.currentTimeMillis()
         notificationJob = serviceScope.launch {
             hrFlow.collect { parsed: ParsedHr ->
+                lastBpmValue = parsed.bpm
                 lastBpm = parsed.bpm.toString()
                 val elapsed = (System.currentTimeMillis() - startMs) / 1000
                 updateNotification(lastBpm, formatDuration(elapsed))
@@ -98,6 +116,8 @@ class HrRecordingService : BaseRecordingService() {
         notificationJob = null
         connectionStateJob?.cancel()
         connectionStateJob = null
+        settingsJob?.cancel()
+        settingsJob = null
         if (currentHrSource == HrSource.WATCH) notifyWatch(false)
         sessionRepository.stopSession()
     }
