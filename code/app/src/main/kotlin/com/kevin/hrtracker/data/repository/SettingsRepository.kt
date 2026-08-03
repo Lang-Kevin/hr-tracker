@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.domain.ZoneBounds
@@ -36,6 +37,7 @@ class SettingsRepository @Inject constructor(
         val TUTORIAL_SEEN    = stringSetPreferencesKey("tutorial_seen_screens")
         val DEBUG_MODE       = booleanPreferencesKey("debug_mode")
         val CHART_DYNAMIC_SCALE = booleanPreferencesKey("chart_dynamic_scale")
+        val WIDGET_VARIANT   = stringPreferencesKey("widget_variant")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -50,7 +52,10 @@ class SettingsRepository @Inject constructor(
             customZones  = prefs[Keys.CUSTOM_ZONES]?.let {
                 runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull()
             },
-            chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true
+            chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true,
+            widgetVariant = prefs[Keys.WIDGET_VARIANT]?.let {
+                runCatching { WidgetVariant.valueOf(it) }.getOrDefault(WidgetVariant.STANDARD)
+            } ?: WidgetVariant.STANDARD
         )
     }
 
@@ -148,5 +153,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setChartDynamicScale(enabled: Boolean) {
         dataStore.edit { it[Keys.CHART_DYNAMIC_SCALE] = enabled }
+    }
+
+    suspend fun setWidgetVariant(variant: WidgetVariant) {
+        dataStore.edit { it[Keys.WIDGET_VARIANT] = variant.name }
     }
 }
