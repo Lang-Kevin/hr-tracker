@@ -14,13 +14,19 @@ class HrSensorManager(private val context: Context) {
     fun hrFlow(): Flow<Int> = callbackFlow {
         val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val sensor = manager.getDefaultSensor(Sensor.TYPE_HEART_RATE)
+        var lastAccuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                if (event.values.isNotEmpty()) {
-                    trySend(event.values[0].toInt())
-                }
+                // ponytail: no-contact/unreliable guard — drop invalid readings before forwarding
+                if (lastAccuracy == SensorManager.SENSOR_STATUS_NO_CONTACT ||
+                    lastAccuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) return
+                if (event.values.isEmpty()) return
+                val bpm = event.values[0].toInt()
+                if (bpm in 30..220) trySend(bpm)
             }
-            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+                lastAccuracy = accuracy
+            }
         }
         if (sensor != null) {
             manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)

@@ -65,6 +65,8 @@ bit4 = RR-Intervalle vorhanden
 
 RR-Umrechnung: `rr_ms = raw * 1000 / 1024`
 
+Gültiger BPM-Bereich: **30–220**. Samples außerhalb dieses Bereichs (z. B. Kein-Kontakt-Readings mit bpm = 0) werden in `HeartRateParser` **verworfen** (Rückgabe `null`), nicht auf 30 geklemmt. So fließen keine Ausreißer in Live-Anzeige, Durchschnitt oder Export ein.
+
 ### Device-Adress-Guard
 
 Samsung-BLE-Stack mischt HR-Notifications der Galaxy Watch (über GPS / Google Play Services) in `HrBleManager.onCharacteristicChanged` ein. Daher: in beiden Overrides die MAC-Adresse gegen das erwartete Gerät prüfen, fremde Notifications mit Warn-Log verwerfen. Siehe `docs/CHANGELOG.md` → "BLE Cross-Notification Bugfix".

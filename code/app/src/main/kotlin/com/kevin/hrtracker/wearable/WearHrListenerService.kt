@@ -33,6 +33,7 @@ class WearHrListenerService : WearableListenerService() {
         repeat(rrCount) {
             if (buf.remaining() >= 2) rrList.add(buf.short.toInt() and 0xFFFF)
         }
-        wearableHrSource.tryEmit(ParsedHr(bpm.coerceIn(30, 220), rrList))
+        if (bpm !in 30..220) return
+        wearableHrSource.tryEmit(ParsedHr(bpm, rrList))
     }
 }
