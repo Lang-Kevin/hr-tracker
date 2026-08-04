@@ -35,8 +35,10 @@ class PipViewModel @Inject constructor(
     }
 
     private val bpm: Flow<Int?> = settingsRepository.userSettings
-        .flatMapLatest { s ->
-            if (s.hrSource == HrSource.WATCH) wearableHrSource.lastHr else bleManager.lastHr
+        .map { it.hrSource }
+        .distinctUntilChanged()
+        .flatMapLatest { hrSource ->
+            if (hrSource == HrSource.WATCH) wearableHrSource.lastHr else bleManager.lastHr
         }
         .map { it?.bpm }
 

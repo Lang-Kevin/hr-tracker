@@ -134,7 +134,7 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 
 - **Trigger:** gegated auf `SessionRepository.activeSessionId != null`. API 31+: `PictureInPictureParams.Builder().setAutoEnterEnabled(true)`, nahtlos beim Home-Swipe. API 26–30: kein Auto-Enter verfügbar, Fallback über `onUserLeaveHint()` — bei Gesten-Navigation nicht immer zuverlässig (Best Effort).
 - **Aspect Ratio:** 4:3.
-- **Inhalt (`PipContent`):** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
+- **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
 - **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr` / `WearableHrSource.lastHr` (je nach `hrSource`), `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.

@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,7 +95,7 @@ private fun TimerLayout(state: PipUiState, accent: Color) {
 }
 
 @Composable
-private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: androidx.compose.ui.unit.Dp) {
+private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: Dp) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.Favorite,

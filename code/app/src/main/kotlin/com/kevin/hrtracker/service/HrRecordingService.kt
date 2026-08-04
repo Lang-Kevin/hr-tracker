@@ -41,10 +41,10 @@ class HrRecordingService : BaseRecordingService() {
     private var connectionStateJob: Job? = null
     private var settingsJob: Job? = null
     private var currentHrSource: HrSource = HrSource.BLE
-    private var lastBpm = "–"
     private var lastBpmValue: Int? = null
-    private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
-    private var currentZones: List<ZoneBounds> = emptyList()
+    @Volatile private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
+    @Volatile private var currentZones: List<ZoneBounds> = emptyList()
+    private var startMs: Long = 0L
 
     override val notificationChannelId = "hr_recording"
     override val notificationChannelName = "HR Aufzeichnung"
@@ -79,10 +79,15 @@ class HrRecordingService : BaseRecordingService() {
             label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr,
             hrSamples = hrFlow, customZones = s.customZones
         )
+        currentVariant = s.widgetVariant
+        currentZones = s.effectiveZones
+        startMs = System.currentTimeMillis()
         settingsJob = serviceScope.launch {
             settingsRepository.userSettings.collect {
                 currentVariant = it.widgetVariant
                 currentZones = it.effectiveZones
+                val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
             }
         }
         if (currentHrSource == HrSource.WATCH) notifyWatch(true)
@@ -100,13 +105,11 @@ class HrRecordingService : BaseRecordingService() {
                 }
             }
         }
-        val startMs = System.currentTimeMillis()
         notificationJob = serviceScope.launch {
             hrFlow.collect { parsed: ParsedHr ->
                 lastBpmValue = parsed.bpm
-                lastBpm = parsed.bpm.toString()
                 val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpm, formatDuration(elapsed))
+                updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
             }
         }
     }
