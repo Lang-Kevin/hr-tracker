@@ -5,10 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
-import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
-import com.kevin.hrtracker.wearable.WearableHrSource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -23,8 +21,7 @@ private data class PipSettings(
 class PipViewModel @Inject constructor(
     bleManager: HrBleManager,
     sessionRepository: SessionRepository,
-    settingsRepository: SettingsRepository,
-    wearableHrSource: WearableHrSource
+    settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val ticker: Flow<Long> = flow {
@@ -34,13 +31,7 @@ class PipViewModel @Inject constructor(
         }
     }
 
-    private val bpm: Flow<Int?> = settingsRepository.userSettings
-        .map { it.hrSource }
-        .distinctUntilChanged()
-        .flatMapLatest { hrSource ->
-            if (hrSource == HrSource.WATCH) wearableHrSource.lastHr else bleManager.lastHr
-        }
-        .map { it?.bpm }
+    private val bpm: Flow<Int?> = bleManager.lastHr.map { it?.bpm }
 
     private val pipSettings: Flow<PipSettings> = settingsRepository.userSettings
         .map { PipSettings(it.effectiveZones, it.widgetVariant) }

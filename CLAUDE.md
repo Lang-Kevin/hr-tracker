@@ -1,12 +1,14 @@
 # HR-Tracker
 
-Native Android-App zur Aufzeichnung von Herzfrequenzdaten eines BLE-Brustgurts (moofit HR8) mit Wear-OS-Companion (Samsung Galaxy Watch D227).
+Native Android-App zur Aufzeichnung von Herzfrequenzdaten eines BLE-Brustgurts (moofit HR8).
+
+> **Hinweis:** Das Wear-OS-Companion-Feature (Samsung Galaxy Watch D227) ist ausgelagert
+> in Branch `feat/wear-os-companion` und noch nicht fertig. Auf diesem Branch bewusst nicht enthalten.
 
 ## Commands
 
 ```bash
 ./gradlew assembleDebug          # App-Modul bauen
-./gradlew :wear:assembleDebug    # Wear-Modul bauen
 ./gradlew test                   # Unit-Tests
 ./gradlew lint                   # Lint
 ./gradlew :app:installDebug      # Auf Gerät installieren
@@ -25,10 +27,8 @@ Package-Layout:
 ```text
 com.kevin.hrtracker
 ├── ble/         data/         domain/       export/
-├── service/     ui/           wearable/
+├── service/     ui/
 ```
-
-Wear-Modul: `com.kevin.hrtracker.wear` (`sensor/`, `comms/`, `ui/`).
 
 ## Hard Rules
 
@@ -40,7 +40,6 @@ Diese Regeln sind **nicht verhandelbar**. Wer sie kippt, bricht entweder eine BL
 - **BPM-Clamp 30–220** im `HeartRateParser` (M-Batch-1, #2).
 - **Device-Adress-Guard** in `HrBleManager.onCharacteristicChanged` — Samsung-Bug, sonst mischt sich Watch-HR in BLE-Stream (Cross-Notification-Bugfix).
 - **Auto-Reconnect**, inkrementelles Speichern, kein Sample-Verlust.
-- **`notifyWatch()` nur im WATCH-Modus** in `HrRecordingService` — sonst Doppel-Stream.
 - Migration v1→v2 für `Session.zoneSnapshotJson` darf nicht entfernt werden (Batch 5, #21).
 
 ## Zonen-Modell
@@ -60,10 +59,10 @@ Diese Regeln sind **nicht verhandelbar**. Wer sie kippt, bricht entweder eine BL
 
 ## Permissions / Plattform-Constraints
 
-- minSdk 26, targetSdk 35, Wear-Modul minSdk 30.
+- minSdk 26, targetSdk 35.
 - Android 12+: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`.
 - < 12: `BLUETOOTH`, `BLUETOOTH_ADMIN`, `ACCESS_FINE_LOCATION`.
-- Zusätzlich: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFICATIONS`, `BODY_SENSORS` (Wear).
+- Zusätzlich: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFICATIONS`.
 
 ## Weiterführend
 

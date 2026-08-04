@@ -14,8 +14,6 @@ datastore = "1.2.1"
 serialization = "1.11.0"
 vico = "3.0.3"
 navigation = "2.9.7"
-health-connect = "1.1.0"
-play-services-wearable = "20.0.1"
 
 [libraries]
 compose-bom                  = { group = "androidx.compose",            name = "compose-bom",                  version.ref = "compose-bom" }
@@ -41,8 +39,6 @@ vico-compose                 = { group = "com.patrykandpatrick.vico",       name
 vico-compose-m3              = { group = "com.patrykandpatrick.vico",       name = "compose-m3",                   version.ref = "vico" }
 navigation-compose              = { group = "androidx.navigation",              name = "navigation-compose",            version.ref = "navigation" }
 compose-material-icons-extended = { group = "androidx.compose.material",        name = "material-icons-extended" }
-health-connect-client           = { group = "androidx.health.connect",                  name = "connect-client",         version.ref = "health-connect" }
-play-services-wearable          = { group = "com.google.android.gms",                    name = "play-services-wearable", version.ref = "play-services-wearable" }
 
 [plugins]
 android-application = { id = "com.android.application",                version.ref = "agp" }

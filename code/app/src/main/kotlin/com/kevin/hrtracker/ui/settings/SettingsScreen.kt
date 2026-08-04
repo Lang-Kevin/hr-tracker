@@ -14,19 +14,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.luminance
-import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
-import com.kevin.hrtracker.FeatureFlags
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -38,13 +32,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val healthImportStatus by viewModel.healthImportStatus.collectAsStateWithLifecycle()
-    val hcPermissions = remember { setOf(HealthPermission.getReadPermission(HeartRateRecord::class)) }
-    val requestHcPermissions = rememberLauncherForActivityResult(
-        PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        if (granted.containsAll(hcPermissions)) viewModel.importRestingHrFromHealthConnect()
-    }
 
     var ageText by remember(settings.age) { mutableStateOf(settings.age.toString()) }
     var manualMaxHrText by remember(settings.manualMaxHr) {
@@ -180,26 +167,6 @@ fun SettingsScreen(
                     isError = restingHrError,
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
-                if (FeatureFlags.SMARTWATCH_ENABLED && viewModel.isHealthConnectAvailable) {
-                    OutlinedButton(
-                        onClick = { requestHcPermissions.launch(hcPermissions) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = healthImportStatus != HealthImportStatus.LOADING
-                    ) {
-                        if (healthImportStatus == HealthImportStatus.LOADING) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Text("Von Smartwatch importieren")
-                    }
-                    if (healthImportStatus == HealthImportStatus.NO_DATA) {
-                        Text(
-                            "Kein Ruhepuls in Health Connect gefunden",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
 
                 HorizontalDivider()
@@ -431,57 +398,7 @@ fun SettingsScreen(
         }
 
         // Task 4: HR-Quelle only in debug mode
-        if (debugMode) {
-            Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        "HR-Quelle",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = PrimaryPurple,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                    )
-                    Text(
-                        "Herzfrequenzquelle für Aufzeichnungen",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (FeatureFlags.SMARTWATCH_ENABLED) {
-                        SingleChoiceSegmentedButtonRow(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            SegmentedButton(
-                                selected = settings.hrSource == HrSource.BLE,
-                                onClick = { viewModel.setHrSource(HrSource.BLE) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                            ) {
-                                Text("BLE-Sensor")
-                            }
-                            SegmentedButton(
-                                selected = settings.hrSource == HrSource.WATCH,
-                                onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                            ) {
-                                Text("Galaxy Watch")
-                            }
-                        }
-                    } else {
-                        Text(
-                            "HR-Quelle: BLE-Sensor",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
-                        Text(
-                            "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
+        // (Wear/Smartwatch entfernt — HR-Quelle ist immer BLE)
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(

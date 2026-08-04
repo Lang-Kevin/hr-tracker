@@ -4,7 +4,6 @@
 # Android build artifacts
 code/app/build/
 code/**/build/
-wear/**/build/
 .gradle/
 .kotlin/
 *.apk

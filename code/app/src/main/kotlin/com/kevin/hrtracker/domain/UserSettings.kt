@@ -5,7 +5,6 @@ data class UserSettings(
     val manualMaxHr: Int? = null,
     val restingHr: Int? = null,
     val targetZone: Int = 2,
-    val hrSource: HrSource = HrSource.BLE,
     val customZones: List<ZoneBounds>? = null,
     val chartDynamicScale: Boolean = true,
     val widgetVariant: WidgetVariant = WidgetVariant.STANDARD

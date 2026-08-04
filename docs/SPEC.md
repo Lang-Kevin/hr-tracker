@@ -5,9 +5,11 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 ## Hardware
 
 - moofit HR8 (BLE-Brustgurt)
-- Samsung Galaxy Watch D227 (Wear-OS-Companion)
 - Standard BLE Heart Rate Service `0x180D` / Characteristic `0x2A37` / CCCD `0x2902`
 - ANT+ ignorieren
+
+> **Hinweis:** Wear-OS-Companion (Samsung Galaxy Watch D227) ist auf Branch
+> `feat/wear-os-companion` ausgelagert und auf diesem Branch nicht enthalten.
 
 ## Tech-Stack
 
@@ -15,7 +17,7 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 | ------------- | --------------------- |
 | Sprache       | Kotlin                |
 | UI            | Jetpack Compose       |
-| Min SDK       | 26 (Wear 30)          |
+| Min SDK       | 26                    |
 | Target SDK    | 35                    |
 | Async         | Coroutines + Flow     |
 | Datenbank     | Room                  |
@@ -23,7 +25,6 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 | Charts        | Vico                  |
 | DI            | Hilt                  |
 | Serialization | kotlinx.serialization |
-| Wear-IPC      | Wearable Data Layer (`MessageClient`) |
 
 ## Datenmodell
 
@@ -90,13 +91,16 @@ Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht
 - **Live-Screen**: Zeigt während der Auto-Pause ein Banner „Verbindung verloren — Messung pausiert".
 - **Cleanup**: Der `connectionStateJob` (Coroutine, die den BLE-Status beobachtet) wird in `onRecordingStop()` des Service gecancelt.
 
-## HR-Quellen-Switch
+## HR-Quelle
 
-`UserSettings.hrSource: HrSource` (BLE | WATCH) im DataStore. `HrRecordingService` injiziert sowohl `HrBleManager` als auch `WearableHrSource` (Singleton `SharedFlow<ParsedHr>`) und wählt die Quelle reaktiv via `flatMapLatest(settingsRepository.userSettings)`. Die HR-Quelle-Card im Settings-Screen ist nur bei `BuildConfig.DEBUG == true` sichtbar (Development-Feature, nicht für Produktions-Nutzer gedacht).
+HR-Quelle ist BLE (`HrBleManager`). `HrRecordingService` und `LiveViewModel`/`PipViewModel`
+beziehen Samples direkt aus `HrBleManager.hrSamples` bzw. `HrBleManager.lastHr`.
 
-`hrSamples: SharedFlow<ParsedHr>` bleibt bewusst bei `replay = 0` — würde `replay = 1` gesetzt, bekäme `SessionRepository.launchSampleJob` bei jedem `startSession()`/`resume()` den zwischengespeicherten Vorgänger-Sample erneut geliefert und schriebe ihn als Phantom-Sample in Room. Für prozessweiten Zugriff auf den letzten Messwert (z. B. PiP-Widget) existiert stattdessen zusätzlich `lastHr: StateFlow<ParsedHr?>` auf beiden Singletons (`HrBleManager`, `WearableHrSource`), per `stateIn` aus dem jeweiligen Flow abgeleitet.
+> Der frühere reaktive HR-Quellen-Switch (BLE | WATCH) inkl. `WearableHrSource`,
+> `notifyWatch()` und Health-Connect-Import lag am Wear-OS-Companion und ist auf
+> Branch `feat/wear-os-companion` ausgelagert.
 
-**Wichtig**: `notifyWatch(true/false)` nur senden, wenn `currentHrSource == WATCH`. Sonst Doppel-Stream.
+`hrSamples: SharedFlow<ParsedHr>` bleibt bewusst bei `replay = 0` — würde `replay = 1` gesetzt, bekäme `SessionRepository.launchSampleJob` bei jedem `startSession()`/`resume()` den zwischengespeicherten Vorgänger-Sample erneut geliefert und schriebe ihn als Phantom-Sample in Room. Für prozessweiten Zugriff auf den letzten Messwert (z. B. PiP-Widget) existiert stattdessen zusätzlich `lastHr: StateFlow<ParsedHr?>` auf `HrBleManager`, per `stateIn` aus dem Flow abgeleitet.
 
 ## Zonen-Modell
 
@@ -137,7 +141,7 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 - **Trigger:** gegated auf `SessionRepository.activeSessionId != null`. API 31+: `PictureInPictureParams.Builder().setAutoEnterEnabled(true)`, nahtlos beim Home-Swipe. API 26–30: kein Auto-Enter verfügbar, Fallback über `onUserLeaveHint()` — bei Gesten-Navigation nicht immer zuverlässig (Best Effort).
 - **Aspect Ratio:** 4:3.
 - **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
-- **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr` / `WearableHrSource.lastHr` (je nach `hrSource`), `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
+- **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr`, `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
 
@@ -208,7 +212,6 @@ Der Detail-Screen bietet einen Report-Dialog mit einem "Kopieren"-Button, der de
 Android 12+: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`
 < 12: `BLUETOOTH`, `BLUETOOTH_ADMIN`, `ACCESS_FINE_LOCATION`
 Immer: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFICATIONS`
-Wear: `BODY_SENSORS`
 
 ## Design-System
 
@@ -249,5 +252,4 @@ Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `Li
 5. Ein gespeicherter Brustgurt
 6. Auto-Reconnect zwingend
 7. RR-Intervalle verpflichtend speichern
-8. HR-Quelle als User-Setting (BLE / WATCH), reaktiv gewählt
-9. Watch-Sessions ohne RR — RMSSD darf nicht crashen, sondern "–" anzeigen
+8. HR-Quelle: BLE (Wear-OS-Companion ausgelagert nach `feat/wear-os-companion`)

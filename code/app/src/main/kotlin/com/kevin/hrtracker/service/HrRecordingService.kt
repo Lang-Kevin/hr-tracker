@@ -6,19 +6,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
-import com.google.android.gms.wearable.Wearable
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
-import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.widgetNotificationText
-import com.kevin.hrtracker.wearable.WearableHrSource
 import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.service.BaseRecordingService
 import com.kevin.shared.service.RecordingServiceContract
@@ -35,12 +32,10 @@ class HrRecordingService : BaseRecordingService() {
     @Inject lateinit var bleManager: HrBleManager
     @Inject lateinit var sessionRepository: SessionRepository
     @Inject lateinit var settingsRepository: SettingsRepository
-    @Inject lateinit var wearableHrSource: WearableHrSource
 
     private var notificationJob: Job? = null
     private var connectionStateJob: Job? = null
     private var settingsJob: Job? = null
-    private var currentHrSource: HrSource = HrSource.BLE
     private var lastBpmValue: Int? = null
     @Volatile private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
     @Volatile private var currentZones: List<ZoneBounds> = emptyList()
@@ -72,9 +67,7 @@ class HrRecordingService : BaseRecordingService() {
 
     override suspend fun onRecordingStart(label: String) {
         val s = settingsRepository.userSettings.first()
-        currentHrSource = s.hrSource
-        val hrFlow: Flow<ParsedHr> = if (s.hrSource == HrSource.WATCH) wearableHrSource.hrSamples
-                                     else bleManager.hrSamples
+        val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
         sessionRepository.startSession(
             label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr,
             hrSamples = hrFlow, customZones = s.customZones
@@ -90,18 +83,15 @@ class HrRecordingService : BaseRecordingService() {
                 updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
             }
         }
-        if (currentHrSource == HrSource.WATCH) notifyWatch(true)
-        if (currentHrSource == HrSource.BLE) {
-            connectionStateJob = serviceScope.launch {
-                bleManager.connectionState.collect { state ->
-                    if (sessionRepository.activeSessionId.value == null) return@collect
-                    when (state) {
-                        is ConnectionState.Disconnected,
-                        is ConnectionState.Reconnecting,
-                        is ConnectionState.Error -> sessionRepository.autoPause()
-                        is ConnectionState.Ready -> sessionRepository.autoResume()
-                        else -> Unit
-                    }
+        connectionStateJob = serviceScope.launch {
+            bleManager.connectionState.collect { state ->
+                if (sessionRepository.activeSessionId.value == null) return@collect
+                when (state) {
+                    is ConnectionState.Disconnected,
+                    is ConnectionState.Reconnecting,
+                    is ConnectionState.Error -> sessionRepository.autoPause()
+                    is ConnectionState.Ready -> sessionRepository.autoResume()
+                    else -> Unit
                 }
             }
         }
@@ -121,18 +111,7 @@ class HrRecordingService : BaseRecordingService() {
         connectionStateJob = null
         settingsJob?.cancel()
         settingsJob = null
-        if (currentHrSource == HrSource.WATCH) notifyWatch(false)
         sessionRepository.stopSession()
-    }
-
-    // notifyWatch stays in this subclass — Hard Rule: only in WATCH mode
-    private fun notifyWatch(isRecording: Boolean) {
-        val data = byteArrayOf(if (isRecording) 1.toByte() else 0.toByte())
-        Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
-            nodes.forEach { node ->
-                Wearable.getMessageClient(this).sendMessage(node.id, "/session_state", data)
-            }
-        }
     }
 
     companion object {
