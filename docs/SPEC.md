@@ -139,6 +139,20 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
 
+### Widget-Varianten
+
+PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im Settings-Screen, Segmented Buttons), gespeichert als `UserSettings.widgetVariant: WidgetVariant` (DataStore-Key `widget_variant`, Enum-Name; unbekannter/fehlender Wert fällt auf `STANDARD` zurück; keine Room-Migration). Default `STANDARD` — bestehende Installationen sehen keine Änderung. Die reine Funktion `widgetNotificationText` in `domain/WidgetVariant.kt` baut den Notification-Text; `PipContent.kt` verzweigt auf vier Layout-Composables.
+
+| Variante   | PiP                                     | Notification-Text            |
+| ---------- | ---------------------------------------- | ----------------------------- |
+| `MINIMAL`  | nur BPM, groß, in Zonenfarbe             | `142 BPM`                     |
+| `STANDARD` | BPM + Zone + Dauer (heutiges Layout)     | `142 BPM  •  Zone 3  •  00:12:04` |
+| `ZONE`     | Zone dominant (große Zahl), BPM klein    | `Zone 3  •  142 BPM`          |
+| `TIMER`    | Dauer dominant, BPM klein                | `00:12:04  •  142 BPM`        |
+
+- **Fehlende Werte:** `bpm == null` → `--` an Stelle der Zahl; `zone == null` → das Zonen-Segment entfällt ersatzlos.
+- **Pause-Regel:** `PAUSE` ersetzt die Zeile, die sonst die Dauer zeigt — in `STANDARD` die untere Info-Zeile, in `TIMER` die große Zahl. In `MINIMAL` und `ZONE`, die keine Dauer zeigen, kommt `PAUSE` als zusätzliche kleine Zeile dazu. Die Notification zeigt `PAUSE` nicht — dort bleibt der Text unverändert.
+
 ## Analytics (DetailScreen)
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
