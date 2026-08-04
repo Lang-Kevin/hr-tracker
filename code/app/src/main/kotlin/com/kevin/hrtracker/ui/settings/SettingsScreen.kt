@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.luminance
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
@@ -389,6 +390,43 @@ fun SettingsScreen(
                     checked = settings.chartDynamicScale,
                     onCheckedChange = { viewModel.setChartDynamicScale(it) }
                 )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Widget-Anzeige",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+                Text(
+                    "Gilt für das PiP-Fenster und die Benachrichtigung während der Aufzeichnung",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                val variants = listOf(
+                    WidgetVariant.MINIMAL to "Nur BPM",
+                    WidgetVariant.STANDARD to "Standard",
+                    WidgetVariant.ZONE to "Zone",
+                    WidgetVariant.TIMER to "Zeit"
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    variants.forEachIndexed { index, (variant, label) ->
+                        SegmentedButton(
+                            selected = settings.widgetVariant == variant,
+                            onClick = { viewModel.setWidgetVariant(variant) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = variants.size)
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
             }
         }
 

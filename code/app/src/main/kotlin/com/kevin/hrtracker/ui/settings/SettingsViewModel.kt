@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.UserSettings
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.health.HealthConnectManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +42,8 @@ class SettingsViewModel @Inject constructor(
     fun setDebugMode(enabled: Boolean) = viewModelScope.launch { settingsRepository.setDebugMode(enabled) }
 
     fun setChartDynamicScale(enabled: Boolean) = viewModelScope.launch { settingsRepository.setChartDynamicScale(enabled) }
+
+    fun setWidgetVariant(variant: WidgetVariant) = viewModelScope.launch { settingsRepository.setWidgetVariant(variant) }
 
     fun clearSavedDevice() = viewModelScope.launch { settingsRepository.clearSavedDevice() }
 
