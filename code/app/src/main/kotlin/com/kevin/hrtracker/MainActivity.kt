@@ -19,6 +19,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -92,12 +93,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             HRTrackerTheme {
+                // ponytail: NavController muss den PiP-Wechsel ueberleben — sonst neuer
+                // BackStack -> neues LiveViewModel -> Chart und Zonentimer auf 0 (Bug).
+                val navController = rememberNavController()
                 val inPip by inPipMode.collectAsStateWithLifecycle()
                 if (inPip) {
                     PipContent()
                 } else {
                     Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                        HrTrackerNav()
+                        HrTrackerNav(navController)
                     }
                 }
             }
@@ -115,8 +119,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun HrTrackerNav() {
-        val navController = rememberNavController()
+    private fun HrTrackerNav(navController: NavHostController) {
         val scanViewModel: ScanViewModel = hiltViewModel()
         val onboardingViewModel: OnboardingViewModel = hiltViewModel()
         val activeSessionId by scanViewModel.activeSessionId.collectAsStateWithLifecycle()

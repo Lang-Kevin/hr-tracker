@@ -144,6 +144,7 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 - **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr`, `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
+- **State-Erhalt bei PiP-Wechsel:** Der `NavController` wird in `MainActivity.onCreate` (`setContent`) geholt und über beide Zweige (PiP und normale UI) hinweg geteilt. So bleibt der BackStack und die daran gebundenen Entry-Scopes der ViewModels (Live-Chart, Zonentimer) beim PiP-Wechsel erhalten.
 
 ### Widget-Varianten
 
