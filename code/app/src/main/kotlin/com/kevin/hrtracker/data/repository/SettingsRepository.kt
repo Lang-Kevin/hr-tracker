@@ -11,6 +11,7 @@ import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.Sex
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -36,6 +37,8 @@ class SettingsRepository @Inject constructor(
         val DEBUG_MODE       = booleanPreferencesKey("debug_mode")
         val CHART_DYNAMIC_SCALE = booleanPreferencesKey("chart_dynamic_scale")
         val WIDGET_VARIANT   = stringPreferencesKey("widget_variant")
+        val WEIGHT_KG        = intPreferencesKey("weight_kg")
+        val SEX              = stringPreferencesKey("sex")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -50,7 +53,9 @@ class SettingsRepository @Inject constructor(
             chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true,
             widgetVariant = prefs[Keys.WIDGET_VARIANT]?.let {
                 runCatching { WidgetVariant.valueOf(it) }.getOrDefault(WidgetVariant.STANDARD)
-            } ?: WidgetVariant.STANDARD
+            } ?: WidgetVariant.STANDARD,
+            weightKg = prefs[Keys.WEIGHT_KG],
+            sex      = prefs[Keys.SEX]?.let { runCatching { Sex.valueOf(it) }.getOrNull() }
         )
     }
 
@@ -67,6 +72,18 @@ class SettingsRepository @Inject constructor(
     suspend fun setRestingHr(restingHr: Int?) {
         dataStore.edit {
             if (restingHr != null) it[Keys.RESTING_HR] = restingHr else it.remove(Keys.RESTING_HR)
+        }
+    }
+
+    suspend fun setWeightKg(weightKg: Int?) {
+        dataStore.edit {
+            if (weightKg != null) it[Keys.WEIGHT_KG] = weightKg else it.remove(Keys.WEIGHT_KG)
+        }
+    }
+
+    suspend fun setSex(sex: Sex?) {
+        dataStore.edit {
+            if (sex != null) it[Keys.SEX] = sex.name else it.remove(Keys.SEX)
         }
     }
 

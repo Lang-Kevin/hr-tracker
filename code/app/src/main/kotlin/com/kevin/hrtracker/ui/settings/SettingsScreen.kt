@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.luminance
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.Sex
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
@@ -46,6 +47,11 @@ fun SettingsScreen(
         (manualMaxHrText.toIntOrNull()?.let { it !in 100..250 } ?: true)
     val restingHrError = restingHrText.isNotEmpty() &&
         (restingHrText.toIntOrNull()?.let { it !in 20..100 } ?: true)
+
+    var weightText by remember(settings.weightKg) {
+        mutableStateOf(settings.weightKg?.toString() ?: "")
+    }
+    val weightError = weightText.isNotBlank() && weightText.toIntOrNull()?.let { it in 30..250 } != true
 
     val tanakaMaxHr = HrZoneCalculator.tanakaMaxHr(settings.age)
     val effectiveMaxHr = settings.maxHrUsed
@@ -168,6 +174,44 @@ fun SettingsScreen(
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
                 Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
+
+                HorizontalDivider()
+                Text(
+                    "Körperdaten (für Kalorienschätzung)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+
+                NumberField(
+                    label = "Gewicht in kg (leer = keine Kalorien)",
+                    value = weightText,
+                    onValueChange = { weightText = it },
+                    onDone = { viewModel.setWeightKg(it.toIntOrNull()?.takeIf { v -> v in 30..250 }) },
+                    isError = weightError,
+                    supportingText = if (weightError) "Gewicht muss zwischen 30 und 250 kg liegen" else null
+                )
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val sexOptions = listOf(Sex.MALE to "Männlich", Sex.FEMALE to "Weiblich")
+                    sexOptions.forEachIndexed { index, (value, label) ->
+                        SegmentedButton(
+                            selected = settings.sex == value,
+                            onClick = { viewModel.setSex(if (settings.sex == value) null else value) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = sexOptions.size),
+                            // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
+                            icon = {}
+                        ) {
+                            Text(label, maxLines = 1, softWrap = false)
+                        }
+                    }
+                }
+                if (settings.sex == null || settings.weightKg == null) {
+                    Text(
+                        "Ohne Gewicht und Geschlecht bleibt die Kalorien-Kachel leer.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 HorizontalDivider()
                 Text(

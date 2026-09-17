@@ -6,6 +6,7 @@ import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.Sex
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,12 @@ class SettingsViewModel @Inject constructor(
     fun setRestingHr(restingHr: Int?) = viewModelScope.launch {
         settingsRepository.setRestingHr(restingHr)
     }
+
+    fun setWeightKg(weightKg: Int?) = viewModelScope.launch {
+        settingsRepository.setWeightKg(weightKg)
+    }
+
+    fun setSex(sex: Sex?) = viewModelScope.launch { settingsRepository.setSex(sex) }
 
     fun setTargetZone(zone: Int) = viewModelScope.launch { settingsRepository.setTargetZone(zone) }
 
