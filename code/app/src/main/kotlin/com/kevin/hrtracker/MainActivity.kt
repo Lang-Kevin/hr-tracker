@@ -160,7 +160,14 @@ class MainActivity : ComponentActivity() {
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
                     onNavigateToSettings = { navController.navigate(Route.SETTINGS) },
-                    onResumeSession = { navController.navigate(Route.live()) { launchSingleTop = true } }
+                    onResumeSession = { navController.navigate(Route.live()) { launchSingleTop = true } },
+                    onSessionStopped = { finishedId ->
+                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        navController.navigate(Route.detail(finishedId)) {
+                            popUpTo(Route.SCAN)
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
@@ -170,9 +177,17 @@ class MainActivity : ComponentActivity() {
             ) {
                 LiveScreen(
                     onStopSession = {
-                        scanViewModel.stopSession()
+                        scanViewModel.stopSession { finishedId ->
+                            if (finishedId != null) {
+                                navController.navigate(Route.detail(finishedId)) {
+                                    popUpTo(Route.SCAN)
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.popBackStack()
+                            }
+                        }
                         stopService(HrRecordingService.stopIntent(this@MainActivity))
-                        navController.popBackStack()
                     },
                     onAbortSession = {
                         scanViewModel.discardSession()

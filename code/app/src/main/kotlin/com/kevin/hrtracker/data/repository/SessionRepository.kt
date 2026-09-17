@@ -130,8 +130,8 @@ class SessionRepository @Inject constructor(
         resume()
     }
 
-    suspend fun stopSession() {
-        val id = _activeSessionId.value ?: return
+    suspend fun stopSession(): Long? {
+        val id = _activeSessionId.value ?: return null
         sampleJob?.cancel()
         sampleJob = null
         _activeSessionId.value = null
@@ -140,6 +140,7 @@ class SessionRepository @Inject constructor(
         activeHrFlow = null
         db.sessionDao().closeSession(id, System.currentTimeMillis())
         Log.d("HRTracker", "Session $id stopped")
+        return id
     }
 
     suspend fun discardSession() {

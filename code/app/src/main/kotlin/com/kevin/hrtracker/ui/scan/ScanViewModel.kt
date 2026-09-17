@@ -143,7 +143,9 @@ class ScanViewModel @Inject constructor(
         sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, customZones = s.customZones)
     }
 
-    fun stopSession() = viewModelScope.launch { sessionRepository.stopSession() }
+    fun stopSession(onStopped: (Long?) -> Unit = {}) = viewModelScope.launch {
+        onStopped(sessionRepository.stopSession())
+    }
 
     fun discardSession() = viewModelScope.launch { sessionRepository.discardSession() }
 

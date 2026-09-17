@@ -45,7 +45,8 @@ fun ScanScreen(
     onHrvSessionStarted: (seconds: Int) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onResumeSession: () -> Unit = {}
+    onResumeSession: () -> Unit = {},
+    onSessionStopped: (Long) -> Unit = {}
 ) {
     val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -174,7 +175,7 @@ fun ScanScreen(
                             Text("Fortsetzen")
                         }
                         Button(
-                            onClick = { viewModel.stopSession() },
+                            onClick = { viewModel.stopSession { id -> if (id != null) onSessionStopped(id) } },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {
