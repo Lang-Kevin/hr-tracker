@@ -376,7 +376,7 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
                 val variants = listOf(
-                    WidgetVariant.MINIMAL to "Nur BPM",
+                    WidgetVariant.MINIMAL to "BPM",
                     WidgetVariant.STANDARD to "Standard",
                     WidgetVariant.ZONE to "Zone",
                     WidgetVariant.TIMER to "Zeit"
@@ -388,9 +388,11 @@ fun SettingsScreen(
                         SegmentedButton(
                             selected = settings.widgetVariant == variant,
                             onClick = { viewModel.setWidgetVariant(variant) },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = variants.size)
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = variants.size),
+                            // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
+                            icon = {}
                         ) {
-                            Text(label)
+                            Text(label, maxLines = 1, softWrap = false)
                         }
                     }
                 }

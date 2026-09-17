@@ -96,7 +96,7 @@ class SessionRepository @Inject constructor(
                                     else parsed.rrIntervalsMs.joinToString(",")
                 )
             )
-            Log.d("HRTracker", "DB: BPM=${parsed.bpm} → session $id")
+            Log.d("HRTracker", "DB: BPM=${parsed.bpm} RR=${parsed.rrIntervalsMs} → session $id")
         }
     }
 
