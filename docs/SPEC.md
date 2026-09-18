@@ -108,9 +108,13 @@ beziehen Samples direkt aus `HrBleManager.hrSamples` bzw. `HrBleManager.lastHr`.
 ## Zonen-Modell
 
 - HRmax-Formel: Tanaka (`208 - 0.7·Alter`), Manual Override möglich.
-- Default: **Karvonen** (`((HRmax − HRrest) · z) + HRrest`).
-- Fallback: **%HRmax**.
-- Pro Session als JSON-Snapshot persistieren (`Session.zoneSnapshotJson`), damit historische Sessions mit ihren Original-Zonengrenzen angezeigt werden, auch wenn HRrest später geändert wird.
+- Gemessener HRmax: Settings schlägt den höchsten aufgezeichneten BPM-Wert der letzten 90 Tage vor (`HrSampleDao.getObservedMaxBpm`), sofern er über dem aktiven HRmax liegt. Wird **nie** automatisch übernommen — der Nutzer tippt "Übernehmen", das Ergebnis landet im vorhandenen `manualMaxHr`.
+- Zonen-Modell ist eine **explizite Einstellung** (`ZoneModel { HR_MAX, KARVONEN }`, DataStore-Key `zone_model`). Default: **`HR_MAX`** (%HRmax).
+- `HR_MAX`: `HRmax · z`. `KARVONEN`: `((HRmax − HRrest) · z) + HRrest`.
+- Beide Modelle nutzen die Lehrbuch-Prozentstufen 50/60/70/80/90. Das ist Absicht: die Stufen sind pro Modell standarddefiniert. Weil sich die Bezugsgröße unterscheidet, liegen Karvonen-Grenzen deutlich höher — Alter 30, HRmax 187, Ruhepuls 60: Zone 2 = 112–130 (%HRmax) vs. 136–148 (Karvonen). Früher wurde implizit auf Karvonen umgeschaltet, sobald ein Ruhepuls gesetzt war; das war für den Nutzer unsichtbar.
+- `KARVONEN` ohne gesetzten Ruhepuls fällt auf `HR_MAX` zurück (Settings weist darauf hin).
+- Pro Session als JSON-Snapshot persistieren (`Session.zoneSnapshotJson`), damit historische Sessions mit ihren Original-Zonengrenzen angezeigt werden, auch wenn HRrest, HRmax oder das Zonen-Modell später geändert werden — ein Default-Wechsel (z. B. `HR_MAX` → `KARVONEN`) bewertet vergangene Sessions dadurch nicht rückwirkend neu. Der Snapshot existiert allerdings nur für Sessions ab DB v2 — `MIGRATION_1_2` hat die Spalte ohne Backfill hinzugefügt, v1-Sessions haben dauerhaft `zoneSnapshotJson == null`.
+- `HrZoneCalculator.resolveZones` bewertet genau diese Alt-Sessions nach der **Legacy-Regel** weiter (KARVONEN wenn `restingHr` gesetzt ist, sonst HR_MAX) — nicht nach dem neuen Default. Sonst würden sich die Zonengrenzen alter Sessions rückwirkend verschieben.
 
 Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe Design-System).
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.luminance
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.ZoneModel
 import com.kevin.hrtracker.domain.Sex
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
@@ -55,7 +56,7 @@ fun SettingsScreen(
 
     val tanakaMaxHr = HrZoneCalculator.tanakaMaxHr(settings.age)
     val effectiveMaxHr = settings.maxHrUsed
-    val model = if (settings.restingHr != null) "Karvonen (HRR)" else "%HRmax"
+    val observedMaxHr by viewModel.observedMaxHr.collectAsStateWithLifecycle()
 
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
     val tutorialAnchors = rememberTutorialAnchors()
@@ -69,7 +70,7 @@ fun SettingsScreen(
         mutableStateOf(settings.customZones != null)
     }
     val defaultBoundaries = HrZoneCalculator.zonesToBoundaries(
-        HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
+        HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr, settings.zoneModel)
     )
     var boundaries by remember(customZonesEnabled) {
         mutableStateOf(
@@ -151,6 +152,21 @@ fun SettingsScreen(
                     "Tanaka HRmax: $tanakaMaxHr  •  Aktiv: $effectiveMaxHr BPM",
                     style = MaterialTheme.typography.bodySmall
                 )
+                observedMaxHr?.takeIf { it > effectiveMaxHr }?.let { observed ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Gemessen: $observed BPM (letzte 90 Tage)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = { viewModel.setManualMaxHr(observed) }) {
+                            Text("Übernehmen")
+                        }
+                    }
+                }
 
                 NumberField(
                     label = "Manueller HRmax (leer = Tanaka)",
@@ -164,7 +180,7 @@ fun SettingsScreen(
                 )
 
                 NumberField(
-                    label = "Ruhepuls (leer = %HRmax-Modell)",
+                    label = "Ruhepuls (für Karvonen)",
                     value = restingHrText,
                     onValueChange = { restingHrText = it },
                     onDone = {
@@ -173,7 +189,33 @@ fun SettingsScreen(
                     isError = restingHrError,
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
-                Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
+
+                Text("Zonen-Modell", style = MaterialTheme.typography.titleSmall)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val zoneModelOptions = listOf(ZoneModel.HR_MAX to "%HRmax", ZoneModel.KARVONEN to "Karvonen")
+                    zoneModelOptions.forEachIndexed { index, (value, label) ->
+                        SegmentedButton(
+                            selected = settings.zoneModel == value,
+                            onClick = { viewModel.setZoneModel(value) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModelOptions.size),
+                            icon = {}
+                        ) {
+                            Text(label, maxLines = 1, softWrap = false)
+                        }
+                    }
+                }
+                if (settings.zoneModel == ZoneModel.KARVONEN && settings.restingHr == null) {
+                    Text(
+                        "Ohne Ruhepuls wird %HRmax verwendet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        "%HRmax: Zonen aus dem Maximalpuls. Karvonen: nutzt zusätzlich den Ruhepuls (Herzfrequenzreserve) — die Zonengrenzen liegen dadurch deutlich höher.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 HorizontalDivider()
                 Text(

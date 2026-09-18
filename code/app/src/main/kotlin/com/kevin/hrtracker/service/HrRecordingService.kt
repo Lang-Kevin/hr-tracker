@@ -69,7 +69,7 @@ class HrRecordingService : BaseRecordingService() {
         val s = settingsRepository.userSettings.first()
         val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
         sessionRepository.startSession(
-            label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr,
+            label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
             hrSamples = hrFlow, customZones = s.customZones
         )
         currentVariant = s.widgetVariant

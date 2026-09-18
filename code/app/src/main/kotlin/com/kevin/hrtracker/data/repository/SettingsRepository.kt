@@ -11,6 +11,7 @@ import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.ZoneModel
 import com.kevin.hrtracker.domain.Sex
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -39,6 +40,7 @@ class SettingsRepository @Inject constructor(
         val WIDGET_VARIANT   = stringPreferencesKey("widget_variant")
         val WEIGHT_KG        = intPreferencesKey("weight_kg")
         val SEX              = stringPreferencesKey("sex")
+        val ZONE_MODEL       = stringPreferencesKey("zone_model")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -55,7 +57,8 @@ class SettingsRepository @Inject constructor(
                 runCatching { WidgetVariant.valueOf(it) }.getOrDefault(WidgetVariant.STANDARD)
             } ?: WidgetVariant.STANDARD,
             weightKg = prefs[Keys.WEIGHT_KG],
-            sex      = prefs[Keys.SEX]?.let { runCatching { Sex.valueOf(it) }.getOrNull() }
+            sex      = prefs[Keys.SEX]?.let { runCatching { Sex.valueOf(it) }.getOrNull() },
+            zoneModel = prefs[Keys.ZONE_MODEL]?.let { runCatching { ZoneModel.valueOf(it) }.getOrNull() } ?: ZoneModel.HR_MAX
         )
     }
 
@@ -89,6 +92,10 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setTargetZone(zone: Int) {
         dataStore.edit { it[Keys.TARGET_ZONE] = zone.coerceIn(1, 5) }
+    }
+
+    suspend fun setZoneModel(model: ZoneModel) {
+        dataStore.edit { it[Keys.ZONE_MODEL] = model.name }
     }
 
     val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }

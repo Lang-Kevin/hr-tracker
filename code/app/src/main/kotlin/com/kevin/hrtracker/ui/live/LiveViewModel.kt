@@ -144,7 +144,9 @@ class LiveViewModel @Inject constructor(
 
                     if (id != null && session != null) {
                         val samples = sessionRepository.getSamplesForSession(id)
-                        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+                        val zones = HrZoneCalculator.resolveZones(
+                            session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
+                        )
                         _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
                     }
                 }

@@ -140,7 +140,7 @@ class ScanViewModel @Inject constructor(
 
     fun startSession(label: String = "Training") = viewModelScope.launch {
         val s = settingsRepository.userSettings.first()
-        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, customZones = s.customZones)
+        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel, customZones = s.customZones)
     }
 
     fun stopSession(onStopped: (Long?) -> Unit = {}) = viewModelScope.launch {
