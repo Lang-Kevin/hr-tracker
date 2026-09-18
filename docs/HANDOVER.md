@@ -52,7 +52,7 @@ Keine Bugs, keine Blockaden — lediglich zwei nachgelagerte Cleanup-Tickets (ex
 
 ## Next 3 steps
 
-1. **Manual-Verification durch User** — Testliste unten durchlaufen (alle 6 Punkte, inkl. neuer Punkte 5+6: Stoppen vom Live- und vom Scan-Screen).
+1. **Stop-Pfade 5+6 nachtesten**, sobald der Brustgurt angelegt ist (siehe „Geräte-Verifikation" unten). Punkte 1–4 sind erledigt.
 2. **Push + PR** — Branch wird beim PR umbenannt (User-Entscheidung).
 3. Optional: die zwei Follow-ups oben abarbeiten (Dead Code in `shared-android-lib`, Build-Logs aufräumen).
 
@@ -70,22 +70,56 @@ Keine Bugs, keine Blockaden — lediglich zwei nachgelagerte Cleanup-Tickets (ex
 | SPEC ↔ Code | Keytel-Formeln term-by-term identisch (inkl. `/ 4.184`, `× Dauer [min]`) |
 | `changelog.d/027` | Dateiliste deckt sich mit `git show --stat` aller Commits |
 
-Offen bleibt nur die Geräte-Verifikation durch den User (Liste unten) — die deckt der QA-Gate nicht ab.
+Geräte-Verifikation wurde am 2026-09-18 vom Product Owner selbst per adb/uiautomator durchgeführt (Ergebnisse unten). Punkte 1–4 PASS, Punkte 5–6 durch fehlenden Brustgurt blockiert.
 
-## Verification steps für den User
+## Geräte-Verifikation (durchgeführt 2026-09-18)
 
-**Alle nachfolgenden Punkte sind jetzt end-to-end testbar.** Build + Install:
+Gerät: **SM-A546B** (Galaxy A54, Android 16, Serial `RZCWC0AEV1F`). Build: `:app:installDebug` → `BUILD SUCCESSFUL`, `Installed on 1 device.`
+Durchgeführt per `adb` + `uiautomator dump` (kein manueller Tap nötig).
 
-```bash
-cd code && ./gradlew :app:installDebug
+| # | Schritt | Ergebnis |
+| --- | --- | --- |
+| 1 | Körperdaten setzen (Gewicht 80, Männlich) → `am force-stop` → Neustart | **PASS** — Gewicht-Feld nach Kaltstart weiterhin `80`, Hinweistext verschwunden. DataStore persistiert. |
+| 2 | Alte Session „Volleyball" 17.09.2026 20:14 öffnen | **PASS** — `KALORIEN: 1141 kcal`, rückwirkend berechnet, keine Migration. |
+| 3 | Dieselbe Session **vor** dem Setzen der Körperdaten | **PASS** — `KALORIEN: —` + Hinweis „Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.", kein Crash. |
+| 4 | Session ohne HRR-Peak („HRV RMSSD" 15.09.2026 15:04, 05:00) | **PASS** — Erholungs-Card gerendert mit `—` + „Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf." |
+| 5 | Session starten → Live „Stop" → Report | **BLOCKIERT** — siehe unten. |
+| 6 | Session starten → Scan-Screen → „Stoppen" → Report + Notification weg | **BLOCKIERT** — siehe unten. |
+
+### Formel-Gegenrechnung (Punkt 2)
+
+Session: Ø 120 BPM, Dauer 01:52:10 (112,17 min). Settings: 80 kg, männlich, Alter 30 (Tanaka-HRmax 187 bestätigt beide).
+
+```
+(-55.0969 + 0.6309·120 + 0.1988·80 + 0.2017·30) / 4.184 × 112,17 = 1141
 ```
 
-1. Einstellungen → „Körperdaten": Gewicht 80, „Männlich" → App neu starten → Werte noch gesetzt (DataStore).
-2. Verlauf → alte Session öffnen → KALORIEN > 0 (on-read, rückwirkend, keine Migration).
-3. Gewicht in Settings leeren → Detail erneut öffnen → KALORIEN „—" + Hinweis, kein Crash.
-4. Session ohne HRR-Peak → Erholungs-Card sichtbar mit „—".
-5. **NEU**: Session starten → Live-Screen „Stop" → Report öffnet sich; Zurück: Scan-Screen (nicht Live).
-6. **NEU**: Session starten → per Zurück-Geste auf den Scan-Screen wechseln (Session läuft weiter, „Fortsetzen"/„Stoppen" erscheinen) → „Stoppen" drücken → Report öffnet sich, Notification verschwindet, Foreground Service beendet.
+Gerät zeigt `1141 kcal` — term-by-term identisch. Keytel-Implementierung ist end-to-end korrekt.
+
+### Clamp-Nachweis (Bonus, nicht geplant)
+
+Die HRV-Session (Ø 51 BPM, 5 min) zeigt `0 kcal`. Keytel ergibt hier rechnerisch ca. `-1`; `coerceAtLeast(0)` greift auf dem Gerät. Semantisch gewollt: ohne RMR-Anteil ist Ruhe-Verbrauch definitionsgemäß 0 (siehe `docs/SPEC.md` → „Bewusst nicht gebaut").
+
+### Report-View: sichtbare Kennzahlen (Feature 2, bestätigt)
+
+`BPM Ø` · `DAUER` · `MAX BPM` · `RMSSD` · `TRIMP` · `MIN BPM` · `KALORIEN` · `HRMAX` · `RUHEPULS`, dazu Zonenverteilung Z1–Z5 mit „% in Ziel-Zone" und die Erholungs-Card. Alle neun Kacheln rendern gleichzeitig ohne Overflow bei 1080×2340.
+
+### Warum 5 + 6 offen sind
+
+Der Brustgurt **HR8 55867** (`C2:E3:8E:A2:71:6E`) sendet nicht — der moofit HR8 advertised nur bei Hautkontakt.
+
+- Logcat: `D HRTracker: Connecting to C2:E3:8E:A2:71:6E`, danach kein GATT-Connect-Callback.
+- 15 s aktiver Scan: 0 Geräte unter „Verfügbare HR-Geräte".
+- Status bleibt auf `Verbinde…`, nie `ConnectionState.Ready`.
+
+`ScanScreen.kt:154` gated die Start-/Fortsetzen-/Stoppen-Steuerung auf `ConnectionState.Ready` — ohne verbundenen Gurt ist **keiner** der beiden Stop-Pfade per UI erreichbar. Kein Softwareproblem, rein physisch.
+
+**Nachzuholen, sobald der Gurt angelegt ist** (beides je < 1 min):
+
+1. Session starten → Live-Screen „Stop" → Report öffnet sich; Zurück landet auf Scan, nicht auf Live.
+2. Session starten → per Zurück-Geste auf Scan (Session läuft weiter, „Fortsetzen"/„Stoppen" erscheinen) → „Stoppen" → Report öffnet sich **und** die Notification verschwindet.
+
+Punkt 2 ist der wichtigere: dort lag der Orphaned-Foreground-Service-Bug (`MainActivity.kt:165`). Die verschwindende Notification ist der eigentliche Nachweis. Baseline vor dem Test ist sauber verifiziert: `dumpsys notification` → 0 Records für `com.kevin.hrtracker`, `dumpsys activity services` → kein laufender Service.
 
 ## Fallen (teuer gelernt)
 
