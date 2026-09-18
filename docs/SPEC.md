@@ -37,11 +37,14 @@ HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 SportLabel(id, name, isPredefined)
 
 Milestone(id, sessionId, atSeconds, label /* DB v5 */)
+
+UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone, 
+             chartDynamicScale, widgetVariant, weightKg, sex /* DataStore */)
 ```
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 5 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`).
+DB-Version 5 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`). **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 
@@ -120,13 +123,13 @@ Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder
 | Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label, HRV-Messung-Button |
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
 | History  | Sessionliste, Summary-Card, Swipe-to-Delete, Label-Filter, Datumsbereich-Filter |
-| Detail   | BPM-Chart, Zonen-Banding, Statistiken, RMSSD, TRIMP, Notiz, Label-Edit  |
-| Settings | Alter, HRmax-Override, Ruhepuls, Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
+| Detail   | BPM-Chart, Zonen-Banding, Statistiken (Kalorien, HRmax, Ruhepuls), RMSSD, TRIMP, HRR60, Notiz, Label-Edit  |
+| Settings | Alter, HRmax-Override, Ruhepuls, Körperdaten (Gewicht, Geschlecht), Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
 Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken. Das Overlay ist **modal** (konsumiert alle Touches, nichts dahinter bedienbar); das Spotlight-Rect wird pro Schritt **eingefroren** statt live gelesen, off-screen-Ziele werden per `BringIntoViewRequester` automatisch in den sichtbaren Bereich gescrollt; das History-Tutorial startet erst bei mindestens einem vorhandenen Training und aktivem Verlauf-Tab.
 
-Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
+Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen zeigt bei aktiver Session einen **Fortsetzen**-Button zurück zur laufenden Live-Session (in-app only, kein Process-Death-Recovery).
 
 HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
 
@@ -164,6 +167,10 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
+- **Kalorien** (Keytel-Formel): On-read aus Durchschnitts-BPM, Session-Dauer, Gewicht und Geschlecht berechnet. Die Formel ermittelt zuerst kJ/min, daher die Division durch `4.184` für kcal.
+  - **Männer:** `((-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184) × Dauer [min]`
+  - **Frauen:** `((-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184) × Dauer [min]`
+  - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen; auch `null`, wenn Dauer ≤ 0 oder Ø-BPM ≤ 0; clamped auf `≥ 0`. Berechnung erfolgt on-read wie HRR60 (keine Persistierung, keine Migration). Nutzt Durchschnitts-BPM über die gesamte Session, nicht sample-weise Integration.
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.
@@ -190,7 +197,7 @@ BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschalt
   - 12–17 bpm: Normal
   - 18–29 bpm: Gut
   - ≥ 30 bpm: Sehr gut
-- **Berechnung:** On-read aus vorhandenen `HrSample`-Daten (timestampMs, bpm) — **keine Room-Migration erforderlich.** HRR-Card wird im Detail-Screen nur angezeigt, wenn Peak-Bedingungen erfüllt sind und HRR60 berechenbar ist.
+- **Berechnung:** On-read aus vorhandenen `HrSample`-Daten (timestampMs, bpm) — **keine Room-Migration erforderlich.** HRR-Card wird im Detail-Screen **immer** gerendert: mit numerischem Wert und Rating-Kategorie, wenn Peak-Bedingungen erfüllt sind; sonst mit „—" und Begründung „Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf."
 
 ## Export / Report
 
@@ -254,3 +261,13 @@ Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `Li
 6. Auto-Reconnect zwingend
 7. RR-Intervalle verpflichtend speichern
 8. HR-Quelle: BLE (Wear-OS-Companion ausgelagert nach `feat/wear-os-companion`)
+
+## Bewusst nicht gebaut (Kalorien & Report Stats)
+
+Diese Features sind **bewusst nicht implementiert**, um MVP-Scope zu halten. Nachrüstbar, wenn die Nutzungsmetriken es rechtfertigen:
+
+- **Keine Kalorien-Persistenz / Migration:** Kalorien werden on-read aus aktuellem Gewicht/Geschlecht berechnet. Alte Sessions profitieren rückwirkend von Gewichtsupdates. Persistierung wird nötig, wenn `UserSettings` historisiert wird (z. B. Gewichtsverlauf-Tracking zur Vermeidung von Report-Drift).
+- **Kein separater Post-Session-Summary-Screen:** Der Detail-Screen ist bereits eine vollständige Report-View mit allen Kennzahlen. Ein zusätzlicher Modal/Screen würde Komplexität ohne Mehrwert bringen.
+- **Keine Sample-weise Kalorien-Integration:** Keytel-Formel nutzt Durchschnitts-BPM über die gesamte Session (einfacher, stabiler). Sample-weise Integration wäre relevant, wenn Intervall-Sessions (z. B. Tabata mit Rast-Pausen) sichtbar neben kontinuierlichen Sessions verglichen würden.
+- **Kein Onboarding-Schritt für Körperdaten:** Die Settings-Rubrik "Körperdaten" reicht. Ein zusätzlicher Onboarding-Dialog wird nötig, wenn Nutzer die Kalorien-Kachel dauerhaft leer lassen (Monitoring via Telemetry).
+- **Kein strukturiertes HRR-Failure-Result:** Ein einheitlicher Begründungstext („Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf") deckt beide Null-Ursachen ab. Separate Fehlerkategorien bringen keinen UX-Vorteil bei heute noch niedriger HRR-Häufigkeit.
