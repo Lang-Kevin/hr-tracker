@@ -193,7 +193,7 @@ private fun ColumnScope.Step2(
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Für genauere Zonen-Berechnungen nach der Karvonen-Formel. Typisch: 50–70 BPM morgens nach dem Aufwachen.",
+        "Nötig, falls du in den Einstellungen das Karvonen-Modell wählst. Standard bleibt %HRmax. Typisch: 50–70 BPM morgens nach dem Aufwachen.",
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
