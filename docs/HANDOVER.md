@@ -1,14 +1,16 @@
 # Handover — Zonen-Modell explizit
 
-Stand: 2026-09-18. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
+Stand: 2026-09-19. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
 
 ## Branch state
 
-Branch `fix/bpm-no-contact-drop` — 22 ahead of `master`, 12 ahead of `origin/fix/bpm-no-contact-drop`. **Nicht gepusht.** Branch wird beim PR umbenannt (User-Entscheidung).
+Branch `fix/bpm-no-contact-drop` — 24 ahead of `master`, 14 ahead of `origin/fix/bpm-no-contact-drop`. **Nicht gepusht.** Branch wird beim PR umbenannt (User-Entscheidung).
 
 | SHA | Was |
 | --- | --- |
-| `c86893a` | **✓ aktuell** fix(zones): zonen-modell explizit statt implizit (14 Dateien, +247/−25) |
+| `1c371dd` | **✓ aktuell** fix(onboarding): ruhepuls-text auf neues zonen-modell (2 Dateien, +5/−2) |
+| `416fa1d` | docs(handover): geraete-verifikation zonen-modell |
+| `c86893a` | fix(zones): zonen-modell explizit statt implizit (14 Dateien, +247/−25) |
 | `f5861a0` | docs(handover) Vorgänger-Feature |
 | `2f23253`..`92dd666` | Kalorien + Report-Stats — abgeschlossen, verifiziert, hier nicht mehr relevant |
 
@@ -40,10 +42,10 @@ Keine. Nichts hängt, nichts läuft im Hintergrund.
 ## Offene Follow-ups
 
 1. ~~Geräte-Verifikation `c86893a`~~ — **erledigt 2026-09-19**, siehe unten. Alle erreichbaren Punkte PASS.
-2. **Stop-Pfade aus dem Vorgänger-Feature** — immer noch offen, blockiert durch fehlenden Brustgurt:
+2. **Stop-Pfade aus dem Vorgänger-Feature** — immer noch **nicht getestet**, aber **nicht mehr blockiert**:
    - Session starten → Live „Stop" → Report öffnet; Zurück landet auf Scan, nicht auf Live.
    - Session starten → Zurück auf Scan → „Stoppen" → Report öffnet **und** Notification verschwindet (das ist der Nachweis für den Orphaned-Foreground-Service-Fix in `MainActivity.kt:165`).
-   - Grund: HR8 `C2:E3:8E:A2:71:6E` advertised nur bei Hautkontakt. `ScanScreen.kt:154` gated die Steuerung auf `ConnectionState.Ready` → ohne Gurt kein Stop-Pfad erreichbar. Rein physisch, kein Softwareproblem.
+   - Bisher blockiert durch fehlenden Brustgurt (HR8 `C2:E3:8E:A2:71:6E` advertised nur bei Hautkontakt, `ScanScreen.kt:154` gated die Steuerung auf `ConnectionState.Ready`). Der Debug-Pseudo-Sensor erreicht `ConnectionState.Ready` — damit sind beide Pfade ohne Gurt fahrbar. Am besten auf dem Fire-Tablet, dort liegen keine echten Messdaten.
 3. **Zonen-Ausbaustufen, dokumentiert aber nicht gebaut** (im Plan, Abschnitt „Deferred"): LTHR-Anker nach Friel (30-min-TT), Fitness-Level-Preset, DFA-α1-Schwellenerkennung aus den gespeicherten RR-Intervallen. Nur auf Ansage bauen.
 4. **shared-android-lib** (`C:\Code\Android\shared-android-lib`, **separates Repo**): `BaseRecordingService.kt:32-58` — `ACTION_STOP`/suspend-Zweig ist Dead Code für diese App. Cleanup-Ticket.
 5. **Build-Logs im Repo**: `code/build_output.txt`, `code/test_output.txt` — untracked. Löschen oder `.gitignore`.
@@ -114,3 +116,26 @@ Alle Teständerungen rückgängig: Alter 30, manueller HRmax leer (aktiv 187), R
 - **`git commit -F <file>`** funktioniert — die Datei muss aber ins Scratchpad, nicht ins Repo-Root (dort schlug es vorher fehl).
 - **cwd driftet** zwischen Tool-Calls. Immer absolute Pfade.
 - graphify post-commit Hook meldet `chunk failed: Connection error` (ollama offline). Kosmetisch, blockiert keinen Commit.
+
+## Geräte-Verifikation Fire-Tablet (2026-09-19)
+
+Zweiter Durchlauf auf anderer Hardware, um die pre-12-Permission-Abzweigung und ein Fresh Install abzudecken. Das Telefon war zu dem Zeitpunkt abgesteckt.
+
+| Gerät | Fire HD 8, `GN42DM04427500BA`, Modell `KFSNWI` |
+| --- | --- |
+| Android | 11 (API 30) — **unterhalb** von Android 12, deckt den zweiten Permission-Zweig ab |
+| Orientierung | Landscape, ~2000×1200 — Layout hält, kein Clipping in Onboarding/Settings/Scan |
+| Zustand | `pm clear com.kevin.hrtracker` → echtes Fresh Install, keine migrierten Daten |
+
+**Gefunden und gefixt: Onboarding-Text-Drift (`1c371dd`).**
+Schritt 3 des Onboardings versprach für den Ruhepuls „genauere Zonen-Berechnungen nach der Karvonen-Formel". Seit `c86893a` ist `%HRmax` der Default — ein Fresh Install mit eingetragenem Ruhepuls landet also **nicht** auf Karvonen, der Text war schlicht falsch. Neu (`OnboardingScreen.kt:196`): „Nötig, falls du in den Einstellungen das Karvonen-Modell wählst. Standard bleibt %HRmax." Nach Rebuild + Reinstall + erneutem `pm clear` im UI-Dump bestätigt.
+
+Das ist eine eigene Fehlerklasse, nicht ein Einzelfall: Onboarding-Copy wird einmal geschrieben, der Default kippt später in einem anderen Commit, nichts erzwingt den Abgleich. **Bei jeder künftigen Default-Änderung Onboarding- und Settings-Texte mitprüfen.**
+
+**Permission-Zweig < Android 12 — PASS.**
+Auf API 30 sind `BLUETOOTH` + `BLUETOOTH_ADMIN` normal-level und automatisch gewährt; `BLUETOOTH_SCAN`/`BLUETOOTH_CONNECT`/`POST_NOTIFICATIONS` sind deklariert, auf diesem API-Level aber nicht anwendbar. Übrig bleibt `ACCESS_FINE_LOCATION` als Runtime-Permission. Ablauf verifiziert: Scan-Screen zeigt „Bluetooth-Berechtigung gewähren" → Tap öffnet den System-Dialog „HR Tracker erlauben, den Gerätestandort abzurufen?" (`com.android.permissioncontroller`) → „Bei Nutzung der App" → `dumpsys` meldet `ACCESS_FINE_LOCATION: granted=true, flags=[USER_SET|...]` → Scan startet („Scan läuft…", „Verfügbare HR-Geräte:"). Kein Absturz, keine Dauerschleife.
+
+**Onboarding + Settings nach Fresh Install — PASS.**
+Alter 30, Ruhepuls 50 eingegeben. Settings zeigt danach `Tanaka HRmax: 187 • Aktiv: 187 BPM`, `Ruhepuls (für Karvonen)`, Zonen-Modell-Auswahl auf `%HRmax`. Default greift also auch ohne Migration, nicht nur beim Update-Pfad.
+
+**Nicht auf dem Tablet gemacht:** die Stop-Pfade aus Follow-up 2 (Pseudo-Sensor lag bereit, Session endete vorher) und alles, was den echten Brustgurt braucht.
