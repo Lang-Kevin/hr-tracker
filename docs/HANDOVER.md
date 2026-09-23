@@ -1,10 +1,10 @@
 # Handover — Zonen-Modell explizit
 
-Stand: 2026-09-19. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
+Stand: 2026-09-23. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
 
 ## Branch state
 
-Branch `fix/bpm-no-contact-drop` — 24 ahead of `master`, 14 ahead of `origin/fix/bpm-no-contact-drop`. **Nicht gepusht.** Branch wird beim PR umbenannt (User-Entscheidung).
+Branch `fix/bpm-no-contact-drop` — gepusht bis `11e8382`, alles danach nur lokal. **Gepusht** (`11e8382`). PR: https://github.com/Lang-Kevin/hr-tracker/pull/2 (offen, gegen `master`). `gh` ist jetzt als `Lang-Kevin` aktiv, passt zum Remote-Owner.
 
 | SHA | Was |
 | --- | --- |
@@ -42,19 +42,20 @@ Keine. Nichts hängt, nichts läuft im Hintergrund.
 ## Offene Follow-ups
 
 1. ~~Geräte-Verifikation `c86893a`~~ — **erledigt 2026-09-19**, siehe unten. Alle erreichbaren Punkte PASS.
-2. **Stop-Pfade aus dem Vorgänger-Feature** — immer noch **nicht getestet**, aber **nicht mehr blockiert**:
-   - Session starten → Live „Stop" → Report öffnet; Zurück landet auf Scan, nicht auf Live.
-   - Session starten → Zurück auf Scan → „Stoppen" → Report öffnet **und** Notification verschwindet (das ist der Nachweis für den Orphaned-Foreground-Service-Fix in `MainActivity.kt:165`).
-   - Bisher blockiert durch fehlenden Brustgurt (HR8 `C2:E3:8E:A2:71:6E` advertised nur bei Hautkontakt, `ScanScreen.kt:154` gated die Steuerung auf `ConnectionState.Ready`). Der Debug-Pseudo-Sensor erreicht `ConnectionState.Ready` — damit sind beide Pfade ohne Gurt fahrbar. Am besten auf dem Fire-Tablet, dort liegen keine echten Messdaten.
+2. **Stop-Pfade aus dem Vorgänger-Feature** — Pfad 1 erledigt, Pfad 2 offen:
+   - ✓ **Live „Stop" → Report — PASS (2026-09-19, Fire-Tablet, Pseudo-Sensor).** Stop-Button öffnet „Session verlassen?" → „Speichern" → Report. `dumpsys activity services` von 1 auf 0 (Foreground Service beendet), Notification-Record weg (übrig nur eine `post_frequency`-Statistikzeile, kein aktiver Eintrag). Zurück aus dem Report landet auf **Scan**, nicht auf Live.
+   - ✗ **Scan „Stoppen" → Report — über die UI nicht erreichbar, Test entfällt in dieser Form (2026-09-23, Fire-Tablet).** `MainActivity.kt:128-132` navigiert per `LaunchedEffect(activeSessionId)` sofort auf Live, sobald eine Session aktiv ist. Live hat keinen Weg zurück auf Scan: die Zurück-Taste öffnet „Session verlassen?", und „Weiter messen" schließt nur den Dialog (war schon in `3572d7e` so). Empirisch geprüft: Activity per `am start --activity-clear-task` neu erzeugt, Prozess lebt weiter → NavHost startet auf `SCAN` und springt sofort auf Live. Der „Fortsetzen/Stoppen"-Zweig in `ScanScreen.kt:168-184` ist also nur für den Frame vor der Weiterleitung sichtbar. Die Auto-Navigation stammt von Anfang Juni (`a5ed7ce`/`f7769d3`), die Buttons von `3572d7e` (17.06.) — sie waren vermutlich nie erreichbar. Der `stopService`-Aufruf in `MainActivity.kt:165` bleibt als Absicherung drin, schadet nicht. **Produktentscheidung offen:** toten Zweig entfernen, oder erreichbar machen (z. B. „Im Hintergrund weiter" im Verlassen-Dialog + `LaunchedEffect` nur beim Übergang null → id feuern lassen).
+   - ✓ **Verwerfen-Pfad — PASS (2026-09-23, Fire-Tablet).** Zurück → „Verwerfen": Foreground Service 1 → 0, Notification-Record 1 → 0, zurück auf Scan mit „Training starten", Log `Session 3 discarded`.
+   - Der Pseudo-Sensor (Debug-Modus in den Einstellungen → „Pseudo-Sensor [Test]" im Scan, `FA:CE:00:00:00:01`) erreicht `ConnectionState.Ready`. Kein Brustgurt nötig.
 3. **Zonen-Ausbaustufen, dokumentiert aber nicht gebaut** (im Plan, Abschnitt „Deferred"): LTHR-Anker nach Friel (30-min-TT), Fitness-Level-Preset, DFA-α1-Schwellenerkennung aus den gespeicherten RR-Intervallen. Nur auf Ansage bauen.
 4. **shared-android-lib** (`C:\Code\Android\shared-android-lib`, **separates Repo**): `BaseRecordingService.kt:32-58` — `ACTION_STOP`/suspend-Zweig ist Dead Code für diese App. Cleanup-Ticket.
 5. **Build-Logs im Repo**: `code/build_output.txt`, `code/test_output.txt` — untracked. Löschen oder `.gitignore`.
 
 ## Next 3 steps
 
-1. **Stop-Pfade nachtesten** — geht **ohne Brustgurt** über den Pseudo-Sensor (Debug-Modus), siehe „Neuer Befund" unten. Vorher offen, jetzt entblockt.
-2. **Push + PR** — `gh` ist als **Kevin-Lang-lynqtech** aktiv, Remote gehört **Lang-Kevin**. Vor dem Push `gh auth switch`, sonst läuft der Push aufs falsche Konto.
-3. Optional: Follow-ups 4 + 5 (Dead Code `shared-android-lib`, Build-Logs).
+1. **Telefon aufräumen** — siehe „Geräte-Zustand". Vorher mit den JumpTracker-Sessions abstimmen.
+2. **Produktentscheidung toter Scan-Zweig** — siehe Follow-up 2. Entfernen oder erreichbar machen; beides ist ein eigener kleiner Commit.
+3. **PR #2 reviewen / mergen** — https://github.com/Lang-Kevin/hr-tracker/pull/2
 
 ## QA-Gate
 
@@ -107,6 +108,17 @@ Der **Pseudo-Sensor [Test]** (Debug-Modus → Scan) erreicht `ConnectionState.Re
 Alle Teständerungen rückgängig: Alter 30, manueller HRmax leer (aktiv 187), Ruhepuls 50, Modell `%HRmax`, Gewicht 80, Männlich, Debug-Modus **aus**, Pseudo-Sensor aus „Gemerkte Geräte" entfernt, Testsession verworfen → **6 Sessions** wie vorher, 0 laufende Services.
 
 > Methodenhinweis: Room läuft im WAL-Modus. Ein `run-as cat databases/hr_tracker.db` **ohne** `-wal` zeigt einen veralteten Stand — dabei sah die verworfene Session kurzzeitig wie eine verwaiste offene Session aus. Immer `hr_tracker.db` **und** `hr_tracker.db-wal` ziehen.
+
+## Geräte-Zustand
+
+**Fire-Tablet (`GN42DM04427500BA`) — aufgeräumt.** App force-stopped, kein Service, keine Notification. DB enthält nur Session 1 (Test-Lauf Pfad 1, gespeichert). Die liegengebliebene Session vom 19.09. (id 2) existiert nicht mehr — Session-IDs sind AUTOINCREMENT und die nächste bekam id 3, also wurde id 2 angelegt und später gelöscht. Wodurch, ist nicht mehr nachvollziehbar (Logcat reicht nur bis 23.09.). Debug-Modus bleibt an — reines Testgerät.
+
+**Telefon (`RZCWC0AEV1F`) — Aufräumen offen.** Beim Testlauf am 19.09. zurückgelassen:
+- eine laufende Pseudo-Sensor-Session (Foreground Service lief zuletzt noch) → verwerfen, nicht speichern, damit keine Test-Session zwischen den echten Messungen landet;
+- `POST_NOTIFICATIONS` per `pm grant` erteilt, war vorher **nicht** erteilt → `adb -s RZCWC0AEV1F shell pm revoke com.kevin.hrtracker android.permission.POST_NOTIFICATIONS`;
+- Debug-Modus an, war vorher aus → in den Einstellungen wieder ausschalten.
+
+Das Telefon teilen sich mehrere Sessions (JumpTracker-Sessions `jump-tracker-app-04` / `-3a`). **Vor jedem Input auf dem Telefon per SendMessage fragen**, `uiautomator dump` und Taps kollidieren sonst mit deren UI-Automatisierung. Kein `adb kill-server` — trennt die anderen Sessions.
 
 ## Fallen (teuer gelernt)
 
