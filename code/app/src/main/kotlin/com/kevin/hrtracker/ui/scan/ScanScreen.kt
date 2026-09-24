@@ -44,9 +44,7 @@ fun ScanScreen(
     onSessionStarted: (label: String) -> Unit = {},
     onHrvSessionStarted: (seconds: Int) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onResumeSession: () -> Unit = {},
-    onSessionStopped: (Long) -> Unit = {}
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -165,22 +163,6 @@ fun ScanScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("HRV messen")
-                    }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = onResumeSession,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Fortsetzen")
-                        }
-                        Button(
-                            onClick = { viewModel.stopSession { id -> if (id != null) onSessionStopped(id) } },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Text("Stoppen")
-                        }
                     }
                 }
                 HorizontalDivider()

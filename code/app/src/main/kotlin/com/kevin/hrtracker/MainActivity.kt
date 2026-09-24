@@ -159,15 +159,7 @@ class MainActivity : ComponentActivity() {
                         navController.navigate(Route.live(seconds)) { launchSingleTop = true }
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
-                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) },
-                    onResumeSession = { navController.navigate(Route.live()) { launchSingleTop = true } },
-                    onSessionStopped = { finishedId ->
-                        stopService(HrRecordingService.stopIntent(this@MainActivity))
-                        navController.navigate(Route.detail(finishedId)) {
-                            popUpTo(Route.SCAN)
-                            launchSingleTop = true
-                        }
-                    }
+                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
                 )
             }
 
