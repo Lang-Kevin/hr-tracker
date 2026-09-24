@@ -1,10 +1,10 @@
 # Handover — Zonen-Modell explizit
 
-Stand: 2026-09-23. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
+Stand: 2026-09-24. Plan: `docs/superpowers/plans/2026-09-18-zone-model-and-observed-hrmax.md` (Option A + E umgesetzt, B/C/D bewusst offen).
 
 ## Branch state
 
-Branch `fix/bpm-no-contact-drop` — gepusht bis `11e8382`, alles danach nur lokal. **Gepusht** (`11e8382`). PR: https://github.com/Lang-Kevin/hr-tracker/pull/2 (offen, gegen `master`). `gh` ist jetzt als `Lang-Kevin` aktiv, passt zum Remote-Owner.
+Branch `fix/bpm-no-contact-drop` — gepusht bis `11e8382`, alles danach nur lokal. **Gepusht** (`11e8382`). PR: https://github.com/Lang-Kevin/hr-tracker/pull/2 (wird nach Push gemerged, gegen `master`). `gh` ist jetzt als `Lang-Kevin` aktiv, passt zum Remote-Owner.
 
 | SHA | Was |
 | --- | --- |
@@ -44,7 +44,7 @@ Keine. Nichts hängt, nichts läuft im Hintergrund.
 1. ~~Geräte-Verifikation `c86893a`~~ — **erledigt 2026-09-19**, siehe unten. Alle erreichbaren Punkte PASS.
 2. **Stop-Pfade aus dem Vorgänger-Feature** — Pfad 1 erledigt, Pfad 2 offen:
    - ✓ **Live „Stop" → Report — PASS (2026-09-19, Fire-Tablet, Pseudo-Sensor).** Stop-Button öffnet „Session verlassen?" → „Speichern" → Report. `dumpsys activity services` von 1 auf 0 (Foreground Service beendet), Notification-Record weg (übrig nur eine `post_frequency`-Statistikzeile, kein aktiver Eintrag). Zurück aus dem Report landet auf **Scan**, nicht auf Live.
-   - ✗ **Scan „Stoppen" → Report — über die UI nicht erreichbar, Test entfällt in dieser Form (2026-09-23, Fire-Tablet).** `MainActivity.kt:128-132` navigiert per `LaunchedEffect(activeSessionId)` sofort auf Live, sobald eine Session aktiv ist. Live hat keinen Weg zurück auf Scan: die Zurück-Taste öffnet „Session verlassen?", und „Weiter messen" schließt nur den Dialog (war schon in `3572d7e` so). Empirisch geprüft: Activity per `am start --activity-clear-task` neu erzeugt, Prozess lebt weiter → NavHost startet auf `SCAN` und springt sofort auf Live. Der „Fortsetzen/Stoppen"-Zweig in `ScanScreen.kt:168-184` ist also nur für den Frame vor der Weiterleitung sichtbar. Die Auto-Navigation stammt von Anfang Juni (`a5ed7ce`/`f7769d3`), die Buttons von `3572d7e` (17.06.) — sie waren vermutlich nie erreichbar. Der `stopService`-Aufruf in `MainActivity.kt:165` bleibt als Absicherung drin, schadet nicht. **Produktentscheidung offen:** toten Zweig entfernen, oder erreichbar machen (z. B. „Im Hintergrund weiter" im Verlassen-Dialog + `LaunchedEffect` nur beim Übergang null → id feuern lassen).
+   - ✓ erledigt (2026-09-24): Produktentscheidung = toten Zweig entfernt (ScanScreen + MainActivity, changelog.d/029), Reviewer ohne Befund, build/lint/test grün.
    - ✓ **Verwerfen-Pfad — PASS (2026-09-23, Fire-Tablet).** Zurück → „Verwerfen": Foreground Service 1 → 0, Notification-Record 1 → 0, zurück auf Scan mit „Training starten", Log `Session 3 discarded`.
    - Der Pseudo-Sensor (Debug-Modus in den Einstellungen → „Pseudo-Sensor [Test]" im Scan, `FA:CE:00:00:00:01`) erreicht `ConnectionState.Ready`. Kein Brustgurt nötig.
 3. **Zonen-Ausbaustufen, dokumentiert aber nicht gebaut** (im Plan, Abschnitt „Deferred"): LTHR-Anker nach Friel (30-min-TT), Fitness-Level-Preset, DFA-α1-Schwellenerkennung aus den gespeicherten RR-Intervallen. Nur auf Ansage bauen.
@@ -53,9 +53,9 @@ Keine. Nichts hängt, nichts läuft im Hintergrund.
 
 ## Next 3 steps
 
-1. **Telefon aufräumen** — siehe „Geräte-Zustand". Vorher mit den JumpTracker-Sessions abstimmen.
-2. **Produktentscheidung toter Scan-Zweig** — siehe Follow-up 2. Entfernen oder erreichbar machen; beides ist ein eigener kleiner Commit.
-3. **PR #2 reviewen / mergen** — https://github.com/Lang-Kevin/hr-tracker/pull/2
+1. **Telefon manuell aufräumen** — siehe „Geräte-Zustand".
+2. **Nach Merge von PR #2: Branch aufräumen / nächstes Thema.**
+3. **Offene Zonen-Optionen B/C/D aus dem Plan bewerten.**
 
 ## QA-Gate
 
@@ -111,14 +111,15 @@ Alle Teständerungen rückgängig: Alter 30, manueller HRmax leer (aktiv 187), R
 
 ## Geräte-Zustand
 
-**Fire-Tablet (`GN42DM04427500BA`) — aufgeräumt.** App force-stopped, kein Service, keine Notification. DB enthält nur Session 1 (Test-Lauf Pfad 1, gespeichert). Die liegengebliebene Session vom 19.09. (id 2) existiert nicht mehr — Session-IDs sind AUTOINCREMENT und die nächste bekam id 3, also wurde id 2 angelegt und später gelöscht. Wodurch, ist nicht mehr nachvollziehbar (Logcat reicht nur bis 23.09.). Debug-Modus bleibt an — reines Testgerät.
+**Fire-Tablet (`GN42DM04427500BA`) — aufgeräumt (2026-09-24): Verlauf leer (Test-Session vom 19.09. gelöscht, Papierkorb geleert), Debug-Modus aus, Pseudo-Sensor aus „Gemerkte Geräte" vergessen, App force-stopped.**
 
-**Telefon (`RZCWC0AEV1F`) — Aufräumen offen.** Beim Testlauf am 19.09. zurückgelassen:
-- eine laufende Pseudo-Sensor-Session (Foreground Service lief zuletzt noch) → verwerfen, nicht speichern, damit keine Test-Session zwischen den echten Messungen landet;
-- `POST_NOTIFICATIONS` per `pm grant` erteilt, war vorher **nicht** erteilt → `adb -s RZCWC0AEV1F shell pm revoke com.kevin.hrtracker android.permission.POST_NOTIFICATIONS`;
-- Debug-Modus an, war vorher aus → in den Einstellungen wieder ausschalten.
+**Telefon (`RZCWC0AEV1F`) — Aufräumen teils offen.**
+- ✓ `POST_NOTIFICATIONS` revoke (2026-09-24, granted=false).
+- ✗ Laufende Pseudo-Sensor-Session → verwerfen, nicht speichern. Service läuft nicht mehr; beim App-Start wird sie per `closeOrphanedSessions` als normale Session in den Verlauf übernommen → dort löschen.
+- ✗ Debug-Modus an, war vorher aus → in den Einstellungen wieder ausschalten.
+- **Per adb nicht möglich:** App-Start wird vom Auto-Mode-Classifier blockiert (Interfere With Workloads, Telefon wird von JumpTracker-Sessions genutzt) → manuell durch Kevin.
 
-Das Telefon teilen sich mehrere Sessions (JumpTracker-Sessions `jump-tracker-app-04` / `-3a`). **Vor jedem Input auf dem Telefon per SendMessage fragen**, `uiautomator dump` und Taps kollidieren sonst mit deren UI-Automatisierung. Kein `adb kill-server` — trennt die anderen Sessions.
+Telefon teilt sich Sessions „Jump Tracker - PO 1" und „Jump Tracker - PO 2". **Vor jedem Input per SendMessage fragen** — beide Sessions müssen OK sein, `uiautomator dump` und Taps kollidieren sonst. Kein `adb kill-server` — trennt die anderen Sessions.
 
 ## Fallen (teuer gelernt)
 
