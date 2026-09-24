@@ -29,6 +29,7 @@ object HeartRateParser {
             }
         }
 
-        return ParsedHr(bpm.coerceIn(30, 220), rr)
+        if (bpm !in 30..220) return null
+        return ParsedHr(bpm, rr)
     }
 }

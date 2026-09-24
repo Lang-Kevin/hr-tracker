@@ -8,6 +8,7 @@ import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.ZoneModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CoroutineScope
@@ -63,10 +64,11 @@ class SessionRepository @Inject constructor(
         label: String,
         maxHrUsed: Int,
         restingHr: Int?,
+        zoneModel: ZoneModel = ZoneModel.HR_MAX,
         hrSamples: Flow<ParsedHr> = bleManager.hrSamples,
         customZones: List<ZoneBounds>? = null
     ): Long {
-        val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr)
+        val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr, zoneModel)
         val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
         val id = db.sessionDao().insert(
             Session(
@@ -96,7 +98,7 @@ class SessionRepository @Inject constructor(
                                     else parsed.rrIntervalsMs.joinToString(",")
                 )
             )
-            Log.d("HRTracker", "DB: BPM=${parsed.bpm} → session $id")
+            Log.d("HRTracker", "DB: BPM=${parsed.bpm} RR=${parsed.rrIntervalsMs} → session $id")
         }
     }
 
@@ -130,8 +132,8 @@ class SessionRepository @Inject constructor(
         resume()
     }
 
-    suspend fun stopSession() {
-        val id = _activeSessionId.value ?: return
+    suspend fun stopSession(): Long? {
+        val id = _activeSessionId.value ?: return null
         sampleJob?.cancel()
         sampleJob = null
         _activeSessionId.value = null
@@ -140,6 +142,7 @@ class SessionRepository @Inject constructor(
         activeHrFlow = null
         db.sessionDao().closeSession(id, System.currentTimeMillis())
         Log.d("HRTracker", "Session $id stopped")
+        return id
     }
 
     suspend fun discardSession() {
@@ -156,6 +159,8 @@ class SessionRepository @Inject constructor(
 
     suspend fun getSamplesForSession(sessionId: Long) =
         db.hrSampleDao().getSamplesForSession(sessionId).first()
+
+    fun observedMaxBpm(sinceMs: Long): Flow<Int?> = db.hrSampleDao().getObservedMaxBpm(sinceMs)
 
     fun getSessionsFlow() = db.sessionDao().getAllSessions()
 

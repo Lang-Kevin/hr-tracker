@@ -14,18 +14,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.health.connect.client.PermissionController
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.HeartRateRecord
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.luminance
-import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.ZoneModel
+import com.kevin.hrtracker.domain.Sex
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
-import com.kevin.hrtracker.FeatureFlags
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -37,13 +34,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val healthImportStatus by viewModel.healthImportStatus.collectAsStateWithLifecycle()
-    val hcPermissions = remember { setOf(HealthPermission.getReadPermission(HeartRateRecord::class)) }
-    val requestHcPermissions = rememberLauncherForActivityResult(
-        PermissionController.createRequestPermissionResultContract()
-    ) { granted ->
-        if (granted.containsAll(hcPermissions)) viewModel.importRestingHrFromHealthConnect()
-    }
 
     var ageText by remember(settings.age) { mutableStateOf(settings.age.toString()) }
     var manualMaxHrText by remember(settings.manualMaxHr) {
@@ -59,9 +49,14 @@ fun SettingsScreen(
     val restingHrError = restingHrText.isNotEmpty() &&
         (restingHrText.toIntOrNull()?.let { it !in 20..100 } ?: true)
 
+    var weightText by remember(settings.weightKg) {
+        mutableStateOf(settings.weightKg?.toString() ?: "")
+    }
+    val weightError = weightText.isNotBlank() && weightText.toIntOrNull()?.let { it in 30..250 } != true
+
     val tanakaMaxHr = HrZoneCalculator.tanakaMaxHr(settings.age)
     val effectiveMaxHr = settings.maxHrUsed
-    val model = if (settings.restingHr != null) "Karvonen (HRR)" else "%HRmax"
+    val observedMaxHr by viewModel.observedMaxHr.collectAsStateWithLifecycle()
 
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
     val tutorialAnchors = rememberTutorialAnchors()
@@ -75,7 +70,7 @@ fun SettingsScreen(
         mutableStateOf(settings.customZones != null)
     }
     val defaultBoundaries = HrZoneCalculator.zonesToBoundaries(
-        HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr)
+        HrZoneCalculator.calculateZones(effectiveMaxHr, settings.restingHr, settings.zoneModel)
     )
     var boundaries by remember(customZonesEnabled) {
         mutableStateOf(
@@ -157,6 +152,21 @@ fun SettingsScreen(
                     "Tanaka HRmax: $tanakaMaxHr  •  Aktiv: $effectiveMaxHr BPM",
                     style = MaterialTheme.typography.bodySmall
                 )
+                observedMaxHr?.takeIf { it > effectiveMaxHr }?.let { observed ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Gemessen: $observed BPM (letzte 90 Tage)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = { viewModel.setManualMaxHr(observed) }) {
+                            Text("Übernehmen")
+                        }
+                    }
+                }
 
                 NumberField(
                     label = "Manueller HRmax (leer = Tanaka)",
@@ -170,7 +180,7 @@ fun SettingsScreen(
                 )
 
                 NumberField(
-                    label = "Ruhepuls (leer = %HRmax-Modell)",
+                    label = "Ruhepuls (für Karvonen)",
                     value = restingHrText,
                     onValueChange = { restingHrText = it },
                     onDone = {
@@ -179,27 +189,71 @@ fun SettingsScreen(
                     isError = restingHrError,
                     supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
                 )
-                if (FeatureFlags.SMARTWATCH_ENABLED && viewModel.isHealthConnectAvailable) {
-                    OutlinedButton(
-                        onClick = { requestHcPermissions.launch(hcPermissions) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = healthImportStatus != HealthImportStatus.LOADING
-                    ) {
-                        if (healthImportStatus == HealthImportStatus.LOADING) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
+
+                Text("Zonen-Modell", style = MaterialTheme.typography.titleSmall)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val zoneModelOptions = listOf(ZoneModel.HR_MAX to "%HRmax", ZoneModel.KARVONEN to "Karvonen")
+                    zoneModelOptions.forEachIndexed { index, (value, label) ->
+                        SegmentedButton(
+                            selected = settings.zoneModel == value,
+                            onClick = { viewModel.setZoneModel(value) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModelOptions.size),
+                            icon = {}
+                        ) {
+                            Text(label, maxLines = 1, softWrap = false)
                         }
-                        Text("Von Smartwatch importieren")
-                    }
-                    if (healthImportStatus == HealthImportStatus.NO_DATA) {
-                        Text(
-                            "Kein Ruhepuls in Health Connect gefunden",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
                     }
                 }
-                Text("Zonen-Modell: $model", style = MaterialTheme.typography.bodySmall)
+                if (settings.zoneModel == ZoneModel.KARVONEN && settings.restingHr == null) {
+                    Text(
+                        "Ohne Ruhepuls wird %HRmax verwendet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        "%HRmax: Zonen aus dem Maximalpuls. Karvonen: nutzt zusätzlich den Ruhepuls (Herzfrequenzreserve) — die Zonengrenzen liegen dadurch deutlich höher.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                HorizontalDivider()
+                Text(
+                    "Körperdaten (für Kalorienschätzung)",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+
+                NumberField(
+                    label = "Gewicht in kg (leer = keine Kalorien)",
+                    value = weightText,
+                    onValueChange = { weightText = it },
+                    onDone = { viewModel.setWeightKg(it.toIntOrNull()?.takeIf { v -> v in 30..250 }) },
+                    isError = weightError,
+                    supportingText = if (weightError) "Gewicht muss zwischen 30 und 250 kg liegen" else null
+                )
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    val sexOptions = listOf(Sex.MALE to "Männlich", Sex.FEMALE to "Weiblich")
+                    sexOptions.forEachIndexed { index, (value, label) ->
+                        SegmentedButton(
+                            selected = settings.sex == value,
+                            onClick = { viewModel.setSex(if (settings.sex == value) null else value) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = sexOptions.size),
+                            // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
+                            icon = {}
+                        ) {
+                            Text(label, maxLines = 1, softWrap = false)
+                        }
+                    }
+                }
+                if (settings.sex == null || settings.weightKg == null) {
+                    Text(
+                        "Ohne Gewicht und Geschlecht bleibt die Kalorien-Kachel leer.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 HorizontalDivider()
                 Text(
@@ -392,58 +446,47 @@ fun SettingsScreen(
             }
         }
 
-        // Task 4: HR-Quelle only in debug mode
-        if (debugMode) {
-            Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_source")) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Widget-Anzeige",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = PrimaryPurple,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+                Text(
+                    "Gilt für das PiP-Fenster und die Benachrichtigung während der Aufzeichnung",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                val variants = listOf(
+                    WidgetVariant.MINIMAL to "BPM",
+                    WidgetVariant.STANDARD to "Standard",
+                    WidgetVariant.ZONE to "Zone",
+                    WidgetVariant.TIMER to "Zeit"
+                )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        "HR-Quelle",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = PrimaryPurple,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                    )
-                    Text(
-                        "Herzfrequenzquelle für Aufzeichnungen",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (FeatureFlags.SMARTWATCH_ENABLED) {
-                        SingleChoiceSegmentedButtonRow(
-                            modifier = Modifier.fillMaxWidth()
+                    variants.forEachIndexed { index, (variant, label) ->
+                        SegmentedButton(
+                            selected = settings.widgetVariant == variant,
+                            onClick = { viewModel.setWidgetVariant(variant) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = variants.size),
+                            // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
+                            icon = {}
                         ) {
-                            SegmentedButton(
-                                selected = settings.hrSource == HrSource.BLE,
-                                onClick = { viewModel.setHrSource(HrSource.BLE) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                            ) {
-                                Text("BLE-Sensor")
-                            }
-                            SegmentedButton(
-                                selected = settings.hrSource == HrSource.WATCH,
-                                onClick = { viewModel.setHrSource(HrSource.WATCH) },
-                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                            ) {
-                                Text("Galaxy Watch")
-                            }
+                            Text(label, maxLines = 1, softWrap = false)
                         }
-                    } else {
-                        Text(
-                            "HR-Quelle: BLE-Sensor",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                    if (FeatureFlags.SMARTWATCH_ENABLED && settings.hrSource == HrSource.WATCH) {
-                        Text(
-                            "Watch-Aufnahmen haben keine RR-Daten — HRV zeigt \"–\"",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
             }
         }
+
+        // Task 4: HR-Quelle only in debug mode
+        // (Wear/Smartwatch entfernt — HR-Quelle ist immer BLE)
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(

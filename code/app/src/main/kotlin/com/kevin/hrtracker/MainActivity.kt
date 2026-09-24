@@ -1,8 +1,11 @@
 package com.kevin.hrtracker
 
+import android.app.PictureInPictureParams
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,23 +15,32 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.service.HrRecordingService
 import com.kevin.hrtracker.ui.detail.DetailScreen
 import com.kevin.hrtracker.ui.history.HistoryScreen
 import com.kevin.hrtracker.ui.onboarding.OnboardingScreen
 import com.kevin.hrtracker.ui.onboarding.OnboardingViewModel
+import com.kevin.hrtracker.ui.pip.PipContent
 import com.kevin.hrtracker.ui.settings.SettingsScreen
 import com.kevin.hrtracker.ui.live.LiveScreen
 import com.kevin.hrtracker.ui.scan.ScanScreen
 import com.kevin.hrtracker.ui.scan.ScanViewModel
 import com.kevin.hrtracker.ui.theme.HRTrackerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 private object Route {
     const val ONBOARDING = "onboarding"
@@ -44,21 +56,70 @@ private object Route {
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    @Inject lateinit var sessionRepository: SessionRepository
+
+    private val inPipMode = MutableStateFlow(false)
+
+    private val pipSupported: Boolean
+        get() = packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    private fun pipParams(autoEnter: Boolean): PictureInPictureParams =
+        PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(4, 3))
+            .apply {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(autoEnter)
+            }
+            .build()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        addOnPictureInPictureModeChangedListener { info ->
+            inPipMode.value = info.isInPictureInPictureMode
+        }
+
+        // API 31+: nahtloses Auto-Enter beim Home-Swipe. Wird bei jeder
+        // Session-Zustandsaenderung neu gesetzt, damit ohne Session nichts passiert.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && pipSupported) {
+            lifecycleScope.launch {
+                repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    sessionRepository.activeSessionId.collect { id ->
+                        setPictureInPictureParams(pipParams(autoEnter = id != null))
+                    }
+                }
+            }
+        }
+
         setContent {
             HRTrackerTheme {
-                Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-                    HrTrackerNav()
+                // ponytail: NavController muss den PiP-Wechsel ueberleben — sonst neuer
+                // BackStack -> neues LiveViewModel -> Chart und Zonentimer auf 0 (Bug).
+                val navController = rememberNavController()
+                val inPip by inPipMode.collectAsStateWithLifecycle()
+                if (inPip) {
+                    PipContent()
+                } else {
+                    Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
+                        HrTrackerNav(navController)
+                    }
                 }
             }
         }
     }
 
+    // API 26-30: kein Auto-Enter verfuegbar, daher manuell beim Verlassen.
+    // ponytail: onUserLeaveHint feuert bei Gesten-Navigation nicht immer —
+    // genau dafuer gibt es ab API 31 setAutoEnterEnabled oben.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
+        if (!pipSupported || sessionRepository.activeSessionId.value == null) return
+        runCatching { enterPictureInPictureMode(pipParams(autoEnter = false)) }
+    }
+
     @Composable
-    private fun HrTrackerNav() {
-        val navController = rememberNavController()
+    private fun HrTrackerNav(navController: NavHostController) {
         val scanViewModel: ScanViewModel = hiltViewModel()
         val onboardingViewModel: OnboardingViewModel = hiltViewModel()
         val activeSessionId by scanViewModel.activeSessionId.collectAsStateWithLifecycle()
@@ -98,8 +159,7 @@ class MainActivity : ComponentActivity() {
                         navController.navigate(Route.live(seconds)) { launchSingleTop = true }
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
-                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) },
-                    onResumeSession = { navController.navigate(Route.live()) { launchSingleTop = true } }
+                    onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
                 )
             }
 
@@ -109,9 +169,17 @@ class MainActivity : ComponentActivity() {
             ) {
                 LiveScreen(
                     onStopSession = {
-                        scanViewModel.stopSession()
+                        scanViewModel.stopSession { finishedId ->
+                            if (finishedId != null) {
+                                navController.navigate(Route.detail(finishedId)) {
+                                    popUpTo(Route.SCAN)
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                navController.popBackStack()
+                            }
+                        }
                         stopService(HrRecordingService.stopIntent(this@MainActivity))
-                        navController.popBackStack()
                     },
                     onAbortSession = {
                         scanViewModel.discardSession()

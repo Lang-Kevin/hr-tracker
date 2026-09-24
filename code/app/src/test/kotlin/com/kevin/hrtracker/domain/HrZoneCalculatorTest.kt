@@ -260,6 +260,38 @@ class HrZoneCalculatorTest {
         assertEquals(12L, result.values.sum())
     }
 
+    // --- ZoneModel ---
+
+    @Test
+    fun calculateZones_hrMaxModel_ignoresRestingHr() {
+        val zones = HrZoneCalculator.calculateZones(187, 60, ZoneModel.HR_MAX)
+        val zone2 = zones.first { it.zone == 2 }
+        assertEquals(112, zone2.lo)
+        assertEquals(130, zone2.hi)
+    }
+
+    @Test
+    fun calculateZones_karvonenModel_usesHeartRateReserve() {
+        val zones = HrZoneCalculator.calculateZones(187, 60, ZoneModel.KARVONEN)
+        val zone2 = zones.first { it.zone == 2 }
+        assertEquals(136, zone2.lo)
+        assertEquals(148, zone2.hi)
+    }
+
+    @Test
+    fun calculateZones_karvonenModel_nullRestingHr_fallsBackToHrMax() {
+        val karvonen = HrZoneCalculator.calculateZones(187, null, ZoneModel.KARVONEN)
+        val hrMax = HrZoneCalculator.calculateZones(187, null, ZoneModel.HR_MAX)
+        assertEquals(hrMax, karvonen)
+    }
+
+    @Test
+    fun calculateZones_defaultModel_isHrMax() {
+        val default = HrZoneCalculator.calculateZones(187, 60)
+        val hrMax = HrZoneCalculator.calculateZones(187, 60, ZoneModel.HR_MAX)
+        assertEquals(hrMax, default)
+    }
+
     // --- resolveZones ---
 
     @Test
@@ -284,7 +316,8 @@ class HrZoneCalculatorTest {
         val maxHr = 185
         val restingHr = 60
         val result = HrZoneCalculator.resolveZones(null, maxHr, restingHr)
-        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+        // restingHr gesetzt -> Legacy-Regel ist KARVONEN, nicht der HR_MAX-Default von calculateZones.
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr, ZoneModel.KARVONEN), result)
     }
 
     @Test
@@ -292,7 +325,7 @@ class HrZoneCalculatorTest {
         val maxHr = 185
         val restingHr = 60
         val result = HrZoneCalculator.resolveZones("[]", maxHr, restingHr)
-        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr, ZoneModel.KARVONEN), result)
     }
 
     @Test
@@ -300,7 +333,23 @@ class HrZoneCalculatorTest {
         val maxHr = 185
         val restingHr = 60
         val result = HrZoneCalculator.resolveZones("{nonsense", maxHr, restingHr)
-        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr), result)
+        assertEquals(HrZoneCalculator.calculateZones(maxHr, restingHr, ZoneModel.KARVONEN), result)
+    }
+
+    @Test
+    fun resolveZones_nullSnapshot_withRestingHr_keepsLegacyKarvonen() {
+        val result = HrZoneCalculator.resolveZones(null, 187, 60)
+        val zone2 = result.first { it.zone == 2 }
+        assertEquals(136, zone2.lo)
+        assertEquals(148, zone2.hi)
+    }
+
+    @Test
+    fun resolveZones_nullSnapshot_withoutRestingHr_usesHrMax() {
+        val result = HrZoneCalculator.resolveZones(null, 187, null)
+        val zone2 = result.first { it.zone == 2 }
+        assertEquals(112, zone2.lo)
+        assertEquals(130, zone2.hi)
     }
 
     @Test

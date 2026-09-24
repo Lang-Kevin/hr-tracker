@@ -1,15 +1,17 @@
 # HR-Tracker
 
-Native Android app for recording heart rate data from a BLE chest strap, with a Wear OS companion app.
+Native Android app for recording heart rate data from a BLE chest strap.
 
-**Hardware:** moofit HR8 (BLE chest strap) · Samsung Galaxy Watch D227 (Wear OS companion)
+**Hardware:** moofit HR8 (BLE chest strap)
+
+> **Note:** The Wear OS companion (Samsung Galaxy Watch D227) lives on branch
+> `feat/wear-os-companion` and is still in progress. It is intentionally excluded from this branch.
 
 ---
 
 ## Features
 
 - **BLE recording** — connects to the moofit HR8 via BLE Heart Rate Service (`0x180D`), auto-reconnects on signal loss
-- **Wear OS companion** — records HR from the Galaxy Watch as an alternative source; switchable at runtime
 - **Live screen** — real-time BPM, heart rate zone, timer, live chart, average BPM, target zone card, time-per-zone table
 - **Session history** — list of all sessions with summary cards and swipe-to-delete
 - **Detail analytics** — BPM chart with zone banding, RMSSD (HRV), TRIMP, zone distribution, editable label and notes
@@ -31,8 +33,7 @@ Native Android app for recording heart rate data from a BLE chest strap, with a 
 | Charts         | Vico                              |
 | DI             | Hilt                              |
 | Serialization  | kotlinx.serialization             |
-| Wear IPC       | Wearable Data Layer (`MessageClient`) |
-| Min SDK        | 26 (Wear: 30) · Target SDK: 35   |
+| Min SDK        | 26 · Target SDK: 35               |
 
 ## Architecture
 
@@ -47,17 +48,13 @@ com.kevin.hrtracker
 ├── domain/     Domain models, zone calculations
 ├── export/     JSON/CSV export
 ├── service/    Foreground service (connectedDevice type)
-├── ui/         Screens: Scan, Live, History, Detail, Settings
-└── wearable/   Wear OS message bridge
+└── ui/         Screens: Scan, Live, History, Detail, Settings
 ```
-
-Wear module: `com.kevin.hrtracker.wear` (`sensor/`, `comms/`, `ui/`)
 
 ## Build
 
 ```bash
 ./gradlew assembleDebug          # build phone app
-./gradlew :wear:assembleDebug    # build Wear module
 ./gradlew test                   # unit tests
 ./gradlew lint                   # lint
 ./gradlew :app:installDebug      # install on connected device
@@ -70,7 +67,6 @@ Wear module: `com.kevin.hrtracker.wear` (`sensor/`, `comms/`, `ui/`)
 | Android 12+ | `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT` |
 | Android < 12 | `BLUETOOTH`, `BLUETOOTH_ADMIN`, `ACCESS_FINE_LOCATION` |
 | All | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFICATIONS` |
-| Wear | `BODY_SENSORS` |
 
 ## Data Model
 

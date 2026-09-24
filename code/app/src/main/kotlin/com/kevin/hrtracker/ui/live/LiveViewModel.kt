@@ -9,10 +9,8 @@ import com.kevin.hrtracker.data.db.MilestoneDao
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
-import com.kevin.hrtracker.domain.HrSource
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
-import com.kevin.hrtracker.wearable.WearableHrSource
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.NonCancellable
@@ -27,7 +25,6 @@ class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
     private val sessionRepository: SessionRepository,
     private val settingsRepository: SettingsRepository,
-    private val wearableHrSource: WearableHrSource,
     private val milestoneDao: MilestoneDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -115,11 +112,7 @@ class LiveViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            settingsRepository.userSettings
-                .flatMapLatest { s ->
-                    if (s.hrSource == HrSource.WATCH) wearableHrSource.hrSamples
-                    else bleManager.hrSamples
-                }
+            bleManager.hrSamples
                 .collect { parsed ->
                     _currentBpm.value = parsed.bpm
                     _lastRrMs.value = parsed.rrIntervalsMs.lastOrNull()
@@ -151,7 +144,9 @@ class LiveViewModel @Inject constructor(
 
                     if (id != null && session != null) {
                         val samples = sessionRepository.getSamplesForSession(id)
-                        val zones = HrZoneCalculator.calculateZones(session.maxHrUsed, session.restingHr)
+                        val zones = HrZoneCalculator.resolveZones(
+                            session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
+                        )
                         _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
                     }
                 }

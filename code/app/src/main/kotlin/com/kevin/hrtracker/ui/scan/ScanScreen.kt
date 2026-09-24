@@ -20,13 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
 import com.kevin.shared.domain.DeviceType
 import com.kevin.shared.domain.DiscoveredDevice
 import com.kevin.shared.domain.SavedDevice
-import com.kevin.hrtracker.FeatureFlags
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.shared.ui.scan.BleStatusCard
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
@@ -46,8 +44,7 @@ fun ScanScreen(
     onSessionStarted: (label: String) -> Unit = {},
     onHrvSessionStarted: (seconds: Int) -> Unit = {},
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
-    onResumeSession: () -> Unit = {}
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val discoveredDevices by viewModel.discoveredDevices.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
@@ -59,7 +56,6 @@ fun ScanScreen(
 
     var showStartDialog by remember { mutableStateOf(false) }
     var showHrvDialog by remember { mutableStateOf(false) }
-    var showSmartWatchHelp by remember { mutableStateOf(false) }
     var isStarting by remember { mutableStateOf(false) }
     // Reset isStarting once session is confirmed active
     LaunchedEffect(activeSessionId) { if (activeSessionId != null) isStarting = false }
@@ -92,10 +88,6 @@ fun ScanScreen(
             onDismiss = { showHrvDialog = false }
         )
     }
-    if (FeatureFlags.SMARTWATCH_ENABLED && showSmartWatchHelp) {
-        SmartWatchHelpDialog(onDismiss = { showSmartWatchHelp = false })
-    }
-
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         listOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
     } else {
@@ -172,22 +164,6 @@ fun ScanScreen(
                     ) {
                         Text("HRV messen")
                     }
-                } else {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = onResumeSession,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Fortsetzen")
-                        }
-                        Button(
-                            onClick = { viewModel.stopSession() },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Text("Stoppen")
-                        }
-                    }
                 }
                 HorizontalDivider()
             }
@@ -220,11 +196,6 @@ fun ScanScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
-                if (FeatureFlags.SMARTWATCH_ENABLED) {
-                    TextButton(onClick = { showSmartWatchHelp = true }) {
-                        Text("Smartwatch verbinden ?", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
             }
             Button(
                 onClick = { viewModel.startScan() },
@@ -246,7 +217,6 @@ fun ScanScreen(
                         iconAndSubtitle = { d ->
                             when {
                                 d is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
-                                FeatureFlags.SMARTWATCH_ENABLED && d.deviceType == DeviceType.SMARTWATCH -> Icons.Default.Watch to "Smartwatch · HR-Broadcast"
                                 d.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
                                 else -> Icons.Default.Bluetooth to d.address
                             }
@@ -267,37 +237,6 @@ fun ScanScreen(
             visible = tutorialSeen == false,
             onFinish = { tutorialViewModel.markSeen("scan") }
         )
-    }
-}
-
-@Composable
-private fun SmartWatchHelpDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Smartwatch verbinden") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Aktiviere den HR-Broadcast-Modus auf deiner Uhr, dann erscheint sie in der Geräteliste:",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                BrandHint("Garmin", "Einstellungen → Herzfrequenz → HR-Broadcast einschalten")
-                BrandHint("Polar", "Polar Flow App → Gerät → HR-Broadcast aktivieren")
-                BrandHint("Samsung Galaxy Watch", "Samsung Health → Training → HR-Monitor → Externe Messung")
-                BrandHint("Suunto", "SuuntoLink → Einstellungen → Herzfrequenz-Übertragung")
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("OK") }
-        }
-    )
-}
-
-@Composable
-private fun BrandHint(brand: String, hint: String) {
-    Column {
-        Text(brand, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        Text(hint, style = MaterialTheme.typography.bodySmall)
     }
 }
 

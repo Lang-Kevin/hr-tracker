@@ -11,6 +11,8 @@ data class ZoneBounds(val zone: Int, val lo: Int, val hi: Int) {
     val label: String get() = "Z$zone"
 }
 
+enum class ZoneModel { HR_MAX, KARVONEN }
+
 object HrZoneCalculator {
 
     private const val MIN_BPM = 30
@@ -48,11 +50,18 @@ object HrZoneCalculator {
 
     fun tanakaMaxHr(age: Int): Int = (208 - 0.7 * age).toInt()
 
-    // Karvonen if restingHr is provided, %HRmax otherwise
-    fun calculateZones(maxHr: Int, restingHr: Int?): List<ZoneBounds> =
-        zonePercentages.map { (zone, pcts) ->
-            val (lo, hi) = if (restingHr != null) {
-                val hrr = maxHr - restingHr
+    // Zonenmodell ist explizit per ZoneModel wählbar (Default HR_MAX/%HRmax).
+    // Bei KARVONEN wird die Herzfrequenzreserve (maxHr - restingHr) verwendet.
+    fun calculateZones(
+        maxHr: Int,
+        restingHr: Int?,
+        model: ZoneModel = ZoneModel.HR_MAX
+    ): List<ZoneBounds> {
+        // ponytail: KARVONEN ohne restingHr fällt bewusst auf %HRmax zurück (kein Crash, kein Fake-HRR).
+        val useKarvonen = model == ZoneModel.KARVONEN && restingHr != null
+        return zonePercentages.map { (zone, pcts) ->
+            val (lo, hi) = if (useKarvonen) {
+                val hrr = maxHr - restingHr!!
                 Pair(
                     (hrr * pcts.first + restingHr).toInt(),
                     (hrr * pcts.second + restingHr).toInt()
@@ -65,17 +74,32 @@ object HrZoneCalculator {
             }
             ZoneBounds(zone, lo, hi)
         }
+    }
 
     /**
      * Liefert die Zonen einer Session: bevorzugt den persistierten Snapshot
      * (zoneSnapshotJson, enthält ggf. Custom-Zonen), Fallback auf Neuberechnung
-     * via calculateZones bei NULL oder Parse-Fehler.
+     * via calculateZones bei NULL oder Parse-Fehler. Der Fallback reproduziert
+     * die Legacy-Regel (v1-Sessions ohne Snapshot): KARVONEN wenn restingHr
+     * gesetzt ist, sonst HR_MAX.
      */
-    fun resolveZones(zoneSnapshotJson: String?, maxHr: Int, restingHr: Int?): List<ZoneBounds> =
+    fun resolveZones(
+        zoneSnapshotJson: String?,
+        maxHr: Int,
+        restingHr: Int?
+    ): List<ZoneBounds> =
         zoneSnapshotJson
             ?.let { runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull() }
             ?.takeIf { it.isNotEmpty() }
-            ?: calculateZones(maxHr, restingHr)
+            // ponytail: Kein Snapshot = Session von vor DB-v2 (MIGRATION_1_2 hat nicht
+            // backfilled). Damals galt implizit Karvonen, sobald ein Ruhepuls gesetzt war.
+            // Genau so weiterbewerten, sonst verschieben sich die Grenzen alter Sessions
+            // rückwirkend. Für alles ab v2 ist der Snapshot die Quelle der Wahrheit.
+            ?: calculateZones(
+                maxHr,
+                restingHr,
+                if (restingHr != null) ZoneModel.KARVONEN else ZoneModel.HR_MAX
+            )
 
     fun zoneFor(bpm: Int, zones: List<ZoneBounds>): Int {
         for (z in zones) { if (bpm <= z.hi) return z.zone }

@@ -7,10 +7,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import com.kevin.hrtracker.domain.HrSource
+import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.shared.domain.SavedDevice
 import com.kevin.hrtracker.domain.UserSettings
 import com.kevin.hrtracker.domain.ZoneBounds
+import com.kevin.hrtracker.domain.ZoneModel
+import com.kevin.hrtracker.domain.Sex
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
@@ -31,11 +33,14 @@ class SettingsRepository @Inject constructor(
         val SAVED_DEVICES    = stringPreferencesKey("saved_devices")
         val AUTO_CONNECT     = booleanPreferencesKey("auto_connect")
         val ONBOARDING_DONE  = booleanPreferencesKey("onboarding_done")
-        val HR_SOURCE        = stringPreferencesKey("hr_source")
         val CUSTOM_ZONES     = stringPreferencesKey("custom_zones")
         val TUTORIAL_SEEN    = stringSetPreferencesKey("tutorial_seen_screens")
         val DEBUG_MODE       = booleanPreferencesKey("debug_mode")
         val CHART_DYNAMIC_SCALE = booleanPreferencesKey("chart_dynamic_scale")
+        val WIDGET_VARIANT   = stringPreferencesKey("widget_variant")
+        val WEIGHT_KG        = intPreferencesKey("weight_kg")
+        val SEX              = stringPreferencesKey("sex")
+        val ZONE_MODEL       = stringPreferencesKey("zone_model")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -44,13 +49,16 @@ class SettingsRepository @Inject constructor(
             manualMaxHr  = prefs[Keys.MANUAL_MAX_HR],
             restingHr    = prefs[Keys.RESTING_HR],
             targetZone   = prefs[Keys.TARGET_ZONE] ?: 2,
-            hrSource     = prefs[Keys.HR_SOURCE]?.let {
-                runCatching { HrSource.valueOf(it) }.getOrDefault(HrSource.BLE)
-            } ?: HrSource.BLE,
             customZones  = prefs[Keys.CUSTOM_ZONES]?.let {
                 runCatching { Json.decodeFromString<List<ZoneBounds>>(it) }.getOrNull()
             },
-            chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true
+            chartDynamicScale = prefs[Keys.CHART_DYNAMIC_SCALE] ?: true,
+            widgetVariant = prefs[Keys.WIDGET_VARIANT]?.let {
+                runCatching { WidgetVariant.valueOf(it) }.getOrDefault(WidgetVariant.STANDARD)
+            } ?: WidgetVariant.STANDARD,
+            weightKg = prefs[Keys.WEIGHT_KG],
+            sex      = prefs[Keys.SEX]?.let { runCatching { Sex.valueOf(it) }.getOrNull() },
+            zoneModel = prefs[Keys.ZONE_MODEL]?.let { runCatching { ZoneModel.valueOf(it) }.getOrNull() } ?: ZoneModel.HR_MAX
         )
     }
 
@@ -70,8 +78,24 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun setWeightKg(weightKg: Int?) {
+        dataStore.edit {
+            if (weightKg != null) it[Keys.WEIGHT_KG] = weightKg else it.remove(Keys.WEIGHT_KG)
+        }
+    }
+
+    suspend fun setSex(sex: Sex?) {
+        dataStore.edit {
+            if (sex != null) it[Keys.SEX] = sex.name else it.remove(Keys.SEX)
+        }
+    }
+
     suspend fun setTargetZone(zone: Int) {
         dataStore.edit { it[Keys.TARGET_ZONE] = zone.coerceIn(1, 5) }
+    }
+
+    suspend fun setZoneModel(model: ZoneModel) {
+        dataStore.edit { it[Keys.ZONE_MODEL] = model.name }
     }
 
     val savedDeviceAddress: Flow<String?> = dataStore.data.map { it[Keys.SAVED_DEVICE_MAC] }
@@ -121,10 +145,6 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { it[Keys.ONBOARDING_DONE] = done }
     }
 
-    suspend fun setHrSource(source: HrSource) {
-        dataStore.edit { it[Keys.HR_SOURCE] = source.name }
-    }
-
     suspend fun setCustomZones(zones: List<ZoneBounds>?) {
         dataStore.edit {
             if (zones != null) it[Keys.CUSTOM_ZONES] = Json.encodeToString(zones)
@@ -148,5 +168,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setChartDynamicScale(enabled: Boolean) {
         dataStore.edit { it[Keys.CHART_DYNAMIC_SCALE] = enabled }
+    }
+
+    suspend fun setWidgetVariant(variant: WidgetVariant) {
+        dataStore.edit { it[Keys.WIDGET_VARIANT] = variant.name }
     }
 }

@@ -28,4 +28,11 @@ interface HrSampleDao {
 
     @Query("SELECT AVG(bpm) FROM HrSample WHERE sessionId IN (:sessionIds)")
     suspend fun getAvgBpmForSessions(sessionIds: List<Long>): Double?
+
+    @Query("""
+        SELECT MAX(s.bpm) FROM HrSample s
+        INNER JOIN Session ses ON ses.id = s.sessionId
+        WHERE ses.deletedAt IS NULL AND ses.startedAt >= :sinceMs
+    """)
+    fun getObservedMaxBpm(sinceMs: Long): Flow<Int?>
 }

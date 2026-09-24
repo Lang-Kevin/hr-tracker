@@ -12,6 +12,7 @@ import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.SportLabel
 import com.kevin.hrtracker.data.repository.SettingsRepository
+import com.kevin.hrtracker.domain.CalorieCalculator
 import com.kevin.hrtracker.domain.HrRecovery
 import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
@@ -101,6 +102,19 @@ class DetailViewModel @Inject constructor(
                 (durationMin * hrRatio * 100).toInt()
             }
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val calories: StateFlow<Int?> = combine(
+        session, stats, settingsRepository.userSettings
+    ) { sess, st, settings ->
+        if (sess == null || st == null || sess.endedAt == null) null
+        else CalorieCalculator.estimateKcal(
+            avgBpm = st.avgBpm,
+            durationMs = sess.endedAt - sess.startedAt,
+            weightKg = settings.weightKg,
+            age = settings.age,
+            sex = settings.sex
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val timeInZone: StateFlow<Map<Int, Long>> = combine(session, samples) { sess, list ->

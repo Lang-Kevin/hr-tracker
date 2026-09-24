@@ -57,6 +57,7 @@ fun DetailScreen(
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
     val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
+    val calories by viewModel.calories.collectAsStateWithLifecycle()
     val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
@@ -330,6 +331,29 @@ fun DetailScreen(
             StatItem("MIN BPM", stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
         }
 
+        Spacer(Modifier.height(8.dp))
+
+        // Kalorien + Zonen-Basis
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatItem(
+                "KALORIEN",
+                calories?.let { "$it kcal" } ?: "—",
+                Modifier.weight(1f),
+                valueColor = PrimaryPurple
+            )
+            StatItem("HRMAX", session?.maxHrUsed?.toString() ?: "—", Modifier.weight(1f))
+            StatItem("RUHEPULS", session?.restingHr?.toString() ?: "—", Modifier.weight(1f))
+        }
+
+        if (calories == null && session?.endedAt != null) {
+            Text(
+                "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // Heart Rate Recovery Card
@@ -395,6 +419,26 @@ fun DetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        } ?: OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Herzfrequenz-Erholung (1 min)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("—", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
