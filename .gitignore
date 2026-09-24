@@ -17,3 +17,8 @@ local.properties
 graphify-out/cache/
 graphify-out/2*/
 code/graphify-out/
+
+# Claude Code project files (local only)
+.claude/
+CLAUDE.md
+.claudeignore
