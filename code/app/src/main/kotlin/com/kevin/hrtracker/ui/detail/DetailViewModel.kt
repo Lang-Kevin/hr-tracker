@@ -105,12 +105,11 @@ class DetailViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val calories: StateFlow<Int?> = combine(
-        session, stats, settingsRepository.userSettings
-    ) { sess, st, settings ->
-        if (sess == null || st == null || sess.endedAt == null) null
-        else CalorieCalculator.estimateKcal(
-            avgBpm = st.avgBpm,
-            durationMs = sess.endedAt - sess.startedAt,
+        session, samples, settingsRepository.userSettings
+    ) { sess, list, settings ->
+        if (sess == null || sess.endedAt == null) null
+        else CalorieCalculator.estimateActiveKcal(
+            samples = list,
             weightKg = settings.weightKg,
             age = settings.age,
             sex = settings.sex

@@ -19,7 +19,7 @@ object HrZoneCalculator {
     private const val MAX_BPM = 220
     // ponytail: Lücke > MAX_SAMPLE_GAP_MS = BLE-Dropout, Dauer zählt nicht in Zeit-in-Zone.
     // Wert ggf. an Auto-Pause-Schwelle angleichen, falls die abweicht.
-    private const val MAX_SAMPLE_GAP_MS = 5000L
+    internal const val MAX_SAMPLE_GAP_MS = 5000L
 
     fun zonesToBoundaries(zones: List<ZoneBounds>): List<Int> =
         listOf(zones.first().lo) + zones.map { it.hi }   // Größe 6

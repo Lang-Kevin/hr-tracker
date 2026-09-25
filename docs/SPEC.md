@@ -171,10 +171,11 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
-- **Kalorien** (Keytel-Formel): On-read aus Durchschnitts-BPM, Session-Dauer, Gewicht und Geschlecht berechnet. Die Formel ermittelt zuerst kJ/min, daher die Division durch `4.184` für kcal.
-  - **Männer:** `((-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184) × Dauer [min]`
-  - **Frauen:** `((-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184) × Dauer [min]`
-  - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen; auch `null`, wenn Dauer ≤ 0 oder Ø-BPM ≤ 0; clamped auf `≥ 0`. Berechnung erfolgt on-read wie HRR60 (keine Persistierung, keine Migration). Nutzt Durchschnitts-BPM über die gesamte Session, nicht sample-weise Integration.
+- **Kalorien** (Aktivkalorien, Keytel minus Grundumsatz): On-read aus den HR-Samples, Gewicht, Alter und Geschlecht berechnet (`CalorieCalculator.estimateActiveKcal`).
+  - **Brutto (Keytel, kcal/min):** Männer `(-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184`, Frauen `(-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184` (Formel liefert kJ/min, daher `/ 4.184`).
+  - **Grundumsatz (Schofield, WHO/FAO 1985, kcal/Tag ÷ 1440):** nach Geschlecht und Altersband (<18, 18–29, 30–59, ≥60) linear im Gewicht; braucht keine Körpergröße.
+  - **Integration:** Pro Intervall zwischen zwei aufeinanderfolgenden Samples `max(0, Brutto(BPM) − Grundumsatz) × Δt`. Intervalle mit Δt > `MAX_SAMPLE_GAP_MS` (5 000 ms; Pause, BLE-Dropout) zählen nicht — Pausen gehen weder mit Trainingspuls noch mit Grundumsatz ein.
+  - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen oder weniger als 2 Samples vorliegen. Keine Persistierung, keine Migration.
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.
@@ -272,6 +273,5 @@ Diese Features sind **bewusst nicht implementiert**, um MVP-Scope zu halten. Nac
 
 - **Keine Kalorien-Persistenz / Migration:** Kalorien werden on-read aus aktuellem Gewicht/Geschlecht berechnet. Alte Sessions profitieren rückwirkend von Gewichtsupdates. Persistierung wird nötig, wenn `UserSettings` historisiert wird (z. B. Gewichtsverlauf-Tracking zur Vermeidung von Report-Drift).
 - **Kein separater Post-Session-Summary-Screen:** Der Detail-Screen ist bereits eine vollständige Report-View mit allen Kennzahlen. Ein zusätzlicher Modal/Screen würde Komplexität ohne Mehrwert bringen.
-- **Keine Sample-weise Kalorien-Integration:** Keytel-Formel nutzt Durchschnitts-BPM über die gesamte Session (einfacher, stabiler). Sample-weise Integration wäre relevant, wenn Intervall-Sessions (z. B. Tabata mit Rast-Pausen) sichtbar neben kontinuierlichen Sessions verglichen würden.
 - **Kein Onboarding-Schritt für Körperdaten:** Die Settings-Rubrik "Körperdaten" reicht. Ein zusätzlicher Onboarding-Dialog wird nötig, wenn Nutzer die Kalorien-Kachel dauerhaft leer lassen (Monitoring via Telemetry).
 - **Kein strukturiertes HRR-Failure-Result:** Ein einheitlicher Begründungstext („Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf") deckt beide Null-Ursachen ab. Separate Fehlerkategorien bringen keinen UX-Vorteil bei heute noch niedriger HRR-Häufigkeit.

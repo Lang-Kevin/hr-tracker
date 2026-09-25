@@ -1,37 +1,69 @@
 package com.kevin.hrtracker.domain
 
+import com.kevin.hrtracker.data.entity.HrSample
 import kotlin.math.roundToInt
 
 enum class Sex { MALE, FEMALE }
 
 /**
- * Keytel et al. (2005): Schätzt den Energieverbrauch aus der mittleren Herzfrequenz.
- * Liefert kJ/min, daher /4.184 für kcal/min.
+ * Aktivkalorien: Keytel et al. (2005) liefert den Brutto-Energieumsatz in kJ/min
+ * (daher /4.184 für kcal/min). Davon wird der Grundumsatz nach Schofield (WHO/FAO 1985)
+ * abgezogen, der nur Gewicht, Alter und Geschlecht braucht.
+ *
+ * Integration sample-weise: jedes Intervall zwischen zwei Samples zählt mit der BPM
+ * des ersten Samples. Intervalle > MAX_SAMPLE_GAP_MS (Pause, BLE-Dropout) zählen nicht,
+ * damit Pausenzeit nicht mit Trainingspuls hochgerechnet wird.
  */
 object CalorieCalculator {
 
-    // ponytail: Keytel nutzt nur die Durchschnitts-HF, nicht den Sample-Verlauf.
-    // Sample-weise Integration lohnt erst, wenn Intervall-Sessions sichtbar danebenliegen.
-    fun estimateKcal(
-        avgBpm: Int,
-        durationMs: Long,
+    fun estimateActiveKcal(
+        samples: List<HrSample>,
         weightKg: Int?,
         age: Int,
         sex: Sex?
     ): Int? {
         if (weightKg == null || sex == null) return null
-        if (durationMs <= 0L || avgBpm <= 0) return null
+        if (samples.size < 2) return null
 
-        val hr = avgBpm.toDouble()
-        val kg = weightKg.toDouble()
-        val yrs = age.toDouble()
+        val bmrPerMin = bmrKcalPerDay(weightKg, age, sex) / 1440.0
+        val sorted = samples.sortedBy { it.timestampMs }
 
-        val kJPerMin = when (sex) {
-            Sex.MALE   -> -55.0969 + 0.6309 * hr + 0.1988 * kg + 0.2017 * yrs
-            Sex.FEMALE -> -20.4022 + 0.4472 * hr - 0.1263 * kg + 0.0740 * yrs
+        val kcal = sorted.zipWithNext().sumOf { (a, b) ->
+            val dtMs = b.timestampMs - a.timestampMs
+            if (dtMs <= 0L || dtMs > HrZoneCalculator.MAX_SAMPLE_GAP_MS || a.bpm <= 0) 0.0
+            else {
+                // Pro Intervall auf >= 0 clampen: niedrige Pulse ergeben mit Keytel sonst negative Werte.
+                val activePerMin = (grossKcalPerMin(a.bpm, weightKg, age, sex) - bmrPerMin).coerceAtLeast(0.0)
+                activePerMin * dtMs / 60_000.0
+            }
         }
+        return kcal.roundToInt()
+    }
 
-        val minutes = durationMs / 60_000.0
-        return (kJPerMin / 4.184 * minutes).roundToInt().coerceAtLeast(0)
+    internal fun grossKcalPerMin(bpm: Int, weightKg: Int, age: Int, sex: Sex): Double {
+        val kJPerMin = when (sex) {
+            Sex.MALE   -> -55.0969 + 0.6309 * bpm + 0.1988 * weightKg + 0.2017 * age
+            Sex.FEMALE -> -20.4022 + 0.4472 * bpm - 0.1263 * weightKg + 0.0740 * age
+        }
+        return kJPerMin / 4.184
+    }
+
+    /** Schofield (WHO/FAO 1985), kcal/Tag. */
+    internal fun bmrKcalPerDay(weightKg: Int, age: Int, sex: Sex): Double {
+        val w = weightKg.toDouble()
+        return when (sex) {
+            Sex.MALE -> when {
+                age < 18 -> 17.686 * w + 658.2
+                age < 30 -> 15.057 * w + 692.2
+                age < 60 -> 11.472 * w + 873.1
+                else     -> 11.711 * w + 587.7
+            }
+            Sex.FEMALE -> when {
+                age < 18 -> 13.384 * w + 692.6
+                age < 30 -> 14.818 * w + 486.6
+                age < 60 -> 8.126 * w + 845.6
+                else     -> 9.082 * w + 658.5
+            }
+        }
     }
 }
