@@ -11,8 +11,8 @@ enum class Sex { MALE, FEMALE }
  * abgezogen, der nur Gewicht, Alter und Geschlecht braucht.
  *
  * Integration sample-weise: jedes Intervall zwischen zwei Samples zählt mit der BPM
- * des ersten Samples. Intervalle > MAX_SAMPLE_GAP_MS (Pause, BLE-Dropout) zählen nicht,
- * damit Pausenzeit nicht mit Trainingspuls hochgerechnet wird.
+ * des ersten Samples. Intervalle > MAX_GAP_MS (Pause, BLE-Dropout) zählen nicht,
+ * damit Pausenzeit nicht mit Trainingspuls hochgerechnet wird (siehe [SampleIntervals]).
  */
 object CalorieCalculator {
 
@@ -26,11 +26,9 @@ object CalorieCalculator {
         if (samples.size < 2) return null
 
         val bmrPerMin = bmrKcalPerDay(weightKg, age, sex) / 1440.0
-        val sorted = samples.sortedBy { it.timestampMs }
 
-        val kcal = sorted.zipWithNext().sumOf { (a, b) ->
-            val dtMs = b.timestampMs - a.timestampMs
-            if (dtMs <= 0L || dtMs > HrZoneCalculator.MAX_SAMPLE_GAP_MS || a.bpm <= 0) 0.0
+        val kcal = SampleIntervals.active(samples).sumOf { (a, dtMs) ->
+            if (a.bpm <= 0) 0.0
             else {
                 // Pro Intervall auf >= 0 clampen: niedrige Pulse ergeben mit Keytel sonst negative Werte.
                 val activePerMin = (grossKcalPerMin(a.bpm, weightKg, age, sex) - bmrPerMin).coerceAtLeast(0.0)

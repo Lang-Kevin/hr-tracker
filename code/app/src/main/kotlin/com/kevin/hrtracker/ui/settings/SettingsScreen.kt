@@ -187,7 +187,9 @@ fun SettingsScreen(
                         viewModel.setRestingHr(it.toIntOrNull()?.takeIf { v -> v in 20..100 })
                     },
                     isError = restingHrError,
-                    supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen" else null
+                    supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen"
+                        else if (settings.autoRestingHr) "Wird automatisch aus HRV-Messungen aktualisiert (Verlauf → Form)"
+                        else null
                 )
 
                 Text("Zonen-Modell", style = MaterialTheme.typography.titleSmall)

@@ -30,7 +30,8 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 
 ```kotlin
 Session(id, label, startedAt, endedAt, maxHrUsed, restingHr, note,
-        zoneSnapshotJson /* DB v2 */)
+        zoneSnapshotJson /* DB v2 */, deletedAt /* DB v4 */,
+        activeMs, avgBpm, trimp, hrr60, rmssd, metricsVersion, rpe /* DB v6 */)
 
 HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 
@@ -39,12 +40,12 @@ SportLabel(id, name, isPredefined)
 Milestone(id, sessionId, atSeconds, label /* DB v5 */)
 
 UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone, 
-             chartDynamicScale, widgetVariant, weightKg, sex /* DataStore */)
+             chartDynamicScale, widgetVariant, weightKg, sex, autoRestingHr /* DataStore */)
 ```
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 5 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`). **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
+DB-Version 6 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`). **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 
@@ -126,8 +127,8 @@ Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder
 | -------- | ----------------------------------------------------------------------- |
 | Scan     | Geräteliste, Verbindungsstatus, Auto-Reconnect, Start-Dialog mit Label, HRV-Messung-Button |
 | Live     | BPM, Zone, Timer, Live-Chart, Ø-BPM, Ziel-Zone, Zeit-pro-Zone, Puls-Anim |
-| History  | Sessionliste, Summary-Card, Swipe-to-Delete, Label-Filter, Datumsbereich-Filter |
-| Detail   | BPM-Chart, Zonen-Banding, Statistiken (Kalorien, HRmax, Ruhepuls), RMSSD, TRIMP, HRR60, Notiz, Label-Edit  |
+| History  | Tabs Verlauf (Sessionliste, Summary-Card, Swipe-to-Delete, Label-/Datumsfilter), Statistik (Trainingslast, Wochen, TRIMP-Verlauf), Form (HRV-Bereitschaft, Ruhepuls, HRR60-Trend), Papierkorb |
+| Detail   | BPM-Chart, Zonen-Banding, Statistiken (aktive Zeit, Kalorien, HRmax, Ruhepuls), RMSSD, TRIMP, Belastung (RPE), HRR60, Notiz, Label-Edit  |
 | Settings | Alter, HRmax-Override, Ruhepuls, Körperdaten (Gewicht, Geschlecht), Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
@@ -135,11 +136,23 @@ Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overl
 
 Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen hat keinen eigenen Session-Zweig: bei aktiver Session navigiert `LaunchedEffect(activeSessionId)` in `MainActivity` immer zu Live; Stoppen/Verwerfen nur über Live.
 
-HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen.
+HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen. HRV-Messungen (`Session.isHrvMeasurement`, Label `Readiness.HRV_LABEL`) zählen nicht als Training: sie fehlen in Summary, Wochenstatistik, TRIMP-Verlauf, Trainingslast und HRR-Trend und werden stattdessen im Form-Tab ausgewertet. Keine RPE-Abfrage für HRV-Messungen.
+
+Belastung (Session-RPE): Nach „Speichern“ im Live-Screen öffnet der Detail-Screen (`detail/{id}?askRpe=true`) einmalig den `RpeDialog` (CR-10, 0–10), sofern noch kein RPE gesetzt ist; „Später“ schließt ohne Wert. Die Karte „Belastung (RPE 0–10)“ im Detail-Screen öffnet den Dialog jederzeit (inkl. „Entfernen“) und zeigt die sRPE-Last = RPE × aktive Minuten (Foster).
 
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
-History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Sessions; Ø-BPM ist sample-gewichtet (DAO-Query über HrSample).
+History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Trainings (ohne HRV-Messungen); Dauern sind aktive Zeit (`activeMs`, Fallback Wanduhr bis zum Backfill), Ø-BPM ist mit der aktiven Zeit gewichtet.
+
+### Trainingslast (History → Statistik)
+
+`TrainingLoad.series` über die letzten 42 Tage: **akut** = Summe der letzten 7 Tage, **chronisch** = Summe der letzten 28 Tage / 4 (beide als Last pro Woche), **ACWR** = akut / chronisch (gekoppelt, rollende Summen). ACWR erst, wenn das erste Training ≥ 28 Tage zurückliegt. Bereiche: < 0,8 Unterlast, 0,8–1,3 Zielbereich, 1,3–1,5 Vorsicht, > 1,5 Belastungsspitze. Umschaltbar zwischen **TRIMP** und **sRPE** (RPE × aktive Minuten); bei sRPE zeigt die Karte, wie viele Trainings der letzten 28 Tage ohne RPE sind (die fehlen in der Last).
+
+### Form (History → Form)
+
+- **Bereitschaft (Ruhe-HRV):** `Readiness.summarize` über HRV-Messungen; pro Tag zählt die erste Messung. Auswertung auf ln(RMSSD): 7-Tage-Ø (ab 3 Messungen) gegen den Normalbereich = Mittel ± 0,5 SD der letzten 60 Tage (ab 7 Messungen, Plews et al.) → „Unter / Im / Über Normalbereich“. Chart: Tageswerte (Punkte), 7-Tage-Ø (Linie), Normalbereich (Fläche), 30 Tage.
+- **Ruhepuls:** 7-Tage-Ø des Ø-Pulses der HRV-Messungen (ab 3 Messungen). „Automatisch übernehmen“ (`UserSettings.autoRestingHr`, Default aus) setzt den Ruhepuls nach jeder HRV-Messung (`SessionRepository.updateRestingHrFromHrv`), sonst Button „jetzt übernehmen“. Betrifft nur künftige Sessions (Zonen-Snapshot).
+- **HRR60-Trend:** HRR60 je Training der letzten 8 Wochen, Ø letzte 4 Wochen vs. 4 Wochen davor (`Readiness.compareWindows`); Differenz ≥ 1 bpm wird als schneller/langsamer markiert.
 
 ## Picture-in-Picture (PiP-BPM-Widget)
 
@@ -169,7 +182,8 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 
 ## Analytics (DetailScreen)
 
-- **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
+- **Aktive Zeit** (`SampleIntervals.activeMs`): Summe der Sample-Intervalle ≤ 5 000 ms — Pausen (manuell und Auto-Pause) und Dropouts zählen nicht. Stat „AKTIV“; der Header zeigt weiter die Gesamtdauer. **Ø-BPM** zeitgewichtet über dieselben Intervalle (`SampleIntervals.avgBpm`).
+- **RMSSD** aus RR-Intervallen (`HrvCalculator.rmssd`; Watch-Sessions haben keine RR → "–"). Über eine Sample-Lücke > 5 000 ms wird nicht differenziert.
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer), sample-weise integriert (`TrimpCalculator`): pro Intervall zwischen zwei Samples `Δt[min] × r × e^(1.92 r)` bzw. `Δt[min] × BPM/HRmax × 100`. Intervalle > 5 000 ms (Pause, BLE-Dropout) zählen nicht. Detail-Screen und TRIMP-Verlauf (History, letzte 15 Sessions) nutzen dieselbe Berechnung.
 - **Kalorien** (Aktivkalorien, Keytel minus Grundumsatz): On-read aus den HR-Samples, Gewicht, Alter und Geschlecht berechnet (`CalorieCalculator.estimateActiveKcal`).
   - **Brutto (Keytel, kcal/min):** Männer `(-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184`, Frauen `(-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184` (Formel liefert kJ/min, daher `/ 4.184`).
@@ -177,7 +191,7 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
   - **Integration:** Pro Intervall zwischen zwei aufeinanderfolgenden Samples `max(0, Brutto(BPM) − Grundumsatz) × Δt`. Intervalle mit Δt > `MAX_SAMPLE_GAP_MS` (5 000 ms; Pause, BLE-Dropout) zählen nicht — Pausen gehen weder mit Trainingspuls noch mit Grundumsatz ein.
   - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen oder weniger als 2 Samples vorliegen. Keine Persistierung, keine Migration. Hinweistext im Detail-Screen unterscheidet: fehlende Körperdaten → „Gewicht und Geschlecht hinterlegen", sonst → „Zu wenig Messdaten".
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
-- **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
+- **Lücken-Ausschluss:** Eine gemeinsame Regel für alle sample-basierten Kennzahlen (`SampleIntervals.MAX_GAP_MS`). Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.
 - **Lücken-Visualisierung:** Der Detail-Chart markiert erkannte Dropout-Lücken als rote gestrichelte Linie auf avg-BPM-Höhe (display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
 

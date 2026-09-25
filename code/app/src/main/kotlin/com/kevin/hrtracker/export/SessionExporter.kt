@@ -8,6 +8,7 @@ import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.SampleIntervals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -48,6 +49,8 @@ class SessionExporter @Inject constructor(
                 put("started_at", ts(session.startedAt))
                 put("ended_at", session.endedAt?.let { JsonPrimitive(ts(it)) } ?: JsonNull)
                 put("duration_s", durationS)
+                put("active_s", SampleIntervals.activeMs(samples) / 1000)
+                put("rpe", session.rpe?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("max_hr_used", session.maxHrUsed)
                 put("resting_hr", session.restingHr?.let { JsonPrimitive(it) } ?: JsonNull)
                 put("zone_model", zoneModel)
@@ -58,7 +61,7 @@ class SessionExporter @Inject constructor(
                 }
             }
             putJsonObject("summary") {
-                put("avg_bpm", if (bpms.isEmpty()) 0 else bpms.average().toInt())
+                put("avg_bpm", SampleIntervals.avgBpm(samples) ?: 0)
                 put("max_bpm", bpms.maxOrNull() ?: 0)
                 put("min_bpm", bpms.minOrNull() ?: 0)
                 putJsonObject("time_in_zone_s") {

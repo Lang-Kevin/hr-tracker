@@ -16,6 +16,9 @@ import com.kevin.hrtracker.domain.CalorieCalculator
 import com.kevin.hrtracker.domain.HrRecovery
 import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.HrvCalculator
+import com.kevin.hrtracker.domain.SampleIntervals
+import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.domain.TrimpCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
@@ -23,7 +26,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.math.sqrt
+import kotlin.math.roundToInt
 
 @HiltViewModel
 class DetailViewModel @Inject constructor(
@@ -35,6 +38,9 @@ class DetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val sessionId: Long = checkNotNull(savedStateHandle.get<Long>("sessionId"))
+
+    /** Direkt nach Session-Ende geöffnet → RPE-Abfrage anbieten. */
+    val askRpeOnOpen: Boolean = savedStateHandle.get<Boolean>("askRpe") ?: false
 
     val chartDynamicScaleDefault: StateFlow<Boolean> =
         settingsRepository.userSettings.map { it.chartDynamicScale }
@@ -58,7 +64,7 @@ class DetailViewModel @Inject constructor(
     val stats: StateFlow<Stats?> = samples.map { list ->
         if (list.isEmpty()) null
         else Stats(
-            avgBpm = list.map { it.bpm }.average().toInt(),
+            avgBpm = SampleIntervals.avgBpm(list) ?: list.map { it.bpm }.average().toInt(),
             maxBpm = list.maxOf { it.bpm },
             minBpm = list.minOf { it.bpm },
             sampleCount = list.size
@@ -70,22 +76,18 @@ class DetailViewModel @Inject constructor(
         else HrZoneCalculator.resolveZones(sess.zoneSnapshotJson, sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val rmssd: StateFlow<Int?> = samples.map { list ->
-        // Collect all RR values in order (each BLE sample = one heartbeat notification,
-        // consecutive samples are consecutive beats — no gap between them).
-        // 300–2000 ms range filter removes ectopic beats and sensor noise before diffing.
-        val allRrs = list.flatMap { sample ->
-            sample.rrIntervalsMs
-                ?.split(",")
-                ?.mapNotNull { it.trim().toIntOrNull() }
-                ?.filter { it in 300..2000 }
-                ?: emptyList()
-        }
-        if (allRrs.size < 2) null
-        else {
-            val diffs = allRrs.zipWithNext { a, b -> (b - a).toDouble() }
-            sqrt(diffs.sumOf { it * it } / diffs.size).toInt()
-        }
+    val rmssd: StateFlow<Int?> = samples.map { HrvCalculator.rmssd(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Aktive Zeit ohne Pausen/Dropouts, null solange die Session läuft. */
+    val activeSeconds: StateFlow<Long?> = combine(session, samples) { sess, list ->
+        if (sess?.endedAt == null) null else SampleIntervals.activeMs(list) / 1000L
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Session-RPE-Last (RPE × aktive Minuten), null ohne Bewertung. */
+    val srpeLoad: StateFlow<Int?> = combine(session, activeSeconds) { sess, active ->
+        val rpe = sess?.rpe ?: return@combine null
+        active?.let { TrainingLoad.srpe(rpe, it * 1000L).roundToInt() }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val trimp: StateFlow<Int?> = combine(session, samples) { sess, list ->
@@ -152,6 +154,10 @@ class DetailViewModel @Inject constructor(
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }
 
+    fun updateRpe(rpe: Int?) {
+        viewModelScope.launch { db.sessionDao().updateRpe(sessionId, rpe?.coerceIn(0, 10)) }
+    }
+
     fun updateNote(note: String) {
         viewModelScope.launch { db.sessionDao().updateNote(sessionId, note) }
     }
@@ -168,7 +174,7 @@ class DetailViewModel @Inject constructor(
         val s = stats.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
         val sess = session.value ?: return "{\"fehler\":\"Keine Daten verfügbar\"}"
         val zones = timeInZone.value
-        val durationS = if (sess.endedAt != null) (sess.endedAt - sess.startedAt) / 1000L else 0L
+        val durationS = activeSeconds.value ?: 0L
         val zonesJson = zones.entries
             .sortedBy { it.key }
             .joinToString(",") { "\"${it.key}\":${it.value}" }

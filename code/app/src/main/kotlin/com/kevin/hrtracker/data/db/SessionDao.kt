@@ -34,6 +34,25 @@ interface SessionDao {
     @Query("UPDATE Session SET note = :note WHERE id = :id")
     suspend fun updateNote(id: Long, note: String)
 
+    @Query("""
+        UPDATE Session SET activeMs = :activeMs, avgBpm = :avgBpm, trimp = :trimp, hrr60 = :hrr60,
+            rmssd = :rmssd, metricsVersion = :version
+        WHERE id = :id
+    """)
+    suspend fun updateMetrics(
+        id: Long, activeMs: Long, avgBpm: Int?, trimp: Int?, hrr60: Int?, rmssd: Int?, version: Int
+    )
+
+    /** Beendete Sessions (inkl. Papierkorb), deren Kennzahlen fehlen oder veraltet sind. */
+    @Query("SELECT * FROM Session WHERE endedAt IS NOT NULL AND metricsVersion < :version")
+    suspend fun getWithStaleMetrics(version: Int): List<Session>
+
+    @Query("UPDATE Session SET rpe = :rpe WHERE id = :id")
+    suspend fun updateRpe(id: Long, rpe: Int?)
+
+    @Query("SELECT * FROM Session WHERE deletedAt IS NULL AND label = :label AND endedAt IS NOT NULL ORDER BY startedAt DESC")
+    fun getByLabelFlow(label: String): Flow<List<Session>>
+
     @Query("UPDATE Session SET deletedAt = :now WHERE id IN (:ids)")
     suspend fun softDeleteByIds(ids: List<Long>, now: Long)
 
