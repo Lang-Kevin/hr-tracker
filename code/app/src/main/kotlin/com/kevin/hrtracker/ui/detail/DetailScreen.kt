@@ -58,6 +58,7 @@ fun DetailScreen(
     val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
     val calories by viewModel.calories.collectAsStateWithLifecycle()
+    val bodyDataMissing by viewModel.bodyDataMissing.collectAsStateWithLifecycle()
     val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
@@ -347,7 +348,8 @@ fun DetailScreen(
 
         if (calories == null && session?.endedAt != null) {
             Text(
-                "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.",
+                if (bodyDataMissing) "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen."
+                else "Kalorien: Zu wenig Messdaten in dieser Session.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)

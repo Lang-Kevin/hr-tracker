@@ -170,12 +170,12 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 ## Analytics (DetailScreen)
 
 - **RMSSD** aus RR-Intervallen (Watch-Sessions haben keine RR → "–").
-- **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer).
+- **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer), sample-weise integriert (`TrimpCalculator`): pro Intervall zwischen zwei Samples `Δt[min] × r × e^(1.92 r)` bzw. `Δt[min] × BPM/HRmax × 100`. Intervalle > 5 000 ms (Pause, BLE-Dropout) zählen nicht. Detail-Screen und TRIMP-Verlauf (History, letzte 15 Sessions) nutzen dieselbe Berechnung.
 - **Kalorien** (Aktivkalorien, Keytel minus Grundumsatz): On-read aus den HR-Samples, Gewicht, Alter und Geschlecht berechnet (`CalorieCalculator.estimateActiveKcal`).
   - **Brutto (Keytel, kcal/min):** Männer `(-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184`, Frauen `(-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184` (Formel liefert kJ/min, daher `/ 4.184`).
   - **Grundumsatz (Schofield, WHO/FAO 1985, kcal/Tag ÷ 1440):** nach Geschlecht und Altersband (<18, 18–29, 30–59, ≥60) linear im Gewicht; braucht keine Körpergröße.
   - **Integration:** Pro Intervall zwischen zwei aufeinanderfolgenden Samples `max(0, Brutto(BPM) − Grundumsatz) × Δt`. Intervalle mit Δt > `MAX_SAMPLE_GAP_MS` (5 000 ms; Pause, BLE-Dropout) zählen nicht — Pausen gehen weder mit Trainingspuls noch mit Grundumsatz ein.
-  - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen oder weniger als 2 Samples vorliegen. Keine Persistierung, keine Migration.
+  - **Bedingungen:** `null`, wenn Gewicht oder Geschlecht fehlen oder weniger als 2 Samples vorliegen. Keine Persistierung, keine Migration. Hinweistext im Detail-Screen unterscheidet: fehlende Körperdaten → „Gewicht und Geschlecht hinterlegen", sonst → „Zu wenig Messdaten".
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.

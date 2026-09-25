@@ -5,14 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.domain.TrimpCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -24,7 +28,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.exp
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
@@ -138,22 +141,17 @@ class HistoryViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val trimpHistory: StateFlow<List<SessionTrimpEntry>> = combine(sessions, sessionAvgBpms) { sessionList, bpmStats ->
-        val bpmMap = bpmStats.associateBy { it.sessionId }
-        sessionList.filter { it.endedAt != null }.take(15).mapNotNull { sess ->
-            val avgBpm = bpmMap[sess.id]?.avgBpm ?: return@mapNotNull null
-            val durationMin = (sess.endedAt!! - sess.startedAt) / 60000.0
-            if (durationMin <= 0) return@mapNotNull null
-            val trimp = if (sess.restingHr != null) {
-                val hrr = (sess.maxHrUsed - sess.restingHr).toDouble().coerceAtLeast(1.0)
-                val hrRatio = ((avgBpm - sess.restingHr) / hrr).coerceIn(0.0, 1.0)
-                (durationMin * hrRatio * exp(1.92 * hrRatio)).toInt().coerceAtLeast(0)
-            } else {
-                val hrRatio = (avgBpm.toDouble() / sess.maxHrUsed).coerceIn(0.0, 1.0)
-                (durationMin * hrRatio * 100).toInt()
-            }
-            SessionTrimpEntry(sess.id, sess.label, sess.startedAt, trimp)
-        }
+    val trimpHistory: StateFlow<List<SessionTrimpEntry>> = sessions.map { sessionList ->
+        sessionList.filter { it.endedAt != null }.take(15)
+    }.distinctUntilChanged().flatMapLatest { recent ->
+        flow {
+            emit(recent.mapNotNull { sess ->
+                val samples = db.hrSampleDao().getSamplesOnce(sess.id)
+                val trimp = TrimpCalculator.compute(samples, sess.maxHrUsed, sess.restingHr)
+                    ?: return@mapNotNull null
+                SessionTrimpEntry(sess.id, sess.label, sess.startedAt, trimp)
+            })
+        }.flowOn(Dispatchers.Default)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun toggleLabelFilter(label: String) {

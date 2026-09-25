@@ -16,13 +16,13 @@ import com.kevin.hrtracker.domain.CalorieCalculator
 import com.kevin.hrtracker.domain.HrRecovery
 import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.TrimpCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.math.exp
 import kotlin.math.sqrt
 
 @HiltViewModel
@@ -88,21 +88,15 @@ class DetailViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val trimp: StateFlow<Int?> = combine(session, stats) { sess, st ->
-        if (sess == null || st == null || sess.endedAt == null) null
-        else {
-            val durationMin = (sess.endedAt - sess.startedAt) / 60000.0
-            if (durationMin <= 0) null
-            else if (sess.restingHr != null) {
-                val hrr = (sess.maxHrUsed - sess.restingHr).toDouble().coerceAtLeast(1.0)
-                val hrRatio = ((st.avgBpm - sess.restingHr) / hrr).coerceIn(0.0, 1.0)
-                (durationMin * hrRatio * exp(1.92 * hrRatio)).toInt().coerceAtLeast(0)
-            } else {
-                val hrRatio = (st.avgBpm.toDouble() / sess.maxHrUsed).coerceIn(0.0, 1.0)
-                (durationMin * hrRatio * 100).toInt()
-            }
-        }
+    val trimp: StateFlow<Int?> = combine(session, samples) { sess, list ->
+        if (sess == null || sess.endedAt == null) null
+        else TrimpCalculator.compute(list, sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Gewicht oder Geschlecht fehlen → Kalorien nicht berechenbar (Hinweis im Detail-Screen). */
+    val bodyDataMissing: StateFlow<Boolean> = settingsRepository.userSettings
+        .map { it.weightKg == null || it.sex == null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val calories: StateFlow<Int?> = combine(
         session, samples, settingsRepository.userSettings
