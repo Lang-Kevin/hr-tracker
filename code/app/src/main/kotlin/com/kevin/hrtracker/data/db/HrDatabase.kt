@@ -9,7 +9,7 @@ import com.kevin.hrtracker.data.entity.SportLabel
 
 @Database(
     entities = [Session::class, HrSample::class, SportLabel::class, Milestone::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class HrDatabase : RoomDatabase() {

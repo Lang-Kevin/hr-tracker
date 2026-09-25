@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.domain.Readiness
 import com.kevin.hrtracker.service.HrRecordingService
 import com.kevin.hrtracker.ui.detail.DetailScreen
 import com.kevin.hrtracker.ui.history.HistoryScreen
@@ -47,9 +48,9 @@ private object Route {
     const val SCAN     = "scan"
     const val LIVE     = "live?hrv={hrv}"
     const val HISTORY  = "history"
-    const val DETAIL   = "detail/{sessionId}"
+    const val DETAIL   = "detail/{sessionId}?askRpe={askRpe}"
     const val SETTINGS = "settings"
-    fun detail(id: Long) = "detail/$id"
+    fun detail(id: Long, askRpe: Boolean = false) = "detail/$id?askRpe=$askRpe"
     fun live(hrv: Int = 0) = "live?hrv=$hrv"
 }
 
@@ -155,7 +156,7 @@ class MainActivity : ComponentActivity() {
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
                     onHrvSessionStarted = { seconds ->
-                        startRecordingService("HRV RMSSD")
+                        startRecordingService(Readiness.HRV_LABEL)
                         navController.navigate(Route.live(seconds)) { launchSingleTop = true }
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
@@ -171,7 +172,7 @@ class MainActivity : ComponentActivity() {
                     onStopSession = {
                         scanViewModel.stopSession { finishedId ->
                             if (finishedId != null) {
-                                navController.navigate(Route.detail(finishedId)) {
+                                navController.navigate(Route.detail(finishedId, askRpe = true)) {
                                     popUpTo(Route.SCAN)
                                     launchSingleTop = true
                                 }
@@ -197,7 +198,10 @@ class MainActivity : ComponentActivity() {
 
             composable(
                 route = Route.DETAIL,
-                arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
+                arguments = listOf(
+                    navArgument("sessionId") { type = NavType.LongType },
+                    navArgument("askRpe") { type = NavType.BoolType; defaultValue = false }
+                )
             ) {
                 DetailScreen()
             }

@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import com.kevin.hrtracker.data.entity.Milestone
+import com.kevin.hrtracker.data.entity.isHrvMeasurement
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
 import com.kevin.shared.ui.StatItem
@@ -58,11 +59,14 @@ fun DetailScreen(
     val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
     val calories by viewModel.calories.collectAsStateWithLifecycle()
+    val bodyDataMissing by viewModel.bodyDataMissing.collectAsStateWithLifecycle()
     val recovery by viewModel.recovery.collectAsStateWithLifecycle()
     val trainingLabels by viewModel.trainingLabels.collectAsStateWithLifecycle()
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
     val gapFractions by viewModel.gapFractions.collectAsStateWithLifecycle()
+    val activeSeconds by viewModel.activeSeconds.collectAsStateWithLifecycle()
+    val srpeLoad by viewModel.srpeLoad.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -71,6 +75,28 @@ fun DetailScreen(
     val dynamicScale = dynamicScaleOverride ?: chartDynamicScaleDefault
     var editingMilestoneId by remember { mutableStateOf<Long?>(null) }
     var editingMilestoneLabel by remember { mutableStateOf("") }
+    var showRpeDialog by remember { mutableStateOf(false) }
+    var rpeAutoPrompted by rememberSaveable { mutableStateOf(false) }
+
+    // Nach Session-Ende einmalig nach der Belastung fragen (nicht bei HRV-Messungen)
+    LaunchedEffect(session) {
+        val s = session ?: return@LaunchedEffect
+        if (viewModel.askRpeOnOpen && !rpeAutoPrompted && s.rpe == null && !s.isHrvMeasurement) {
+            showRpeDialog = true
+        }
+        rpeAutoPrompted = true
+    }
+
+    if (showRpeDialog) {
+        RpeDialog(
+            current = session?.rpe,
+            onSave = { rpe ->
+                viewModel.updateRpe(rpe)
+                showRpeDialog = false
+            },
+            onDismiss = { showRpeDialog = false }
+        )
+    }
 
     // ponytail: compute reachedZones from existing timeInZone map (zones with duration > 0)
     val reachedZones = timeInZone.filter { it.value > 0 }.keys
@@ -312,13 +338,7 @@ fun DetailScreen(
         // Stats Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("BPM Ø", stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem(
-                "DAUER",
-                session?.endedAt?.let { end ->
-                    durationString((end - (session?.startedAt ?: end)) / 1000)
-                } ?: "—",
-                Modifier.weight(1f)
-            )
+            StatItem("AKTIV", activeSeconds?.let { durationString(it) } ?: "—", Modifier.weight(1f))
             StatItem("MAX BPM", stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
         }
 
@@ -347,11 +367,48 @@ fun DetailScreen(
 
         if (calories == null && session?.endedAt != null) {
             Text(
-                "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.",
+                if (bodyDataMissing) "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen."
+                else "Kalorien: Zu wenig Messdaten in dieser Session.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
             )
+        }
+
+        // Subjektive Belastung (Session-RPE)
+        if (session?.isHrvMeasurement == false) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth().clickable { showRpeDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Belastung (RPE 0–10)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        val rpe = session?.rpe
+                        Text(
+                            if (rpe == null) "Bewerten…"
+                            else "$rpe · ${rpeLabel(rpe)}" + (srpeLoad?.let { "  ·  Last $it" } ?: ""),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (rpe == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+                        )
+                    }
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Belastung bewerten",
+                        tint = PrimaryPurple,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -538,6 +595,62 @@ private fun EditNoteDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(text.trim()) }) { Text("Speichern") }
+        }
+    )
+}
+
+/** Borg CR-10, deutsche Kurzlabels. */
+private fun rpeLabel(rpe: Int): String = when (rpe) {
+    0 -> "Ruhe"
+    1 -> "Sehr leicht"
+    2 -> "Leicht"
+    3 -> "Moderat"
+    4 -> "Etwas hart"
+    5, 6 -> "Hart"
+    7, 8, 9 -> "Sehr hart"
+    else -> "Maximal"
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RpeDialog(
+    current: Int?,
+    onSave: (Int?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Wie anstrengend war das Training?") },
+        text = {
+            Column {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    (0..10).forEach { value ->
+                        FilterChip(
+                            selected = selected == value,
+                            onClick = { selected = value },
+                            label = { Text("$value") }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    selected?.let { rpeLabel(it) } ?: "Gesamteindruck der ganzen Einheit (CR-10-Skala).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(selected) }, enabled = selected != null) { Text("Speichern") }
+        },
+        dismissButton = {
+            TextButton(onClick = if (current != null) ({ onSave(null) }) else onDismiss) {
+                Text(if (current != null) "Entfernen" else "Später")
+            }
         }
     )
 }
