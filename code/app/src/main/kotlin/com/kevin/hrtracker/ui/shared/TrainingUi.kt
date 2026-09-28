@@ -263,7 +263,7 @@ fun BpmZoneChart(
             val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
             // Aktueller Punkt/Label nur, wenn das letzte Sample sichtbar ist
-            if (viewport.end >= 1f) {
+            if (viewport.end >= 1f - 1e-4f) {
                 drawCircle(
                     color = LightPurple,
                     radius = with(density) { 4.dp.toPx() },

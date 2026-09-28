@@ -40,6 +40,7 @@ fun Modifier.chartZoomPan(
                 var accX = 0f
                 var accY = 0f
                 var panning = false
+                var wasMulti = false
                 while (true) {
                     val event = awaitPointerEvent()
                     if (event.changes.none { it.pressed }) break
@@ -52,7 +53,13 @@ fun Modifier.chartZoomPan(
                         if (pan.x != 0f) onPanState(pan.x)
                         event.changes.forEach { if (it.positionChange() != Offset.Zero) it.consume() }
                         panning = true
+                        wasMulti = true
                     } else if (panEnabledState()) {
+                        if (wasMulti) {
+                            wasMulti = false
+                            accX = 0f
+                            accY = 0f
+                        }
                         val change = event.changes.firstOrNull { it.pressed } ?: break
                         val delta = change.positionChange()
                         if (panning) {
@@ -70,7 +77,14 @@ fun Modifier.chartZoomPan(
                             }
                         }
                     } else {
-                        // Pan nicht erlaubt: Ein-Finger-Geste ignorieren, auf weiteren Finger warten.
+                        // Pan nicht erlaubt: Ein-Finger-Geste ignorieren (nicht konsumieren, damit der
+                        // Eltern-verticalScroll nutzbar bleibt), auf weiteren Finger warten.
+                        if (wasMulti) {
+                            wasMulti = false
+                            panning = false
+                            accX = 0f
+                            accY = 0f
+                        }
                     }
                 }
             }

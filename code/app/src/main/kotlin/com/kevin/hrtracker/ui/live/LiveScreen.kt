@@ -28,7 +28,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import com.kevin.hrtracker.ui.shared.LiveWindow
 import com.kevin.hrtracker.ui.shared.chartZoomPan
-import com.kevin.shared.ui.chart.aggregateByChunks
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +64,8 @@ import com.kevin.shared.ui.zone.TargetZoneDialog
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
 import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
@@ -90,25 +91,19 @@ fun LiveScreen(
     val reachedZones by viewModel.reachedZones.collectAsStateWithLifecycle()
     val isPaused by viewModel.isPaused.collectAsStateWithLifecycle()
     val connectionLost by viewModel.connectionLost.collectAsStateWithLifecycle()
-    val milestones by viewModel.milestones.collectAsStateWithLifecycle()
+    val milestoneSampleIdx by viewModel.milestoneSampleIndices.collectAsStateWithLifecycle()
     val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
     val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
 
     val leftPadPx = with(LocalDensity.current) { 54.dp.toPx() } // = linker Rand in LiveBpmZoneChart
-    // Live-Viewport (Scroll/Zoom). Folgt neuen Samples, solange offsetFromEnd == 0.
-    // Hinweis: Erreicht der Verlauf die Kappe (6 h), ändert sich size nicht mehr; ein
-    // zurückgescrolltes Fenster driftet dann minimal mit (akzeptiert).
+    // Live-Viewport (Scroll/Zoom). Folgt neuen Samples, solange window.anchorEnd == null; der
+    // absolute Anker bleibt beim Anhängen neuer Samples stehen (kein Effect nötig).
+    // Hinweis: Erreicht der Verlauf die Kappe (6 h), verschiebt sich die Liste; ein
+    // zurückgescrolltes Fenster driftet dann mit (akzeptiert).
     var window by remember { mutableStateOf(LiveWindow()) }
     var chartWidthPx by remember { mutableIntStateOf(0) }
-    var prevHistorySize by remember { mutableIntStateOf(bpmHistory.size) }
-    LaunchedEffect(bpmHistory.size) {
-        val size = bpmHistory.size
-        if (size > prevHistorySize) {
-            window = window.onSampleAdded()
-        } else if (size < prevHistorySize) {
-            window = LiveWindow() // Verlauf zurückgesetzt (neue Session)
-        }
-        prevHistorySize = size
+    LaunchedEffect(bpmHistory.isEmpty()) {
+        if (bpmHistory.isEmpty()) window = LiveWindow() // Verlauf zurückgesetzt (neue Session)
     }
     val visibleRange = window.visibleRange(bpmHistory.size)
 
@@ -218,7 +213,7 @@ fun LiveScreen(
             ) {
                 if (!window.isFollowing) {
                     AssistChip(
-                        onClick = { window = window.copy(offsetFromEnd = 0) },
+                        onClick = { window = window.copy(anchorEnd = null) },
                         label = { Text("LIVE") },
                         leadingIcon = {
                             Icon(
@@ -229,8 +224,8 @@ fun LiveScreen(
                         }
                     )
                 }
-                if (window.windowSeconds != LiveWindow.DEFAULT) {
-                    val ws = min(window.windowSeconds, bpmHistory.size.coerceAtLeast(1))
+                if (window.windowSeconds.roundToInt() != LiveWindow.DEFAULT) {
+                    val ws = min(window.windowSeconds.roundToInt(), bpmHistory.size.coerceAtLeast(1))
                     Text(
                         text = "%d:%02d".format(ws / 60, ws % 60),
                         style = MaterialTheme.typography.labelMedium,
@@ -257,8 +252,7 @@ fun LiveScreen(
             targetZone = targetZone,
             dynamicScale = dynamicScale,
             reachedZones = reachedZones,
-            milestones = milestones,
-            elapsedSeconds = elapsed,
+            milestoneSampleIndices = milestoneSampleIdx,
             visibleRange = visibleRange,
             following = window.isFollowing,
             modifier = Modifier
@@ -278,7 +272,7 @@ fun LiveScreen(
                         val total = bpmHistory.size
                         val visibleSeconds = window.visibleRange(total).count()
                         val drawWidth = (chartWidthPx - leftPadPx).coerceAtLeast(1f)
-                        // dx > 0 (Finger nach rechts) -> ältere Daten -> positiver Offset
+                        // dx > 0 (Finger nach rechts) -> ältere Daten -> positive Verschiebung
                         window = window.panBy(dx * visibleSeconds / drawWidth, total)
                     },
                     onDoubleTap = { window = LiveWindow() }
@@ -404,18 +398,17 @@ private fun LiveBpmZoneChart(
     targetZone: Int,
     dynamicScale: Boolean = false,
     reachedZones: Set<Int> = emptySet(),
-    milestones: List<Long> = emptyList(),
-    elapsedSeconds: Long = 0L,
+    milestoneSampleIndices: List<Int> = emptyList(),
     visibleRange: IntRange = bpmHistory.indices,
     following: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
-    val slice: List<Int> = remember(bpmHistory, visibleRange) {
+    val visible: List<Int> = remember(bpmHistory, visibleRange) {
         if (visibleRange.isEmpty() || visibleRange.first < 0 || visibleRange.last >= bpmHistory.size) {
             emptyList()
         } else {
-            bpmHistory.slice(visibleRange)
+            bpmHistory.subList(visibleRange.first, visibleRange.last + 1)
         }
     }
 
@@ -429,9 +422,16 @@ private fun LiveBpmZoneChart(
         val bpmMin: Float
         val bpmMax: Float
 
-        if (dynamicScale && slice.isNotEmpty()) {
-            val actualMin = slice.minOrNull()?.toFloat() ?: 60f
-            val actualMax = slice.maxOrNull()?.toFloat() ?: 180f
+        if (dynamicScale && visible.isNotEmpty()) {
+            var lo = visible[0]
+            var hi = visible[0]
+            for (i in 1 until visible.size) {
+                val v = visible[i]
+                if (v < lo) lo = v
+                if (v > hi) hi = v
+            }
+            val actualMin = lo.toFloat()
+            val actualMax = hi.toFloat()
             val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
             // Zielband/ZIEL-Badge rechnen mit zoneBounds — Skala muss die Zielzone einschließen,
             // sonst landet bpmToY() für das Band außerhalb [0, size.height].
@@ -522,20 +522,18 @@ private fun LiveBpmZoneChart(
             )
         }
 
-        // Milestone vertical lines — anchored to their timestamp, scroll left as new data arrives
-        if (slice.size >= 2 && milestones.isNotEmpty()) {
+        // Milestone vertical lines — anchored to their sample index, scroll with the data
+        if (visible.size >= 2 && milestoneSampleIndices.isNotEmpty()) {
             val milestonePaint = Paint().apply {
                 isAntiAlias = true
                 textSize = with(density) { 9.sp.toPx() }
                 color = android.graphics.Color.argb(200, 255, 200, 80)
                 textAlign = Paint.Align.CENTER
             }
-            milestones.forEachIndexed { idx, ms ->
-                val secondsAgo = elapsedSeconds - ms
-                val absIndex = (bpmHistory.size - 1) - secondsAgo.toInt()
+            milestoneSampleIndices.forEachIndexed { idx, absIndex ->
                 if (absIndex in visibleRange) {
                     val x = leftPaddingPx +
-                        ((absIndex - visibleRange.first).toFloat() / (slice.size - 1)) * chartWidth
+                        ((absIndex - visibleRange.first).toFloat() / (visible.size - 1)) * chartWidth
                     drawLine(
                         color = Color(0xFFFFC850).copy(alpha = 0.6f),
                         start = Offset(x, 0f),
@@ -553,18 +551,32 @@ private fun LiveBpmZoneChart(
         }
 
         // BPM history line
-        if (slice.size >= 2) {
-            // Beim Herauszoomen: Zeichenaufwand begrenzen (Chunk-Mittelwerte).
-            val drawValues: List<Int> = if (slice.size > 600) {
-                aggregateByChunks(slice.map { it.toFloat() }, maxPoints = 600).map { it.toInt() }
-            } else {
-                slice
-            }
+        if (visible.size >= 2) {
+            // Dezimierung mit an absolute Indizes gebundenen Chunks (Grenzen wandern nicht jede
+            // Sekunde): Mittelwert je Chunk am Chunk-Mittelpunkt, zuletzt das rohe letzte Sample.
+            val first = visibleRange.first
+            val last = visibleRange.last
+            val span = (last - first).coerceAtLeast(1).toFloat()
+            val chunk = ceil(visible.size / 600.0).toInt().coerceAtLeast(1)
             val path = Path()
-            drawValues.forEachIndexed { index, bpm ->
-                val x = leftPaddingPx + (index.toFloat() / (drawValues.size - 1).coerceAtLeast(1)) * chartWidth
-                val y = bpmToY(bpm.toFloat().coerceIn(bpmMin, bpmMax))
-                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            var started = false
+            fun addPoint(absIdx: Float, bpm: Float) {
+                val x = leftPaddingPx + (absIdx - first) / span * chartWidth
+                val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
+                if (!started) { path.moveTo(x, y); started = true } else path.lineTo(x, y)
+            }
+            if (chunk == 1) {
+                for (i in visible.indices) addPoint((first + i).toFloat(), visible[i].toFloat())
+            } else {
+                for (k in (first / chunk)..(last / chunk)) {
+                    val gs = max(k * chunk, first)
+                    val ge = min((k + 1) * chunk - 1, last)
+                    if (gs == last) break // letztes Sample wird unten roh gezeichnet
+                    var sum = 0L
+                    for (i in gs..ge) sum += visible[i - first]
+                    addPoint((gs + ge) / 2f, sum.toFloat() / (ge - gs + 1))
+                }
+                addPoint(last.toFloat(), visible[visible.size - 1].toFloat())
             }
             drawPath(
                 path = path,

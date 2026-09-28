@@ -22,12 +22,12 @@ data class ChartViewport(val start: Float = 0f, val end: Float = 1f) {
      * sichtbaren Breite; der Datenpunkt darunter bleibt dort (außer bei Begrenzung an 0/1).
      */
     fun zoomBy(factor: Float, anchor: Float, minSpan: Float): ChartViewport {
-        if (factor <= 0f || factor.isNaN()) return this
+        if (factor <= 0f || factor.isNaN() || factor.isInfinite()) return this
         val a = anchor.coerceIn(0f, 1f)
         val newSpan = (span / factor).coerceIn(minSpan.coerceIn(TINY, 1f), 1f)
         val focus = start + a * span
         val newStart = (focus - a * newSpan).coerceIn(0f, 1f - newSpan)
-        return ChartViewport(newStart, newStart + newSpan)
+        return snapped(newStart, newSpan)
     }
 
     /**
@@ -37,7 +37,17 @@ data class ChartViewport(val start: Float = 0f, val end: Float = 1f) {
     fun panBy(deltaFraction: Float): ChartViewport {
         val s = span
         val newStart = (start - deltaFraction * s).coerceIn(0f, 1f - s)
-        return ChartViewport(newStart, newStart + s)
+        return snapped(newStart, s)
+    }
+
+    /** Rastet an exakten Rändern ein, damit Float-Rauschen kein "fast voll" erzeugt. */
+    private fun snapped(start: Float, span: Float): ChartViewport {
+        var s = start
+        var e = start + span
+        val atEnd = e > 1f - EPS
+        if (atEnd) { e = 1f; s = 1f - span }
+        if (s < EPS) { s = 0f; if (!atEnd) e = span }
+        return ChartViewport(s, e)
     }
 
     /** Position von [fraction] (Datenbereich) im sichtbaren Fenster; kann außerhalb 0..1 liegen. */
@@ -66,52 +76,64 @@ data class ChartViewport(val start: Float = 0f, val end: Float = 1f) {
 }
 
 /**
- * Live-Fenster in Sekunden/Samples (1 Sample ≈ 1 s): Fensterbreite und Abstand des rechten
- * Randes zum neuesten Sample ([offsetFromEnd] = 0 -> folgt live).
+ * Live-Fenster in Sekunden/Samples (1 Sample ≈ 1 s). [windowSeconds] ist die (Float-)Breite,
+ * [anchorEnd] der absolute Index (in die Verlaufsliste) des rechten Rands, wenn zurückgescrollt;
+ * null = folgt dem neuesten Sample. Da der Anker absolut ist, bleibt die Ansicht beim Anhängen
+ * neuer Samples stehen, und viele kleine Pan-/Zoom-Schritte verlieren keine Sub-Sample-Präzision.
  */
-data class LiveWindow(val windowSeconds: Int = DEFAULT, val offsetFromEnd: Int = 0) {
+data class LiveWindow(val windowSeconds: Float = DEFAULT.toFloat(), val anchorEnd: Float? = null) {
 
-    val isFollowing: Boolean get() = offsetFromEnd == 0
+    val isFollowing: Boolean get() = anchorEnd == null
 
     /** Sichtbare Sample-Indizes bei [total] Samples; leer wenn total <= 0. */
     fun visibleRange(total: Int): IntRange {
         if (total <= 0) return IntRange.EMPTY
-        val window = min(windowSeconds, total)
-        val end = (total - 1 - offsetFromEnd).coerceIn(0, total - 1)
-        val start = max(0, end - window + 1)
+        val w = windowSeconds.roundToInt().coerceIn(1, max(1, total))
+        val end = if (anchorEnd == null) total - 1
+        else anchorEnd.roundToInt().coerceIn(min(w - 1, total - 1), total - 1)
+        val start = (end - w + 1).coerceAtLeast(0)
         return start..end
     }
 
     /**
      * Zoomt um [factor] (>1 = hinein) mit [anchor] (0..1) in der sichtbaren Breite; das Sample
-     * unter dem Anker bleibt möglichst fest. Fenster in [MIN, max(MIN, total)].
+     * unter dem Anker bleibt fest. Ist alles sichtbar, wird nur die gespeicherte Breite geändert.
      */
     fun zoomBy(factor: Float, anchor: Float, total: Int): LiveWindow {
-        if (factor <= 0f || factor.isNaN()) return this
+        if (factor <= 0f || factor.isNaN() || factor.isInfinite()) return this
         val a = anchor.coerceIn(0f, 1f)
-        val newWindow = (windowSeconds / factor).roundToInt().coerceIn(MIN, max(MIN, total))
-        val oldWindow = min(windowSeconds, max(total, 1))
-        val oldStart = total - offsetFromEnd - oldWindow
-        val focus = oldStart + a * oldWindow
-        val newStart = focus - a * newWindow
-        val newEnd = newStart + newWindow - 1
-        val newOffset = (total - 1 - newEnd).roundToInt()
-            .coerceIn(0, max(0, total - newWindow))
-        return LiveWindow(newWindow, newOffset)
+        val effW = min(windowSeconds, total.toFloat()).coerceAtLeast(1f)
+        val newW = (effW / factor).coerceAtLeast(MIN.toFloat())
+        if (newW >= total) {
+            return copy(windowSeconds = max(newW, windowSeconds).coerceAtMost(MAX_WINDOW))
+        }
+        val lastIdx = total - 1f
+        val currentEnd = (anchorEnd ?: lastIdx).coerceIn(min(effW - 1f, lastIdx), lastIdx)
+        val anchorSample = currentEnd - (1f - a) * (effW - 1f)
+        val newEnd = anchorSample + (1f - a) * (newW - 1f)
+        return when {
+            isFollowing && a >= 0.999f -> LiveWindow(newW, null)
+            newEnd >= lastIdx -> LiveWindow(newW, null)
+            else -> LiveWindow(newW, newEnd.coerceAtLeast(min(newW - 1f, lastIdx)))
+        }
     }
 
     /** Verschiebt um [deltaSeconds]; positiv = weiter in die Vergangenheit. */
     fun panBy(deltaSeconds: Float, total: Int): LiveWindow {
-        val maxOffset = max(0, total - min(windowSeconds, total))
-        val newOffset = (offsetFromEnd + deltaSeconds).roundToInt().coerceIn(0, maxOffset)
-        return copy(offsetFromEnd = newOffset)
+        if (total <= 0 || deltaSeconds.isNaN()) return this
+        val effW = min(windowSeconds, total.toFloat()).coerceAtLeast(1f)
+        val lastIdx = total - 1f
+        val base = anchorEnd ?: lastIdx
+        val newEnd = (base - deltaSeconds).coerceAtLeast(min(effW - 1f, lastIdx))
+        // Nur beim Zurückscrollen Richtung live einrasten; beim Wegscrollen vom Live-Rand müssen
+        // viele kleine Schritte (< 0.5 s) sich aufsummieren können.
+        return if (newEnd >= lastIdx || (deltaSeconds <= 0f && newEnd >= lastIdx - 0.5f)) copy(anchorEnd = null)
+        else copy(anchorEnd = newEnd)
     }
-
-    /** Neues Sample eingetroffen: Ansicht bleibt beim selben Zeitpunkt, wenn zurückgescrollt. */
-    fun onSampleAdded(): LiveWindow = if (isFollowing) this else copy(offsetFromEnd = offsetFromEnd + 1)
 
     companion object {
         const val DEFAULT = 120
         const val MIN = 30
+        const val MAX_WINDOW = 21600f
     }
 }
