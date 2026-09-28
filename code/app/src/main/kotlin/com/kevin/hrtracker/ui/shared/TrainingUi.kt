@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
@@ -52,7 +53,8 @@ fun BpmZoneChart(
     detailMilestones: List<Milestone> = emptyList(),
     totalSessionSeconds: Long? = null,
     gaps: List<Pair<Float, Float>> = emptyList(),
-    meanBpm: Int? = null
+    meanBpm: Int? = null,
+    viewport: ChartViewport = ChartViewport.Full
 ) {
     val density = LocalDensity.current
 
@@ -63,13 +65,17 @@ fun BpmZoneChart(
         val chartWidth = size.width - leftPaddingPx
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
+        // Sichtbarer Ausschnitt der Historie (bei Zoom); Indizes beziehen sich auf bpmHistory.
+        val visibleRange = viewport.visibleIndexRange(bpmHistory.size)
+        val visibleSlice = if (visibleRange.isEmpty()) emptyList() else bpmHistory.subList(visibleRange.first, visibleRange.last + 1)
+
         val bpmMin: Float
         val bpmMax: Float
 
-        if (dynamicScale && bpmHistory.isNotEmpty()) {
-            // DYNAMIC: measured min/max with 10% padding
-            val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
-            val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
+        if (dynamicScale && visibleSlice.isNotEmpty()) {
+            // DYNAMIC: measured min/max des sichtbaren Ausschnitts with 10% padding
+            val actualMin = visibleSlice.minOrNull()?.toFloat() ?: 60f
+            val actualMax = visibleSlice.maxOrNull()?.toFloat() ?: 180f
             val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
             // Zielband/ZIEL-Badge rechnen mit zoneBounds — Skala muss die Zielzone einschließen,
             // sonst landet bpmToY() für das Band außerhalb [0, size.height].
@@ -173,7 +179,7 @@ fun BpmZoneChart(
             }
             detailMilestones.forEach { milestone ->
                 val posRatio = milestone.atSeconds.toFloat() / totalSessionSeconds.toFloat()
-                val x = leftPaddingPx + posRatio * chartWidth
+                val x = leftPaddingPx + viewport.mapX(posRatio) * chartWidth
                 if (x in leftPaddingPx..size.width) {
                     drawLine(
                         color = Color(0xFFFFC850).copy(alpha = 0.6f),
@@ -198,8 +204,8 @@ fun BpmZoneChart(
             val gapLineColor = Color(0xFFE53935)
             val gapStrokeWidth = with(density) { 2.dp.toPx() }
             gaps.forEach { (startFraction, endFraction) ->
-                val xStart = leftPaddingPx + startFraction.coerceIn(0f, 1f) * chartWidth
-                val xEnd = leftPaddingPx + endFraction.coerceIn(0f, 1f) * chartWidth
+                val xStart = leftPaddingPx + viewport.mapX(startFraction).coerceIn(0f, 1f) * chartWidth
+                val xEnd = leftPaddingPx + viewport.mapX(endFraction).coerceIn(0f, 1f) * chartWidth
                 if (xEnd > xStart) {
                     val gapPath = Path().apply {
                         moveTo(xStart, gapLineY)
@@ -217,54 +223,66 @@ fun BpmZoneChart(
             }
         }
 
-        if (bpmHistory.size >= 2) {
-            // ponytail: downsample via aggregateByChunks when size > 300 in dynamic mode
-            val historyToUse = if (dynamicScale && bpmHistory.size > 300) {
-                val floatValues = bpmHistory.map { it.toFloat() }
+        if (bpmHistory.size >= 2 && visibleSlice.size >= 2) {
+            // ponytail: downsample via aggregateByChunks when slice size > 300 in dynamic mode
+            val historyToUse = if (dynamicScale && visibleSlice.size > 300) {
+                val floatValues = visibleSlice.map { it.toFloat() }
                 val aggregated = aggregateByChunks(floatValues, maxPoints = 300)
                 aggregated.map { it.toInt() }
             } else {
-                bpmHistory
+                visibleSlice
             }
 
+            // Aggregierte Punkte linear auf die Indexspanne des Ausschnitts zurückrechnen,
+            // damit x-Positionen (Anteil an der Gesamtdauer) auch nach dem Downsampling stimmen.
+            val totalSteps = (bpmHistory.size - 1).toFloat()
+            val firstIdx = visibleRange.first.toFloat()
+            val idxSpan = (visibleRange.last - visibleRange.first).toFloat()
             val path = Path()
             historyToUse.forEachIndexed { index, bpm ->
-                val x = leftPaddingPx + (index.toFloat() / (historyToUse.size - 1)) * chartWidth
+                val idxPos = if (historyToUse.size > 1) firstIdx + index.toFloat() / (historyToUse.size - 1) * idxSpan else firstIdx
+                val x = leftPaddingPx + viewport.mapX(idxPos / totalSteps) * chartWidth
                 val y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
-            drawPath(
-                path = path,
-                color = Color.White,
-                style = Stroke(
-                    width = with(density) { 2.dp.toPx() },
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+            // Linie nicht über die Y-Achsen-Beschriftung zeichnen
+            clipRect(left = leftPaddingPx) {
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                    style = Stroke(
+                        width = with(density) { 2.dp.toPx() },
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
                 )
-            )
+            }
 
             val lastBpm = bpmHistory.last()
-            val lastX = leftPaddingPx + chartWidth
+            val lastX = leftPaddingPx + viewport.mapX(1f) * chartWidth
             val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
-            drawCircle(
-                color = LightPurple,
-                radius = with(density) { 4.dp.toPx() },
-                center = Offset(lastX, lastY)
-            )
+            // Aktueller Punkt/Label nur, wenn das letzte Sample sichtbar ist
+            if (viewport.end >= 1f) {
+                drawCircle(
+                    color = LightPurple,
+                    radius = with(density) { 4.dp.toPx() },
+                    center = Offset(lastX, lastY)
+                )
 
-            val bpmLabelPaint = Paint().apply {
-                isAntiAlias = true
-                textSize = with(density) { 11.sp.toPx() }
-                color = LightPurple.toArgb()
-                textAlign = Paint.Align.RIGHT
+                val bpmLabelPaint = Paint().apply {
+                    isAntiAlias = true
+                    textSize = with(density) { 11.sp.toPx() }
+                    color = LightPurple.toArgb()
+                    textAlign = Paint.Align.RIGHT
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    "• ${currentBpm ?: lastBpm} bpm",
+                    size.width - with(density) { 2.dp.toPx() },
+                    lastY - with(density) { 8.dp.toPx() },
+                    bpmLabelPaint
+                )
             }
-            drawContext.canvas.nativeCanvas.drawText(
-                "• ${currentBpm ?: lastBpm} bpm",
-                size.width - with(density) { 2.dp.toPx() },
-                lastY - with(density) { 8.dp.toPx() },
-                bpmLabelPaint
-            )
         }
     }
 }
