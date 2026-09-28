@@ -157,4 +157,271 @@ class ChartViewportTest {
         assertEquals(LiveWindow(120, 0), LiveWindow(120, 0).onSampleAdded())
         assertEquals(LiveWindow(120, 6), LiveWindow(120, 5).onSampleAdded())
     }
+
+    // ---- Edge cases: ChartViewport ----
+
+    @Test
+    fun `zoom in and out round trip returns full`() {
+        val v = ChartViewport.Full.zoomBy(10f, 0.5f, 0.01f)
+        val z = v.zoomBy(0.1f, 0.5f, 0.01f)
+        assertTrue(z.isFull)
+        assertEquals(0f, z.start, eps)
+        assertEquals(1f, z.end, eps)
+    }
+
+    @Test
+    fun `zoom with anchor 0 keeps left edge`() {
+        val v = ChartViewport(0.2f, 0.8f)
+        val z = v.zoomBy(2f, 0f, 0.01f)
+        assertEquals(v.start, z.start, eps)
+    }
+
+    @Test
+    fun `zoom with anchor 1 keeps right edge`() {
+        val v = ChartViewport(0.2f, 0.8f)
+        val z = v.zoomBy(2f, 1f, 0.01f)
+        assertEquals(v.end, z.end, eps)
+    }
+
+    @Test
+    fun `minSpan larger than 1 clamps to 1`() {
+        val z = ChartViewport.Full.zoomBy(1000f, 0.5f, 1.5f)
+        assertEquals(1f, z.span, eps)
+    }
+
+    @Test
+    fun `minSpan negative or zero becomes TINY`() {
+        val z1 = ChartViewport.Full.zoomBy(1000f, 0.5f, 0f)
+        assertTrue(z1.span > 0f)
+        val z2 = ChartViewport.Full.zoomBy(1000f, 0.5f, -0.5f)
+        assertTrue(z2.span > 0f)
+    }
+
+    @Test
+    fun `panBy huge positive delta clamps to left edge`() {
+        val v = ChartViewport(0.4f, 0.6f)
+        val p = v.panBy(1_000_000f)
+        assertEquals(0f, p.start, eps)
+        assertEquals(v.span, p.end, eps)
+    }
+
+    @Test
+    fun `panBy huge negative delta clamps to right edge`() {
+        val v = ChartViewport(0.4f, 0.6f)
+        val p = v.panBy(-1_000_000f)
+        assertEquals(1f - v.span, p.start, eps)
+        assertEquals(1f, p.end, eps)
+    }
+
+    @Test
+    fun `mapX at start of viewport is 0`() {
+        val v = ChartViewport(0.3f, 0.7f)
+        assertEquals(0f, v.mapX(0.3f), eps)
+    }
+
+    @Test
+    fun `mapX at end of viewport is 1`() {
+        val v = ChartViewport(0.3f, 0.7f)
+        assertEquals(1f, v.mapX(0.7f), eps)
+    }
+
+    @Test
+    fun `visibleIndexRange with 3601 samples zoomed to middle`() {
+        // Zoom into the middle portion of 3601 samples (fractions from 0 to 1)
+        val v = ChartViewport(0.4f, 0.6f)
+        val range = v.visibleIndexRange(3601)
+        // At start fraction 0.4 with 3600 steps between 3601 samples
+        // first sample is at index ~1440, with neighbor at 1439
+        // at end fraction 0.6, last sample is at index ~2160, with neighbor at 2161
+        assertTrue(range.first < range.last)
+        assertTrue(range.first >= 0)
+        assertTrue(range.last < 3601)
+        // Verify samples at start and end fractions are included
+        val startFraction = range.first.toFloat() / 3600f
+        val endFraction = range.last.toFloat() / 3600f
+        assertTrue(startFraction <= 0.4f + 0.01f)  // with some tolerance
+        assertTrue(endFraction >= 0.6f - 0.01f)
+    }
+
+    @Test
+    fun `zoom by NaN is no-op`() {
+        val v = ChartViewport(0.1f, 0.5f)
+        assertEquals(v, v.zoomBy(Float.NaN, 0.5f, 0.05f))
+    }
+
+    @Test
+    fun `zoom by Infinity zooms to minSpan`() {
+        // NOTE: This exposes a potential bug - Infinity should be treated as invalid
+        // Currently, Float.POSITIVE_INFINITY > 0 so it passes the validation,
+        // and (span / Infinity) ≈ 0, resulting in minSpan being applied
+        val v = ChartViewport(0.1f, 0.5f)
+        val z = v.zoomBy(Float.POSITIVE_INFINITY, 0.5f, 0.05f)
+        assertEquals(0.05f, z.span, eps)
+    }
+
+    @Test
+    fun `pan by huge positive value clamps correctly`() {
+        val v = ChartViewport(0.2f, 0.8f)
+        val p = v.panBy(1e9f)
+        assertEquals(0f, p.start, eps)
+        assertEquals(0.6f, p.end, eps)
+    }
+
+    @Test
+    fun `visibleIndexRange with single sample and zoomed viewport`() {
+        val v = ChartViewport(0.3f, 0.7f)
+        assertEquals(0..0, v.visibleIndexRange(1))
+    }
+
+    // ---- Edge cases: LiveWindow ----
+
+    @Test
+    fun `live with total=0 returns empty range`() {
+        assertTrue(LiveWindow(120, 0).visibleRange(0).isEmpty())
+        assertTrue(LiveWindow(120, 50).visibleRange(0).isEmpty())
+    }
+
+    @Test
+    fun `live with total=1 returns single sample`() {
+        assertEquals(0..0, LiveWindow(120, 0).visibleRange(1))
+        assertEquals(0..0, LiveWindow(120, 50).visibleRange(1))
+    }
+
+    @Test
+    fun `live with offset larger than total returns single latest`() {
+        val w = LiveWindow(120, 9999)
+        val range = w.visibleRange(500)
+        assertEquals(0..0, range)
+    }
+
+    @Test
+    fun `live zoom out beyond total while scrolled back`() {
+        val w = LiveWindow(100, 200).zoomBy(0.1f, 0.5f, 300)
+        // window expands from 100 to 1000, but clamped to total (300)
+        assertEquals(300, w.windowSeconds)
+        // offset should be clamped appropriately
+        assertTrue(w.offsetFromEnd >= 0)
+    }
+
+    @Test
+    fun `live panBy negative past 0 clamps to 0 and becomes following`() {
+        val w = LiveWindow(120, 100)
+        val p = w.panBy(-200f, 500)
+        assertEquals(0, p.offsetFromEnd)
+        assertTrue(p.isFollowing)
+    }
+
+    @Test
+    fun `live onSampleAdded while following stays following`() {
+        val w = LiveWindow(120, 0)
+        assertTrue(w.isFollowing)
+        val after = w.onSampleAdded()
+        assertTrue(after.isFollowing)
+        assertEquals(0, after.offsetFromEnd)
+    }
+
+    @Test
+    fun `live scroll back then add samples maintains offset`() {
+        val initial = LiveWindow(120, 0)
+        val range1 = initial.visibleRange(500)
+        // range = 380..499
+
+        // Scroll back by 100 seconds (increases offsetFromEnd)
+        val scrolledBack = initial.panBy(100f, 500)
+        // panBy moves forward in the past, so offset becomes 100
+        assertEquals(100, scrolledBack.offsetFromEnd)
+        val range2 = scrolledBack.visibleRange(500)
+        // end = 500 - 1 - 100 = 399, start = 280
+        assertEquals(280..399, range2)
+
+        // Add 10 samples while scrolled back (offset increases via onSampleAdded)
+        var w = scrolledBack
+        repeat(10) { w = w.onSampleAdded() }
+        assertEquals(110, w.offsetFromEnd)
+        val range3 = w.visibleRange(510)
+        // end = 510 - 1 - 110 = 399, start = 280
+        assertEquals(280..399, range3)
+    }
+
+    @Test
+    fun `live zoom with total smaller than window`() {
+        val w = LiveWindow(120, 0).zoomBy(2f, 0.5f, 80)
+        assertEquals(60, w.windowSeconds)
+        // With newStart=10, newEnd=69, offset becomes 10
+        val range = w.visibleRange(80)
+        assertEquals(10..69, range)
+    }
+
+    @Test
+    fun `live with very large total and small offset`() {
+        val w = LiveWindow(120, 1)
+        val range = w.visibleRange(1_000_000)
+        // end = 1_000_000 - 1 - 1 = 999_998
+        // start = 999_998 - 120 + 1 = 999_879
+        assertEquals(999_879, range.first)
+        assertEquals(999_998, range.last)
+    }
+
+    @Test
+    fun `live panBy zero is no-op`() {
+        val w = LiveWindow(120, 50)
+        assertEquals(w, w.panBy(0f, 500))
+    }
+
+    @Test
+    fun `live panBy negative with small total`() {
+        val w = LiveWindow(120, 10)
+        val p = w.panBy(-50f, 80)
+        assertTrue(p.offsetFromEnd >= 0)
+        assertEquals(0, p.offsetFromEnd)
+    }
+
+    @Test
+    fun `zoom preserves anchor point through multiple zooms`() {
+        var v = ChartViewport.Full
+        val anchor = 0.5f
+        val anchorValue1 = v.start + anchor * v.span
+
+        v = v.zoomBy(2f, anchor, 0.01f)
+        val anchorValue2 = v.start + anchor * v.span
+
+        v = v.zoomBy(2f, anchor, 0.01f)
+        val anchorValue3 = v.start + anchor * v.span
+
+        assertEquals(anchorValue1, anchorValue2, eps)
+        assertEquals(anchorValue1, anchorValue3, eps)
+    }
+
+    @Test
+    fun `visibleIndexRange at exact sample boundaries`() {
+        // 11 samples at fractions 0, 0.1, 0.2, ..., 1.0
+        val v = ChartViewport(0f, 0.2f)
+        val range = v.visibleIndexRange(11)
+        // Should include samples 0 and 2, plus neighbors -1 (clamped to 0) and 3
+        assertTrue(range.contains(0))
+        assertTrue(range.contains(2))
+    }
+
+    @Test
+    fun `live zoom preserves following state with anchor 1f`() {
+        val w = LiveWindow(120, 0)
+        val z = w.zoomBy(2f, 1f, 1000)
+        assertTrue(z.isFollowing)
+    }
+
+    @Test
+    fun `live offset exactly equals total minus 1`() {
+        val w = LiveWindow(120, 499)
+        val range = w.visibleRange(500)
+        assertEquals(0..0, range)
+    }
+
+    @Test
+    fun `zoom with minSpan = span keeps viewport unchanged`() {
+        val v = ChartViewport(0.3f, 0.6f)
+        val span = v.span
+        val z = v.zoomBy(2f, 0.5f, span)
+        // Should not zoom because minSpan equals current span
+        assertEquals(v, z)
+    }
 }
