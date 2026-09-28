@@ -24,7 +24,11 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import com.kevin.hrtracker.ui.shared.LiveWindow
+import com.kevin.hrtracker.ui.shared.chartZoomPan
+import com.kevin.shared.ui.chart.aggregateByChunks
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,6 +93,24 @@ fun LiveScreen(
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val hrvCountdown by viewModel.hrvCountdown.collectAsStateWithLifecycle()
     val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
+
+    val leftPadPx = with(LocalDensity.current) { 54.dp.toPx() } // = linker Rand in LiveBpmZoneChart
+    // Live-Viewport (Scroll/Zoom). Folgt neuen Samples, solange offsetFromEnd == 0.
+    // Hinweis: Erreicht der Verlauf die Kappe (6 h), ändert sich size nicht mehr; ein
+    // zurückgescrolltes Fenster driftet dann minimal mit (akzeptiert).
+    var window by remember { mutableStateOf(LiveWindow()) }
+    var chartWidthPx by remember { mutableIntStateOf(0) }
+    var prevHistorySize by remember { mutableIntStateOf(bpmHistory.size) }
+    LaunchedEffect(bpmHistory.size) {
+        val size = bpmHistory.size
+        if (size > prevHistorySize) {
+            window = window.onSampleAdded()
+        } else if (size < prevHistorySize) {
+            window = LiveWindow() // Verlauf zurückgesetzt (neue Session)
+        }
+        prevHistorySize = size
+    }
+    val visibleRange = window.visibleRange(bpmHistory.size)
 
     LaunchedEffect(hrvCountdown) {
         if (hrvCountdown == 0) onStopSession()
@@ -190,7 +212,33 @@ fun LiveScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.weight(1f))
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!window.isFollowing) {
+                    AssistChip(
+                        onClick = { window = window.copy(offsetFromEnd = 0) },
+                        label = { Text("LIVE") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
+                if (window.windowSeconds != LiveWindow.DEFAULT) {
+                    val ws = min(window.windowSeconds, bpmHistory.size.coerceAtLeast(1))
+                    Text(
+                        text = "%d:%02d".format(ws / 60, ws % 60),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
             ChartToggleButton(
                 checked = dynamicScale,
                 onCheckedChange = { dynamicScaleOverride = it },
@@ -211,10 +259,30 @@ fun LiveScreen(
             reachedZones = reachedZones,
             milestones = milestones,
             elapsedSeconds = elapsed,
+            visibleRange = visibleRange,
+            following = window.isFollowing,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .tutorialAnchor(tutorialAnchors, "live_chart")
+                .onSizeChanged { chartWidthPx = it.width }
+                .chartZoomPan(
+                    panEnabled = { true },
+                    onZoom = { factor, x ->
+                        val leftPad = leftPadPx
+                        val anchor = ((x - leftPad) / (chartWidthPx - leftPad).coerceAtLeast(1f))
+                            .coerceIn(0f, 1f)
+                        window = window.zoomBy(factor, anchor, bpmHistory.size)
+                    },
+                    onPan = { dx ->
+                        val total = bpmHistory.size
+                        val visibleSeconds = window.visibleRange(total).count()
+                        val drawWidth = (chartWidthPx - leftPadPx).coerceAtLeast(1f)
+                        // dx > 0 (Finger nach rechts) -> ältere Daten -> positiver Offset
+                        window = window.panBy(dx * visibleSeconds / drawWidth, total)
+                    },
+                    onDoubleTap = { window = LiveWindow() }
+                )
         )
 
         Spacer(Modifier.height(12.dp))
@@ -303,7 +371,7 @@ fun LiveScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone."),
+                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone. Wische zum Zurückscrollen, ziehe mit zwei Fingern zum Skalieren, Doppeltipp setzt zurück."),
                 TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
                 TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
                 TutorialStep("live_milestone", "Meilenstein", "Setzt eine Markierung im Chart — z. B. für Intervallwechsel oder besondere Momente."),
@@ -318,8 +386,9 @@ fun LiveScreen(
 
 /**
  * Live-Chart für die Aufzeichnung. Bewusst NICHT [com.kevin.hrtracker.ui.shared.BpmZoneChart]:
- * 1. Positionierung: hier Index ins rollende 120s-Fenster ([bpmHistory] ist `takeLast(120)` im
- *    [LiveViewModel]), dort anteilig zur Gesamt-Sessiondauer. Identisch nur bis `elapsed = 120`.
+ * 1. Positionierung: hier Index ins sichtbare Fenster ([visibleRange], per `LiveWindow`-Viewport
+ *    scroll-/zoombar, Standard 120 s; [bpmHistory] ist die gesamte Session, Kappe 6 h im
+ *    [LiveViewModel]), dort anteilig zur Gesamt-Sessiondauer.
  * 2. `Milestone` braucht `label` + `sessionId`; live existieren nur Sekunden-Timestamps,
  *    persistiert wird erst am Session-Ende (LiveViewModel.kt:189-191).
  * 3. Die öffentliche Variante filtert bei `dynamicScale` auf `reachedZones` — live sollen alle
@@ -337,9 +406,18 @@ private fun LiveBpmZoneChart(
     reachedZones: Set<Int> = emptySet(),
     milestones: List<Long> = emptyList(),
     elapsedSeconds: Long = 0L,
+    visibleRange: IntRange = bpmHistory.indices,
+    following: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val slice: List<Int> = remember(bpmHistory, visibleRange) {
+        if (visibleRange.isEmpty() || visibleRange.first < 0 || visibleRange.last >= bpmHistory.size) {
+            emptyList()
+        } else {
+            bpmHistory.slice(visibleRange)
+        }
+    }
 
     Canvas(modifier = modifier.clipToBounds()) {
         if (zoneBounds.isEmpty()) return@Canvas
@@ -351,9 +429,9 @@ private fun LiveBpmZoneChart(
         val bpmMin: Float
         val bpmMax: Float
 
-        if (dynamicScale && bpmHistory.isNotEmpty()) {
-            val actualMin = bpmHistory.minOrNull()?.toFloat() ?: 60f
-            val actualMax = bpmHistory.maxOrNull()?.toFloat() ?: 180f
+        if (dynamicScale && slice.isNotEmpty()) {
+            val actualMin = slice.minOrNull()?.toFloat() ?: 60f
+            val actualMax = slice.maxOrNull()?.toFloat() ?: 180f
             val pad = (actualMax - actualMin).coerceAtLeast(1f) * 0.10f
             // Zielband/ZIEL-Badge rechnen mit zoneBounds — Skala muss die Zielzone einschließen,
             // sonst landet bpmToY() für das Band außerhalb [0, size.height].
@@ -445,7 +523,7 @@ private fun LiveBpmZoneChart(
         }
 
         // Milestone vertical lines — anchored to their timestamp, scroll left as new data arrives
-        if (bpmHistory.size >= 2 && milestones.isNotEmpty()) {
+        if (slice.size >= 2 && milestones.isNotEmpty()) {
             val milestonePaint = Paint().apply {
                 isAntiAlias = true
                 textSize = with(density) { 9.sp.toPx() }
@@ -454,9 +532,10 @@ private fun LiveBpmZoneChart(
             }
             milestones.forEachIndexed { idx, ms ->
                 val secondsAgo = elapsedSeconds - ms
-                val posFromLeft = (bpmHistory.size - 1) - secondsAgo.toInt()
-                if (posFromLeft in 0 until bpmHistory.size) {
-                    val x = leftPaddingPx + (posFromLeft.toFloat() / (bpmHistory.size - 1)) * chartWidth
+                val absIndex = (bpmHistory.size - 1) - secondsAgo.toInt()
+                if (absIndex in visibleRange) {
+                    val x = leftPaddingPx +
+                        ((absIndex - visibleRange.first).toFloat() / (slice.size - 1)) * chartWidth
                     drawLine(
                         color = Color(0xFFFFC850).copy(alpha = 0.6f),
                         start = Offset(x, 0f),
@@ -474,10 +553,16 @@ private fun LiveBpmZoneChart(
         }
 
         // BPM history line
-        if (bpmHistory.size >= 2) {
+        if (slice.size >= 2) {
+            // Beim Herauszoomen: Zeichenaufwand begrenzen (Chunk-Mittelwerte).
+            val drawValues: List<Int> = if (slice.size > 600) {
+                aggregateByChunks(slice.map { it.toFloat() }, maxPoints = 600).map { it.toInt() }
+            } else {
+                slice
+            }
             val path = Path()
-            bpmHistory.forEachIndexed { index, bpm ->
-                val x = leftPaddingPx + (index.toFloat() / (bpmHistory.size - 1)) * chartWidth
+            drawValues.forEachIndexed { index, bpm ->
+                val x = leftPaddingPx + (index.toFloat() / (drawValues.size - 1).coerceAtLeast(1)) * chartWidth
                 val y = bpmToY(bpm.toFloat().coerceIn(bpmMin, bpmMax))
                 if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
@@ -491,7 +576,8 @@ private fun LiveBpmZoneChart(
                 )
             )
 
-            // Current BPM dot and label at last point
+            // Current BPM dot and label at last point (nur wenn live folgend)
+            if (!following) return@Canvas
             val lastBpm = bpmHistory.last()
             val lastX = leftPaddingPx + chartWidth
             val lastY = bpmToY(lastBpm.toFloat().coerceIn(bpmMin, bpmMax))
