@@ -1,0 +1,48 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # settings.gradle.kts bindet ../../shared-android-lib ein (relativ zu code/),
+      # daher beide Repos als Geschwister unter ws/ auschecken.
+      - uses: actions/checkout@v4
+        with:
+          path: ws/hr-tracker
+      - uses: actions/checkout@v4
+        with:
+          repository: Lang-Kevin/shared-app-lib
+          path: ws/shared-android-lib
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build und Unit-Tests
+        working-directory: ws/hr-tracker/code
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest --stacktrace
+
+      - name: Test-Reports hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: ws/hr-tracker/code/app/build/reports/
+          if-no-files-found: ignore
