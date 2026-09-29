@@ -15,6 +15,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.PermissionStatus
 import com.kevin.shared.ble.ConnectionState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
@@ -97,6 +99,17 @@ fun ScanScreen(
 
     LaunchedEffect(permissionState.allPermissionsGranted) {
         if (permissionState.allPermissionsGranted) viewModel.startScan()
+    }
+
+    // POST_NOTIFICATIONS: requested after BLE is granted (no double dialog). Not gating —
+    // the recording works without it, only the FGS notification stays hidden.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notifPermission = rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+        LaunchedEffect(permissionState.allPermissionsGranted) {
+            if (permissionState.allPermissionsGranted && notifPermission.status != PermissionStatus.Granted) {
+                notifPermission.launchPermissionRequest()
+            }
+        }
     }
 
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
