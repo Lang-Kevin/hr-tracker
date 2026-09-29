@@ -20,8 +20,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.kevin.shared.ble.BleConstants
 import com.kevin.shared.ble.ConnectionState
 import java.util.UUID
@@ -38,9 +41,13 @@ class HrBleManager @Inject constructor(
         private const val TAG = "HRTracker"
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
         val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
-        // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s
+        // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s (cap).
+        // For attempts beyond the list, use the last value (30s) indefinitely.
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
         const val FAKE_DEVICE_NAME = "Pseudo-Sensor [Test]"
+
+        internal fun reconnectDelayMs(attempt: Int): Long =
+            RECONNECT_DELAYS_MS.getOrElse(attempt) { RECONNECT_DELAYS_MS.last() }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -51,18 +58,19 @@ class HrBleManager @Inject constructor(
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _hrSamples = MutableSharedFlow<ParsedHr>(replay = 0, extraBufferCapacity = 64)
+    private val _hrSamples = MutableSharedFlow<ParsedHr>(replay = 0, extraBufferCapacity = 256)
     val hrSamples: SharedFlow<ParsedHr> = _hrSamples.asSharedFlow()
 
     // ponytail: replay=0 bleibt — SessionRepository.launchSampleJob würde sonst
     // bei jedem startSession/resume den gecachten Vorgänger als Duplikat in Room schreiben.
     val lastHr: StateFlow<ParsedHr?> = _hrSamples.stateIn(scope, SharingStarted.Eagerly, null)
 
-    private var bluetoothGatt: BluetoothGatt? = null
+    @Volatile private var bluetoothGatt: BluetoothGatt? = null
     private var scanCallback: ScanCallback? = null
     private var lastDevice: BluetoothDevice? = null
-    private var reconnectEnabled = false
+    @Volatile private var reconnectEnabled = false
     private var reconnectJob: Job? = null
+    private val gattLock = Any()
 
     @Volatile private var isFakeActive = false
     private var fakeJob: Job? = null
@@ -120,11 +128,11 @@ class HrBleManager @Inject constructor(
     @SuppressLint("MissingPermission")
     fun connectFake() {
         reconnectEnabled = false
-        reconnectJob?.cancel()
-        reconnectJob = null
-        bluetoothGatt?.disconnect()
-        bluetoothGatt?.close()
-        bluetoothGatt = null
+        synchronized(gattLock) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+            closeGatt()
+        }
         isFakeActive = false
         fakeJob?.cancel()
         isFakeActive = true
@@ -153,19 +161,16 @@ class HrBleManager @Inject constructor(
         isFakeActive = false
         fakeJob?.cancel()
         fakeJob = null
-        // Close any existing GATT before opening a new one —
+        // Stop the old loop before closing its GATT, then close it —
         // leaving it open causes duplicate onCharacteristicChanged callbacks.
-        bluetoothGatt?.disconnect()
-        bluetoothGatt?.close()
-        bluetoothGatt = null
-        lastDevice = device
-        reconnectEnabled = true
-        reconnectJob?.cancel()
-        _connectionState.value = ConnectionState.Connecting
-        bluetoothGatt = device.connectGatt(
-            context, false, gattCallback, BluetoothDevice.TRANSPORT_LE
-        )
-        Log.d(TAG, "Connecting to ${device.address}")
+        synchronized(gattLock) {
+            reconnectJob?.cancel()
+            closeGatt()
+            lastDevice = device
+            reconnectEnabled = true
+            startConnectionLoop(device)
+        }
+        Log.d(TAG, "Connecting")
     }
 
     @SuppressLint("MissingPermission")
@@ -174,46 +179,62 @@ class HrBleManager @Inject constructor(
         fakeJob?.cancel()
         fakeJob = null
         reconnectEnabled = false
-        reconnectJob?.cancel()
-        reconnectJob = null
-        bluetoothGatt?.disconnect()
-        bluetoothGatt?.close()
-        bluetoothGatt = null
+        synchronized(gattLock) {
+            reconnectJob?.cancel()
+            reconnectJob = null
+            closeGatt()
+        }
         _connectionState.value = ConnectionState.Disconnected
         Log.d(TAG, "Disconnected (user-initiated)")
     }
 
     @SuppressLint("MissingPermission")
-    private fun scheduleReconnect() {
-        val device = lastDevice ?: return
+    private fun closeGatt() {
+        bluetoothGatt?.let { it.disconnect(); it.close() }
+        bluetoothGatt = null
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startConnectionLoop(device: BluetoothDevice) {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
-            for ((attempt, delayMs) in RECONNECT_DELAYS_MS.withIndex()) {
-                if (!reconnectEnabled) break
-                Log.d(TAG, "Reconnect attempt ${attempt + 1}/${RECONNECT_DELAYS_MS.size} in ${delayMs}ms")
-                _connectionState.value = ConnectionState.Reconnecting
+            var failures = 0
+            while (reconnectEnabled) {
+                synchronized(gattLock) {
+                    // Checked under the lock: connect()/disconnect() cancel + close under the same lock,
+                    // so a cancelled loop can never assign an orphan GATT.
+                    if (!isActive) return@launch
+                    _connectionState.value = ConnectionState.Connecting
+                    bluetoothGatt = try {
+                        device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+                    } catch (e: SecurityException) {
+                        reconnectEnabled = false
+                        _connectionState.value = ConnectionState.Error("Bluetooth-Berechtigung fehlt")
+                        return@launch
+                    } catch (e: Exception) {
+                        // ponytail: transient stack error — attempt times out and retries via backoff
+                        Log.w(TAG, "connectGatt failed", e)
+                        null
+                    }
+                }
+                val result = withTimeoutOrNull(10_000) {
+                    _connectionState.first { it is ConnectionState.Ready || it is ConnectionState.Error || it is ConnectionState.Reconnecting }
+                }
+                if (result is ConnectionState.Ready) {
+                    failures = 0
+                    // Stay here while the link is healthy; any drop/error falls through to retry.
+                    _connectionState.first { it !is ConnectionState.Ready }
+                }
+                val delayMs = synchronized(gattLock) {
+                    // Cancelled while running (not suspended)? Don't touch the successor loop's GATT/state.
+                    if (!isActive) return@launch
+                    closeGatt()
+                    if (!reconnectEnabled) return@launch
+                    _connectionState.value = ConnectionState.Reconnecting
+                    reconnectDelayMs(failures++)
+                }
+                Log.d(TAG, "Reconnect attempt $failures in ${delayMs}ms")
                 delay(delayMs)
-                if (!reconnectEnabled) break
-                bluetoothGatt?.close()
-                bluetoothGatt = device.connectGatt(
-                    context, false, gattCallback, BluetoothDevice.TRANSPORT_LE
-                )
-                // Wait up to 8s for the connection to succeed before trying again
-                var waited = 0
-                while (waited < 8_000 && reconnectEnabled &&
-                    _connectionState.value is ConnectionState.Reconnecting
-                ) {
-                    delay(500)
-                    waited += 500
-                }
-                if (_connectionState.value is ConnectionState.Ready) {
-                    Log.d(TAG, "Reconnected successfully after attempt ${attempt + 1}")
-                    return@launch
-                }
-            }
-            if (_connectionState.value !is ConnectionState.Ready) {
-                Log.w(TAG, "Reconnect failed after all attempts — giving up")
-                _connectionState.value = ConnectionState.Disconnected
             }
         }
     }
@@ -222,6 +243,7 @@ class HrBleManager @Inject constructor(
     private val gattCallback = object : BluetoothGattCallback() {
 
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+            if (gatt != bluetoothGatt) { if (newState == BluetoothProfile.STATE_DISCONNECTED) gatt.close(); return }
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     Log.d(TAG, "GATT connected — discovering services")
@@ -232,19 +254,17 @@ class HrBleManager @Inject constructor(
                     Log.d(TAG, "GATT disconnected (status=$status)")
                     gatt.close()
                     bluetoothGatt = null
-                    if (reconnectEnabled) {
-                        Log.d(TAG, "Unexpected disconnect — scheduling reconnect")
-                        scheduleReconnect()
-                    } else {
-                        _connectionState.value = ConnectionState.Disconnected
-                    }
+                    if (reconnectEnabled) _connectionState.value = ConnectionState.Reconnecting
                 }
             }
         }
 
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+            if (gatt != bluetoothGatt) return
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.e(TAG, "Service discovery failed: $status")
+                _connectionState.value = ConnectionState.Error("Dienste konnten nicht gelesen werden (Status $status)")
+                gatt.disconnect()
                 return
             }
             val allServices = gatt.services.map { it.uuid.toString().uppercase().take(8) }
@@ -253,6 +273,9 @@ class HrBleManager @Inject constructor(
                 ?.getCharacteristic(HR_MEASUREMENT_UUID)
             if (hrChar == null) {
                 Log.e(TAG, "HR Measurement characteristic (0x2A37) not found")
+                reconnectEnabled = false
+                _connectionState.value = ConnectionState.Error("HR-Messwert-Merkmal nicht gefunden. Falsches Gerät?")
+                gatt.disconnect()
                 return
             }
             gatt.setCharacteristicNotification(hrChar, true)
@@ -260,6 +283,9 @@ class HrBleManager @Inject constructor(
             val cccd = hrChar.getDescriptor(BleConstants.CCCD_UUID)
             if (cccd == null) {
                 Log.e(TAG, "CCCD descriptor (0x2902) not found")
+                reconnectEnabled = false
+                _connectionState.value = ConnectionState.Error("CCCD-Deskriptor nicht gefunden. Falsches Gerät?")
+                gatt.disconnect()
                 return
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -276,6 +302,7 @@ class HrBleManager @Inject constructor(
         override fun onDescriptorWrite(
             gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int
         ) {
+            if (gatt != bluetoothGatt) return
             if (descriptor.uuid != BleConstants.CCCD_UUID) return
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "CCCD write confirmed — HR notifications active")
@@ -283,6 +310,7 @@ class HrBleManager @Inject constructor(
             } else {
                 Log.e(TAG, "CCCD write failed: status=$status")
                 _connectionState.value = ConnectionState.Error("HR-Benachrichtigungen konnten nicht aktiviert werden (CCCD-Fehler $status)")
+                gatt.disconnect()
             }
         }
 
@@ -323,6 +351,8 @@ class HrBleManager @Inject constructor(
     private fun handleHrData(value: ByteArray) {
         val parsed = HeartRateParser.parse(value) ?: return
         Log.d(TAG, "BPM=${parsed.bpm}  RR=${parsed.rrIntervalsMs}")
-        scope.launch { _hrSamples.emit(parsed) }
+        if (!_hrSamples.tryEmit(parsed)) {
+            Log.w(TAG, "HR sample dropped, buffer full")
+        }
     }
 }

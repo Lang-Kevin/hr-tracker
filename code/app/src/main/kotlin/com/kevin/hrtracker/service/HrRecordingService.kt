@@ -89,6 +89,7 @@ class HrRecordingService : BaseRecordingService() {
                 when (state) {
                     is ConnectionState.Disconnected,
                     is ConnectionState.Reconnecting,
+                    is ConnectionState.Connecting,
                     is ConnectionState.Error -> sessionRepository.autoPause()
                     is ConnectionState.Ready -> sessionRepository.autoResume()
                     else -> Unit
