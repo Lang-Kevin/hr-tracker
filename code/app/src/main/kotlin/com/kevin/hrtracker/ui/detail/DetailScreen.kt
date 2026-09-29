@@ -301,7 +301,7 @@ fun DetailScreen(
             gaps = gapFractions,
             meanBpm = stats?.avgBpm,
             viewport = viewport,
-            scrubX = scrubX
+            scrubX = { scrubX }
         )
 
         Spacer(Modifier.height(12.dp))

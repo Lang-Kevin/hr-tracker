@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
@@ -264,7 +265,7 @@ fun LiveScreen(
             milestoneSampleIndices = milestoneSampleIdx,
             visibleRange = visibleRange,
             following = window.isFollowing,
-            scrubX = scrubX,
+            scrubX = { scrubX },
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -415,7 +416,7 @@ private fun LiveBpmZoneChart(
     milestoneSampleIndices: List<Int> = emptyList(),
     visibleRange: IntRange = bpmHistory.indices,
     following: Boolean = true,
-    scrubX: Float? = null,
+    scrubX: () -> Float? = { null },
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -430,10 +431,11 @@ private fun LiveBpmZoneChart(
     Canvas(modifier = modifier.clipToBounds()) {
         if (zoneBounds.isEmpty()) return@Canvas
 
+        val scrubXValue = scrubX()
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
         // Unten Platz für die Zeitachsen-Beschriftung reservieren.
-        val axisPx = with(density) { TIME_AXIS_HEIGHT_DP.dp.toPx() }
+        val axisPx = max(TIME_AXIS_HEIGHT_DP.dp.toPx(), 10.sp.toPx() * 1.4f)
         val plotHeight = (size.height - axisPx).coerceAtLeast(1f)
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
@@ -483,180 +485,183 @@ private fun LiveBpmZoneChart(
             )
         }
 
-        // Zone separator lines and Y-axis labels
-        zoneBounds.forEach { z ->
-            val y = bpmToY(z.lo.toFloat())
-            drawLine(
-                color = Color.White.copy(alpha = 0.10f),
-                start = Offset(leftPaddingPx, y),
-                end = Offset(size.width, y),
-                strokeWidth = with(density) { 1.dp.toPx() }
-            )
-            val yCentre = bpmToY(((z.lo + z.hi) / 2).toFloat())
-            val labelBaselineY = yCentre + labelPaint.textSize / 3f
-            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= plotHeight) {
-                drawContext.canvas.nativeCanvas.drawText(
-                    "Z${z.zone} ${z.lo}",
-                    4f,
-                    labelBaselineY,
-                    labelPaint
+        clipRect(left = 0f, top = 0f, right = size.width, bottom = plotHeight) {
+            // Zone separator lines and Y-axis labels
+            zoneBounds.forEach { z ->
+                val y = bpmToY(z.lo.toFloat())
+                drawLine(
+                    color = Color.White.copy(alpha = 0.10f),
+                    start = Offset(leftPaddingPx, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = with(density) { 1.dp.toPx() }
                 )
-            }
-        }
-        // Top boundary line for highest zone
-        zoneBounds.lastOrNull()?.let { z ->
-            drawLine(
-                color = Color.White.copy(alpha = 0.10f),
-                start = Offset(leftPaddingPx, bpmToY(z.hi.toFloat())),
-                end = Offset(size.width, bpmToY(z.hi.toFloat())),
-                strokeWidth = with(density) { 1.dp.toPx() }
-            )
-        }
-
-        // Target zone highlight band
-        targetBound?.let { zBound ->
-            val yTop = bpmToY(zBound.hi.toFloat())
-            val yBottom = bpmToY(zBound.lo.toFloat())
-            drawRect(
-                color = ZoneColors[targetZone - 1].copy(alpha = 0.18f),
-                topLeft = Offset(leftPaddingPx, yTop),
-                size = Size(chartWidth, yBottom - yTop)
-            )
-        }
-
-        // ZIEL badge at target zone lower boundary
-        targetBound?.let { zBound ->
-            val yZiel = bpmToY(zBound.lo.toFloat())
-            val bw = with(density) { 34.dp.toPx() }
-            val bh = with(density) { 15.dp.toPx() }
-            val br = with(density) { 4.dp.toPx() }
-            val bx = leftPaddingPx + with(density) { 6.dp.toPx() }
-            val by = yZiel - bh - with(density) { 2.dp.toPx() }
-            drawRoundRect(
-                color = PrimaryPurple.copy(alpha = 0.9f),
-                topLeft = Offset(bx, by),
-                size = Size(bw, bh),
-                cornerRadius = CornerRadius(br)
-            )
-            val zielPaint = Paint().apply {
-                isAntiAlias = true
-                textSize = with(density) { 9.sp.toPx() }
-                color = android.graphics.Color.WHITE
-                textAlign = Paint.Align.CENTER
-            }
-            drawContext.canvas.nativeCanvas.drawText(
-                "ZIEL",
-                bx + bw / 2,
-                by + bh / 2 + zielPaint.textSize / 3f,
-                zielPaint
-            )
-        }
-
-        // Milestone vertical lines — anchored to their sample index, scroll with the data
-        if (visible.size >= 2 && milestoneSampleIndices.isNotEmpty()) {
-            val milestonePaint = Paint().apply {
-                isAntiAlias = true
-                textSize = with(density) { 9.sp.toPx() }
-                color = android.graphics.Color.argb(200, 255, 200, 80)
-                textAlign = Paint.Align.CENTER
-            }
-            milestoneSampleIndices.forEachIndexed { idx, absIndex ->
-                if (absIndex in visibleRange) {
-                    val x = leftPaddingPx +
-                        ((absIndex - visibleRange.first).toFloat() / (visible.size - 1)) * chartWidth
-                    drawLine(
-                        color = Color(0xFFFFC850).copy(alpha = 0.6f),
-                        start = Offset(x, 0f),
-                        end = Offset(x, plotHeight),
-                        strokeWidth = with(density) { 1.5.dp.toPx() }
-                    )
+                val yCentre = bpmToY(((z.lo + z.hi) / 2).toFloat())
+                val labelBaselineY = yCentre + labelPaint.textSize / 3f
+                if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= plotHeight) {
                     drawContext.canvas.nativeCanvas.drawText(
-                        "M${idx + 1}",
-                        x,
-                        with(density) { 12.sp.toPx() },
-                        milestonePaint
+                        "Z${z.zone} ${z.lo}",
+                        4f,
+                        labelBaselineY,
+                        labelPaint
                     )
                 }
             }
-        }
-
-        // BPM history line
-        if (visible.size >= 2) {
-            // Dezimierung mit an absolute Indizes gebundenen Chunks (Grenzen wandern nicht jede
-            // Sekunde): Mittelwert je Chunk am Chunk-Mittelpunkt, zuletzt das rohe letzte Sample.
-            val first = visibleRange.first
-            val last = visibleRange.last
-            val span = (last - first).coerceAtLeast(1).toFloat()
-            val chunk = ceil(visible.size / 600.0).toInt().coerceAtLeast(1)
-            val path = Path()
-            var started = false
-            fun addPoint(absIdx: Float, bpm: Float) {
-                val x = leftPaddingPx + (absIdx - first) / span * chartWidth
-                val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
-                if (!started) { path.moveTo(x, y); started = true } else path.lineTo(x, y)
-            }
-            if (chunk == 1) {
-                for (i in visible.indices) addPoint((first + i).toFloat(), visible[i].toFloat())
-            } else {
-                for (k in (first / chunk)..(last / chunk)) {
-                    val gs = max(k * chunk, first)
-                    val ge = min((k + 1) * chunk - 1, last)
-                    if (gs == last) break // letztes Sample wird unten roh gezeichnet
-                    var sum = 0L
-                    for (i in gs..ge) sum += visible[i - first]
-                    addPoint((gs + ge) / 2f, sum.toFloat() / (ge - gs + 1))
-                }
-                addPoint(last.toFloat(), visible[visible.size - 1].toFloat())
-            }
-            drawPath(
-                path = path,
-                color = Color.White,
-                style = Stroke(
-                    width = with(density) { 2.dp.toPx() },
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
+            // Top boundary line for highest zone
+            zoneBounds.lastOrNull()?.let { z ->
+                drawLine(
+                    color = Color.White.copy(alpha = 0.10f),
+                    start = Offset(leftPaddingPx, bpmToY(z.hi.toFloat())),
+                    end = Offset(size.width, bpmToY(z.hi.toFloat())),
+                    strokeWidth = with(density) { 1.dp.toPx() }
                 )
-            )
+            }
 
-            // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
-            if (scrubX != null && scrubX >= leftPaddingPx && chartWidth > 0f) {
-                val idx = nearestIndex((scrubX - leftPaddingPx) / chartWidth, visibleRange)
-                if (idx != null) {
-                    drawScrubber(
-                        x = leftPaddingPx + (idx - first).toFloat() / span * chartWidth,
-                        y = bpmToY(bpmHistory[idx].toFloat().coerceIn(bpmMin, bpmMax)),
-                        label = "${bpmHistory[idx]} bpm · ${formatTickLabel(idx.toFloat())}",
-                        leftPaddingPx = leftPaddingPx,
-                        plotHeight = plotHeight,
-                        density = density
-                    )
+            // Target zone highlight band
+            targetBound?.let { zBound ->
+                val yTop = bpmToY(zBound.hi.toFloat())
+                val yBottom = bpmToY(zBound.lo.toFloat())
+                drawRect(
+                    color = ZoneColors[targetZone - 1].copy(alpha = 0.18f),
+                    topLeft = Offset(leftPaddingPx, yTop),
+                    size = Size(chartWidth, yBottom - yTop)
+                )
+            }
+
+            // ZIEL badge at target zone lower boundary
+            targetBound?.let { zBound ->
+                val yZiel = bpmToY(zBound.lo.toFloat())
+                val bw = with(density) { 34.dp.toPx() }
+                val bh = with(density) { 15.dp.toPx() }
+                val br = with(density) { 4.dp.toPx() }
+                val bx = leftPaddingPx + with(density) { 6.dp.toPx() }
+                val by = yZiel - bh - with(density) { 2.dp.toPx() }
+                drawRoundRect(
+                    color = PrimaryPurple.copy(alpha = 0.9f),
+                    topLeft = Offset(bx, by),
+                    size = Size(bw, bh),
+                    cornerRadius = CornerRadius(br)
+                )
+                val zielPaint = Paint().apply {
+                    isAntiAlias = true
+                    textSize = with(density) { 9.sp.toPx() }
+                    color = android.graphics.Color.WHITE
+                    textAlign = Paint.Align.CENTER
+                }
+                drawContext.canvas.nativeCanvas.drawText(
+                    "ZIEL",
+                    bx + bw / 2,
+                    by + bh / 2 + zielPaint.textSize / 3f,
+                    zielPaint
+                )
+            }
+
+            // Milestone vertical lines — anchored to their sample index, scroll with the data
+            if (visible.size >= 2 && milestoneSampleIndices.isNotEmpty()) {
+                val milestonePaint = Paint().apply {
+                    isAntiAlias = true
+                    textSize = with(density) { 9.sp.toPx() }
+                    color = android.graphics.Color.argb(200, 255, 200, 80)
+                    textAlign = Paint.Align.CENTER
+                }
+                milestoneSampleIndices.forEachIndexed { idx, absIndex ->
+                    if (absIndex in visibleRange) {
+                        val x = leftPaddingPx +
+                            ((absIndex - visibleRange.first).toFloat() / (visible.size - 1)) * chartWidth
+                        drawLine(
+                            color = Color(0xFFFFC850).copy(alpha = 0.6f),
+                            start = Offset(x, 0f),
+                            end = Offset(x, plotHeight),
+                            strokeWidth = with(density) { 1.5.dp.toPx() }
+                        )
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "M${idx + 1}",
+                            x,
+                            with(density) { 12.sp.toPx() },
+                            milestonePaint
+                        )
+                    }
                 }
             }
 
-            // Current BPM dot and label at last point (nur wenn live folgend)
-            if (!following) return@Canvas
-            val lastBpm = bpmHistory.last()
-            val lastX = leftPaddingPx + chartWidth
-            val lastY = bpmToY(lastBpm.toFloat().coerceIn(bpmMin, bpmMax))
+            // BPM history line
+            if (visible.size >= 2) {
+                // Dezimierung mit an absolute Indizes gebundenen Chunks (Grenzen wandern nicht jede
+                // Sekunde): Mittelwert je Chunk am Chunk-Mittelpunkt, zuletzt das rohe letzte Sample.
+                val first = visibleRange.first
+                val last = visibleRange.last
+                val span = (last - first).coerceAtLeast(1).toFloat()
+                val chunk = ceil(visible.size / 600.0).toInt().coerceAtLeast(1)
+                val path = Path()
+                var started = false
+                fun addPoint(absIdx: Float, bpm: Float) {
+                    val x = leftPaddingPx + (absIdx - first) / span * chartWidth
+                    val y = bpmToY(bpm.coerceIn(bpmMin, bpmMax))
+                    if (!started) { path.moveTo(x, y); started = true } else path.lineTo(x, y)
+                }
+                if (chunk == 1) {
+                    for (i in visible.indices) addPoint((first + i).toFloat(), visible[i].toFloat())
+                } else {
+                    for (k in (first / chunk)..(last / chunk)) {
+                        val gs = max(k * chunk, first)
+                        val ge = min((k + 1) * chunk - 1, last)
+                        if (gs == last) break // letztes Sample wird unten roh gezeichnet
+                        var sum = 0L
+                        for (i in gs..ge) sum += visible[i - first]
+                        addPoint((gs + ge) / 2f, sum.toFloat() / (ge - gs + 1))
+                    }
+                    addPoint(last.toFloat(), visible[visible.size - 1].toFloat())
+                }
+                drawPath(
+                    path = path,
+                    color = Color.White,
+                    style = Stroke(
+                        width = with(density) { 2.dp.toPx() },
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
 
-            drawCircle(
-                color = LightPurple,
-                radius = with(density) { 4.dp.toPx() },
-                center = Offset(lastX, lastY)
-            )
+                // Current BPM dot and label at last point (nur wenn live folgend)
+                if (following) {
+                    val lastBpm = bpmHistory.last()
+                    val lastX = leftPaddingPx + chartWidth
+                    val lastY = bpmToY(lastBpm.toFloat().coerceIn(bpmMin, bpmMax))
 
-            val bpmLabelPaint = Paint().apply {
-                isAntiAlias = true
-                textSize = with(density) { 11.sp.toPx() }
-                color = LightPurple.toArgb()
-                textAlign = Paint.Align.RIGHT
+                    drawCircle(
+                        color = LightPurple,
+                        radius = with(density) { 4.dp.toPx() },
+                        center = Offset(lastX, lastY)
+                    )
+
+                    val bpmLabelPaint = Paint().apply {
+                        isAntiAlias = true
+                        textSize = with(density) { 11.sp.toPx() }
+                        color = LightPurple.toArgb()
+                        textAlign = Paint.Align.RIGHT
+                    }
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "• ${currentBpm ?: lastBpm} bpm",
+                        size.width - with(density) { 2.dp.toPx() },
+                        lastY - with(density) { 8.dp.toPx() },
+                        bpmLabelPaint
+                    )
+                }
+
+                // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
+                if (scrubXValue != null && scrubXValue >= leftPaddingPx && chartWidth > 0f) {
+                    val idx = nearestIndex((scrubXValue - leftPaddingPx) / chartWidth, visibleRange)
+                    if (idx != null) {
+                        drawScrubber(
+                            x = leftPaddingPx + (idx - first).toFloat() / span * chartWidth,
+                            y = bpmToY(bpmHistory[idx].toFloat().coerceIn(bpmMin, bpmMax)),
+                            label = "${bpmHistory[idx]} bpm · ${formatTickLabel(idx.toFloat())}",
+                            leftPaddingPx = leftPaddingPx,
+                            plotHeight = plotHeight,
+                            density = density
+                        )
+                    }
+                }
             }
-            drawContext.canvas.nativeCanvas.drawText(
-                "• ${currentBpm ?: lastBpm} bpm",
-                size.width - with(density) { 2.dp.toPx() },
-                lastY - with(density) { 8.dp.toPx() },
-                bpmLabelPaint
-            )
         }
     }
 }
