@@ -21,11 +21,13 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +65,9 @@ fun BpmZoneChart(
 
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
+        // Unten Platz für die Zeitachsen-Beschriftung reservieren.
+        val axisPx = with(density) { TIME_AXIS_HEIGHT_DP.dp.toPx() }
+        val plotHeight = (size.height - axisPx).coerceAtLeast(1f)
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
         // Sichtbarer Ausschnitt der Historie (bei Zoom); Indizes beziehen sich auf bpmHistory.
@@ -90,7 +95,7 @@ fun BpmZoneChart(
         val bpmRange = bpmMax - bpmMin
 
         fun bpmToY(bpm: Int): Float =
-            size.height * (1f - (bpm - bpmMin).toFloat() / bpmRange)
+            plotHeight * (1f - (bpm - bpmMin).toFloat() / bpmRange)
 
         val labelPaint = Paint().apply {
             isAntiAlias = true
@@ -104,6 +109,22 @@ fun BpmZoneChart(
             zoneBounds
         }
 
+        run {
+            val totalSec = if (totalSessionSeconds != null && totalSessionSeconds > 0L) {
+                totalSessionSeconds.toFloat()
+            } else {
+                (bpmHistory.size - 1).coerceAtLeast(0).toFloat()
+            }
+            drawTimeAxis(
+                fromSec = viewport.start * totalSec,
+                toSec = viewport.end * totalSec,
+                leftPaddingPx = leftPaddingPx,
+                plotHeight = plotHeight,
+                labelPaint = labelPaint,
+                density = density
+            )
+        }
+
         zonesToDraw.forEach { z ->
             val y = bpmToY(z.lo)
             drawLine(
@@ -114,7 +135,7 @@ fun BpmZoneChart(
             )
             val yCentre = bpmToY((z.lo + z.hi) / 2)
             val labelBaselineY = yCentre + labelPaint.textSize / 3f
-            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= size.height) {
+            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= plotHeight) {
                 drawContext.canvas.nativeCanvas.drawText(
                     "Z${z.zone} ${z.lo}",
                     4f,
@@ -184,7 +205,7 @@ fun BpmZoneChart(
                     drawLine(
                         color = Color(0xFFFFC850).copy(alpha = 0.6f),
                         start = Offset(x, 0f),
-                        end = Offset(x, size.height),
+                        end = Offset(x, plotHeight),
                         strokeWidth = with(density) { 1.5.dp.toPx() }
                     )
                     drawContext.canvas.nativeCanvas.drawText(
@@ -283,6 +304,44 @@ fun BpmZoneChart(
                     bpmLabelPaint
                 )
             }
+        }
+    }
+}
+
+/** Höhe des Bandes für die Zeitachsen-Beschriftung unter dem Diagramm. */
+internal const val TIME_AXIS_HEIGHT_DP = 14
+
+/**
+ * Zeichnet X-Achsen-Ticks: schwache vertikale Gitterlinien über den Plotbereich und
+ * zentrierte "m:ss"-Beschriftungen im unteren Band. Fenster: [fromSec]..[toSec] über
+ * die Breite rechts von [leftPaddingPx].
+ */
+internal fun DrawScope.drawTimeAxis(
+    fromSec: Float,
+    toSec: Float,
+    leftPaddingPx: Float,
+    plotHeight: Float,
+    labelPaint: Paint,
+    density: Density
+) {
+    if (toSec <= fromSec) return
+    val chartWidth = size.width - leftPaddingPx
+    if (chartWidth <= 0f) return
+    val paint = Paint(labelPaint).apply { textAlign = Paint.Align.CENTER }
+    val baselineY = plotHeight + (size.height - plotHeight) / 2f + paint.textSize / 3f
+    val gridStroke = with(density) { 1.dp.toPx() }
+    timeTicks(fromSec, toSec).forEach { sec ->
+        val x = leftPaddingPx + (sec - fromSec) / (toSec - fromSec) * chartWidth
+        drawLine(
+            color = Color.White.copy(alpha = 0.06f),
+            start = Offset(x, 0f),
+            end = Offset(x, plotHeight),
+            strokeWidth = gridStroke
+        )
+        val label = formatTickLabel(sec)
+        val half = paint.measureText(label) / 2f
+        if (x - half >= 4f && x + half <= size.width) {
+            drawContext.canvas.nativeCanvas.drawText(label, x, baselineY, paint)
         }
     }
 }

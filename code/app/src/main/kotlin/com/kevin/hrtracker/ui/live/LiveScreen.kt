@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import com.kevin.hrtracker.ui.shared.LiveWindow
+import com.kevin.hrtracker.ui.shared.TIME_AXIS_HEIGHT_DP
+import com.kevin.hrtracker.ui.shared.drawTimeAxis
 import com.kevin.hrtracker.ui.shared.chartZoomPan
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -417,6 +419,9 @@ private fun LiveBpmZoneChart(
 
         val leftPaddingPx = with(density) { 54.dp.toPx() }
         val chartWidth = size.width - leftPaddingPx
+        // Unten Platz für die Zeitachsen-Beschriftung reservieren.
+        val axisPx = with(density) { TIME_AXIS_HEIGHT_DP.dp.toPx() }
+        val plotHeight = (size.height - axisPx).coerceAtLeast(1f)
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
         val bpmMin: Float
@@ -445,12 +450,24 @@ private fun LiveBpmZoneChart(
         val bpmRange = bpmMax - bpmMin
 
         fun bpmToY(bpm: Float): Float =
-            size.height * (1f - (bpm - bpmMin) / bpmRange)
+            plotHeight * (1f - (bpm - bpmMin) / bpmRange)
 
         val labelPaint = Paint().apply {
             isAntiAlias = true
             textSize = with(density) { 10.sp.toPx() }
             color = android.graphics.Color.argb(160, 255, 255, 255)
+        }
+
+        // Zeitachse: 1 Sample ≈ 1 s seit Sessionstart
+        if (visible.isNotEmpty()) {
+            drawTimeAxis(
+                fromSec = visibleRange.first.toFloat(),
+                toSec = visibleRange.last.toFloat(),
+                leftPaddingPx = leftPaddingPx,
+                plotHeight = plotHeight,
+                labelPaint = labelPaint,
+                density = density
+            )
         }
 
         // Zone separator lines and Y-axis labels
@@ -464,7 +481,7 @@ private fun LiveBpmZoneChart(
             )
             val yCentre = bpmToY(((z.lo + z.hi) / 2).toFloat())
             val labelBaselineY = yCentre + labelPaint.textSize / 3f
-            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= size.height) {
+            if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= plotHeight) {
                 drawContext.canvas.nativeCanvas.drawText(
                     "Z${z.zone} ${z.lo}",
                     4f,
@@ -537,7 +554,7 @@ private fun LiveBpmZoneChart(
                     drawLine(
                         color = Color(0xFFFFC850).copy(alpha = 0.6f),
                         start = Offset(x, 0f),
-                        end = Offset(x, size.height),
+                        end = Offset(x, plotHeight),
                         strokeWidth = with(density) { 1.5.dp.toPx() }
                     )
                     drawContext.canvas.nativeCanvas.drawText(
