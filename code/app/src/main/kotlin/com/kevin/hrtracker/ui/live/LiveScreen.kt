@@ -25,11 +25,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.kevin.hrtracker.ui.shared.LiveWindow
 import com.kevin.hrtracker.ui.shared.TIME_AXIS_HEIGHT_DP
 import com.kevin.hrtracker.ui.shared.drawTimeAxis
 import com.kevin.hrtracker.ui.shared.chartZoomPan
+import com.kevin.hrtracker.ui.shared.drawScrubber
+import com.kevin.hrtracker.ui.shared.formatTickLabel
+import com.kevin.hrtracker.ui.shared.nearestIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,6 +108,8 @@ fun LiveScreen(
     // Hinweis: Erreicht der Verlauf die Kappe (6 h), verschiebt sich die Liste; ein
     // zurückgescrolltes Fenster driftet dann mit (akzeptiert).
     var window by remember { mutableStateOf(LiveWindow()) }
+    var scrubX by remember { mutableStateOf<Float?>(null) }
+    val haptic = LocalHapticFeedback.current
     var chartWidthPx by remember { mutableIntStateOf(0) }
     LaunchedEffect(bpmHistory.isEmpty()) {
         if (bpmHistory.isEmpty()) window = LiveWindow() // Verlauf zurückgesetzt (neue Session)
@@ -257,6 +264,7 @@ fun LiveScreen(
             milestoneSampleIndices = milestoneSampleIdx,
             visibleRange = visibleRange,
             following = window.isFollowing,
+            scrubX = scrubX,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -277,7 +285,11 @@ fun LiveScreen(
                         // dx > 0 (Finger nach rechts) -> ältere Daten -> positive Verschiebung
                         window = window.panBy(dx * visibleSeconds / drawWidth, total)
                     },
-                    onDoubleTap = { window = LiveWindow() }
+                    onDoubleTap = { window = LiveWindow() },
+                    onScrub = { x ->
+                        if (scrubX == null && x != null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scrubX = x
+                    }
                 )
         )
 
@@ -367,7 +379,7 @@ fun LiveScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone. Wische zum Zurückscrollen, ziehe mit zwei Fingern zum Skalieren, Doppeltipp setzt zurück."),
+                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone. Wische zum Zurückscrollen, ziehe mit zwei Fingern zum Skalieren, Doppeltipp setzt zurück. Lange drücken zeigt den genauen Wert."),
                 TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
                 TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
                 TutorialStep("live_milestone", "Meilenstein", "Setzt eine Markierung im Chart — z. B. für Intervallwechsel oder besondere Momente."),
@@ -403,6 +415,7 @@ private fun LiveBpmZoneChart(
     milestoneSampleIndices: List<Int> = emptyList(),
     visibleRange: IntRange = bpmHistory.indices,
     following: Boolean = true,
+    scrubX: Float? = null,
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -604,6 +617,21 @@ private fun LiveBpmZoneChart(
                     join = StrokeJoin.Round
                 )
             )
+
+            // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
+            if (scrubX != null && scrubX >= leftPaddingPx && chartWidth > 0f) {
+                val idx = nearestIndex((scrubX - leftPaddingPx) / chartWidth, visibleRange)
+                if (idx != null) {
+                    drawScrubber(
+                        x = leftPaddingPx + (idx - first).toFloat() / span * chartWidth,
+                        y = bpmToY(bpmHistory[idx].toFloat().coerceIn(bpmMin, bpmMax)),
+                        label = "${bpmHistory[idx]} bpm · ${formatTickLabel(idx.toFloat())}",
+                        leftPaddingPx = leftPaddingPx,
+                        plotHeight = plotHeight,
+                        density = density
+                    )
+                }
+            }
 
             // Current BPM dot and label at last point (nur wenn live folgend)
             if (!following) return@Canvas

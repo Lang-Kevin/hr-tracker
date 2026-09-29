@@ -23,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -261,6 +263,8 @@ fun DetailScreen(
         // Mindest-Sichtbreite: 20 s (Fallback 5 %)
         val minSpan = if (totalSessionSeconds != null && totalSessionSeconds > 20) 20f / totalSessionSeconds else 0.05f
         val drawWidthPx = (chartWidthPx - chartLeftPadPx).coerceAtLeast(1f)
+        var scrubX by remember { mutableStateOf<Float?>(null) }
+        val haptic = LocalHapticFeedback.current
         BpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = bpmHistory.lastOrNull(),
@@ -284,6 +288,10 @@ fun DetailScreen(
                             val anchor = ((x - chartLeftPadPx) / drawWidthPx).coerceIn(0f, 1f)
                             viewport.zoomBy(3f, anchor, minSpan)
                         }
+                    },
+                    onScrub = { x ->
+                        if (scrubX == null && x != null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scrubX = x
                     }
                 ),
             dynamicScale = dynamicScale,
@@ -292,7 +300,8 @@ fun DetailScreen(
             totalSessionSeconds = totalSessionSeconds,
             gaps = gapFractions,
             meanBpm = stats?.avgBpm,
-            viewport = viewport
+            viewport = viewport,
+            scrubX = scrubX
         )
 
         Spacer(Modifier.height(12.dp))

@@ -5,8 +5,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -21,17 +23,22 @@ import kotlin.math.abs
  * - Ein Finger: nur wenn [panEnabled]; erst nach horizontalem Touch-Slop wird konsumiert,
  *   vertikale Bewegung wird nicht konsumiert (Eltern-verticalScroll bleibt nutzbar).
  * - Doppeltipp: [onDoubleTap] (x in px).
+ * - Langes Drücken + Ziehen: [onScrub] (x in px, null = beendet). Während des Scrubbens wird nicht gepannt.
  */
 fun Modifier.chartZoomPan(
     panEnabled: () -> Boolean,
     onZoom: (factor: Float, anchorX: Float) -> Unit,
     onPan: (dxPx: Float) -> Unit,
-    onDoubleTap: (x: Float) -> Unit
+    onDoubleTap: (x: Float) -> Unit,
+    onScrub: ((x: Float?) -> Unit)? = null
 ): Modifier = composed {
     val panEnabledState by rememberUpdatedState(panEnabled)
     val onZoomState by rememberUpdatedState(onZoom)
     val onPanState by rememberUpdatedState(onPan)
     val onDoubleTapState by rememberUpdatedState(onDoubleTap)
+    val onScrubState by rememberUpdatedState(onScrub)
+    val scrubbing = remember { BooleanArray(1) }
+    val scrubEnabled = onScrub != null
 
     this
         .pointerInput(Unit) {
@@ -44,6 +51,12 @@ fun Modifier.chartZoomPan(
                 while (true) {
                     val event = awaitPointerEvent()
                     if (event.changes.none { it.pressed }) break
+                    if (scrubbing[0]) {
+                        // Scrubben aktiv: kein Pan/Zoom, Zustand für Neustart nach Ende zurücksetzen.
+                        accX = 0f
+                        accY = 0f
+                        continue
+                    }
                     val pressedCount = event.changes.count { it.pressed }
                     if (pressedCount >= 2) {
                         val zoom = event.calculateZoom()
@@ -92,4 +105,26 @@ fun Modifier.chartZoomPan(
         .pointerInput(Unit) {
             detectTapGestures(onDoubleTap = { onDoubleTapState(it.x) })
         }
+        .then(
+            if (scrubEnabled) Modifier.pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        scrubbing[0] = true
+                        onScrubState?.invoke(it.x)
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+                        onScrubState?.invoke(change.position.x)
+                    },
+                    onDragEnd = {
+                        scrubbing[0] = false
+                        onScrubState?.invoke(null)
+                    },
+                    onDragCancel = {
+                        scrubbing[0] = false
+                        onScrubState?.invoke(null)
+                    }
+                )
+            } else Modifier
+        )
 }

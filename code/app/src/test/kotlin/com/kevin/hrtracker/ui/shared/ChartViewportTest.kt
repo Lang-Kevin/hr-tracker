@@ -385,4 +385,26 @@ class ChartViewportTest {
         val range = LiveWindow(120f, 999_998f).visibleRange(1_000_000)
         assertEquals(999_879..999_998, range)
     }
+
+    @Test
+    fun `nearestIndex maps fraction linearly and rounds`() {
+        assertEquals(10, nearestIndex(0f, 10..20))
+        assertEquals(20, nearestIndex(1f, 10..20))
+        assertEquals(15, nearestIndex(0.5f, 10..20))
+        assertEquals(13, nearestIndex(0.26f, 10..20))
+        assertEquals(50, nearestIndex(0.5f, 0..100))
+    }
+
+    @Test
+    fun `nearestIndex clamps out-of-range fractions`() {
+        assertEquals(10, nearestIndex(-0.5f, 10..20))
+        assertEquals(20, nearestIndex(1.7f, 10..20))
+    }
+
+    @Test
+    fun `nearestIndex handles empty and single ranges`() {
+        assertNull(nearestIndex(0.5f, IntRange.EMPTY))
+        assertEquals(7, nearestIndex(0.9f, 7..7))
+        assertNull(nearestIndex(Float.NaN, 0..5))
+    }
 }

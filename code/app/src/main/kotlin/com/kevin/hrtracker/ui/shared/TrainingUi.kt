@@ -56,7 +56,8 @@ fun BpmZoneChart(
     totalSessionSeconds: Long? = null,
     gaps: List<Pair<Float, Float>> = emptyList(),
     meanBpm: Int? = null,
-    viewport: ChartViewport = ChartViewport.Full
+    viewport: ChartViewport = ChartViewport.Full,
+    scrubX: Float? = null
 ) {
     val density = LocalDensity.current
 
@@ -305,7 +306,79 @@ fun BpmZoneChart(
                 )
             }
         }
+
+        // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
+        if (scrubX != null && scrubX >= leftPaddingPx && bpmHistory.isNotEmpty() && chartWidth > 0f) {
+            val idx = nearestIndex((scrubX - leftPaddingPx) / chartWidth, visibleRange)
+            if (idx != null) {
+                val n = (bpmHistory.size - 1).coerceAtLeast(1).toFloat()
+                val frac = idx / n
+                val sx = leftPaddingPx + viewport.mapX(frac) * chartWidth
+                val totalSec = if (totalSessionSeconds != null && totalSessionSeconds > 0L) {
+                    totalSessionSeconds.toFloat()
+                } else {
+                    (bpmHistory.size - 1).coerceAtLeast(0).toFloat()
+                }
+                val bpm = bpmHistory[idx]
+                drawScrubber(
+                    x = sx.coerceIn(leftPaddingPx, size.width),
+                    y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt())),
+                    label = "$bpm bpm · ${formatTickLabel(frac * totalSec)}",
+                    leftPaddingPx = leftPaddingPx,
+                    plotHeight = plotHeight,
+                    density = density
+                )
+            }
+        }
     }
+}
+
+/**
+ * Scrubber-Overlay: vertikale Linie über den Plotbereich, Punkt am Sample bei ([x], [y]) und
+ * Tooltip mit [label] oben im Plot, horizontal in [leftPaddingPx]..Canvas-Breite geklemmt.
+ */
+internal fun DrawScope.drawScrubber(
+    x: Float,
+    y: Float,
+    label: String,
+    leftPaddingPx: Float,
+    plotHeight: Float,
+    density: Density
+) {
+    drawLine(
+        color = LightPurple.copy(alpha = 0.7f),
+        start = Offset(x, 0f),
+        end = Offset(x, plotHeight),
+        strokeWidth = with(density) { 1.dp.toPx() }
+    )
+    drawCircle(
+        color = LightPurple,
+        radius = with(density) { 4.dp.toPx() },
+        center = Offset(x, y.coerceIn(0f, plotHeight))
+    )
+    val paint = Paint().apply {
+        isAntiAlias = true
+        textSize = with(density) { 11.sp.toPx() }
+        color = android.graphics.Color.WHITE
+        textAlign = Paint.Align.LEFT
+    }
+    val padH = with(density) { 8.dp.toPx() }
+    val boxW = paint.measureText(label) + 2 * padH
+    val boxH = paint.textSize + with(density) { 10.dp.toPx() }
+    val top = with(density) { 4.dp.toPx() }
+    val left = (x - boxW / 2f).coerceIn(leftPaddingPx, max(leftPaddingPx, size.width - boxW))
+    drawRoundRect(
+        color = Color(0xE6202030),
+        topLeft = Offset(left, top),
+        size = Size(boxW, boxH),
+        cornerRadius = CornerRadius(with(density) { 6.dp.toPx() })
+    )
+    drawContext.canvas.nativeCanvas.drawText(
+        label,
+        left + padH,
+        top + boxH / 2f + paint.textSize / 3f,
+        paint
+    )
 }
 
 /** Höhe des Bandes für die Zeitachsen-Beschriftung unter dem Diagramm. */

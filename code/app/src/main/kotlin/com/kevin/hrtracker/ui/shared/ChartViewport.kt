@@ -76,6 +76,18 @@ data class ChartViewport(val start: Float = 0f, val end: Float = 1f) {
 }
 
 /**
+ * Index des Samples unter [fraction] (0..1 über die sichtbare Plotbreite), linear auf
+ * range.first..range.last abgebildet, gerundet und geklemmt; null bei leerem Bereich.
+ */
+fun nearestIndex(fraction: Float, range: IntRange): Int? {
+    if (range.isEmpty()) return null
+    if (fraction.isNaN()) return null
+    val f = fraction.coerceIn(0f, 1f)
+    val idx = range.first + (f * (range.last - range.first)).roundToInt()
+    return idx.coerceIn(range.first, range.last)
+}
+
+/**
  * Live-Fenster in Sekunden/Samples (1 Sample ≈ 1 s). [windowSeconds] ist die (Float-)Breite,
  * [anchorEnd] der absolute Index (in die Verlaufsliste) des rechten Rands, wenn zurückgescrollt;
  * null = folgt dem neuesten Sample. Da der Anker absolut ist, bleibt die Ansicht beim Anhängen
