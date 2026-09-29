@@ -14,15 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      # settings.gradle.kts bindet ../../shared-android-lib ein (relativ zu code/),
-      # daher beide Repos als Geschwister unter ws/ auschecken.
+      # includeBuild zeigt (relativ zu code/) auf ../../shared-android-lib bzw. nach
+      # PR #6 auf ../../../shared-android-lib. Layout deckt beide ab:
+      #   ws/src/hr-tracker/code  ->  ws/src/shared-android-lib (Symlink) und ws/shared-android-lib
       - uses: actions/checkout@v4
         with:
-          path: ws/hr-tracker
+          path: ws/src/hr-tracker
       - uses: actions/checkout@v4
         with:
           repository: Lang-Kevin/shared-app-lib
           path: ws/shared-android-lib
+      - name: Shared-Lib fuer beide includeBuild-Pfade verlinken
+        run: ln -s ../shared-android-lib ws/src/shared-android-lib
 
       - uses: actions/setup-java@v4
         with:
@@ -34,7 +37,7 @@ jobs:
       # Runner bringt ein Android-SDK (ANDROID_HOME) mit akzeptierten Lizenzen mit;
       # fehlende Plattformen (compileSdk 37) laedt AGP selbst nach.
       - name: Build und Unit-Tests
-        working-directory: ws/hr-tracker/code
+        working-directory: ws/src/hr-tracker/code
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug :app:testDebugUnitTest --stacktrace
@@ -44,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: ws/hr-tracker/code/app/build/reports/
+          path: ws/src/hr-tracker/code/app/build/reports/
           if-no-files-found: ignore
