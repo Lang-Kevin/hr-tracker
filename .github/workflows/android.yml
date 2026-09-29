@@ -2,7 +2,7 @@ name: Android CI
 
 on:
   push:
-    branches: [main, "claude/**"]
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -29,10 +29,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v3
-
       - uses: gradle/actions/setup-gradle@v4
 
+      # Runner bringt ein Android-SDK (ANDROID_HOME) mit akzeptierten Lizenzen mit;
+      # fehlende Plattformen (compileSdk 37) laedt AGP selbst nach.
       - name: Build und Unit-Tests
         working-directory: ws/hr-tracker/code
         run: |
