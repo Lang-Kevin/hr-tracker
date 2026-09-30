@@ -73,7 +73,8 @@ class HrBleManager @Inject constructor(
     private val gattLock = Any()
 
     @Volatile private var isFakeActive = false
-    private var fakeJob: Job? = null
+    @Volatile private var fakeJob: Job? = null
+    @Volatile private var fakeDropoutUntilMs = 0L
 
     @SuppressLint("MissingPermission")
     fun startScan() {
@@ -125,20 +126,14 @@ class HrBleManager @Inject constructor(
         connect(adapter.getRemoteDevice(address))
     }
 
-    @SuppressLint("MissingPermission")
     fun connectFake() {
-        reconnectEnabled = false
         synchronized(gattLock) {
+            fakeDropoutUntilMs = 0L
             reconnectJob?.cancel()
-            reconnectJob = null
             closeGatt()
+            reconnectEnabled = true
+            startConnectionLoop { fakeAttempt() }
         }
-        isFakeActive = false
-        fakeJob?.cancel()
-        isFakeActive = true
-        _connectionState.value = ConnectionState.Ready
-        startFakeEmission()
-        Log.d(TAG, "Fake HR device connected")
     }
 
     private fun startFakeEmission() {
@@ -158,28 +153,30 @@ class HrBleManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
-        isFakeActive = false
-        fakeJob?.cancel()
-        fakeJob = null
         // Stop the old loop before closing its GATT, then close it —
         // leaving it open causes duplicate onCharacteristicChanged callbacks.
         synchronized(gattLock) {
+            isFakeActive = false
+            fakeJob?.cancel()
+            fakeJob = null
+            fakeDropoutUntilMs = 0L
             reconnectJob?.cancel()
             closeGatt()
             lastDevice = device
             reconnectEnabled = true
-            startConnectionLoop(device)
+            startConnectionLoop { device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE) }
         }
         Log.d(TAG, "Connecting")
     }
 
     @SuppressLint("MissingPermission")
     fun disconnect() {
-        isFakeActive = false
-        fakeJob?.cancel()
-        fakeJob = null
         reconnectEnabled = false
         synchronized(gattLock) {
+            isFakeActive = false
+            fakeJob?.cancel()
+            fakeJob = null
+            fakeDropoutUntilMs = 0L
             reconnectJob?.cancel()
             reconnectJob = null
             closeGatt()
@@ -195,7 +192,7 @@ class HrBleManager @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    private fun startConnectionLoop(device: BluetoothDevice) {
+    private fun startConnectionLoop(connectAttempt: () -> BluetoothGatt?) {
         reconnectJob?.cancel()
         reconnectJob = scope.launch {
             var failures = 0
@@ -206,7 +203,7 @@ class HrBleManager @Inject constructor(
                     if (!isActive) return@launch
                     _connectionState.value = ConnectionState.Connecting
                     bluetoothGatt = try {
-                        device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+                        connectAttempt()
                     } catch (e: SecurityException) {
                         reconnectEnabled = false
                         _connectionState.value = ConnectionState.Error("Bluetooth-Berechtigung fehlt")
@@ -236,6 +233,33 @@ class HrBleManager @Inject constructor(
                 Log.d(TAG, "Reconnect attempt $failures in ${delayMs}ms")
                 delay(delayMs)
             }
+        }
+    }
+
+    private fun fakeAttempt(): BluetoothGatt? {
+        if (System.currentTimeMillis() < fakeDropoutUntilMs) {
+            return null // simulated out of range → loop times out, backoff
+        }
+        fakeJob?.cancel()
+        isFakeActive = true
+        startFakeEmission()
+        _connectionState.value = ConnectionState.Ready
+        Log.d(TAG, "Fake HR device connected")
+        return null
+    }
+
+    fun simulateFakeDropout(durationMs: Long) {
+        synchronized(gattLock) {
+            if (!isFakeActive) {
+                Log.w(TAG, "Dropout sim ignored: fake not connected")
+                return
+            }
+            fakeDropoutUntilMs = System.currentTimeMillis() + durationMs
+            isFakeActive = false
+            fakeJob?.cancel()
+            fakeJob = null
+            if (reconnectEnabled) _connectionState.value = ConnectionState.Reconnecting
+            Log.d(TAG, "Dropout sim ${durationMs}ms")
         }
     }
 
