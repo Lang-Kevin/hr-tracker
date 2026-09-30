@@ -9,3 +9,6 @@
 .cxx
 local.properties
 /graphify-out
+# Nur vom CVE-Check in CI erzeugt (.github/security/dependency-locking.init.gradle)
+gradle.lockfile
+buildscript-gradle.lockfile

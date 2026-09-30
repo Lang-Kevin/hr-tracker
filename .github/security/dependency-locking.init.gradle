@@ -1,0 +1,8 @@
+// Nur für den CVE-Check in CI: schreibt Gradle-Lockfiles (app/gradle.lockfile,
+// buildscript-gradle.lockfile), die osv-scanner anschließend gegen die OSV-Datenbank prüft.
+// Erfasst alle aufgelösten Konfigurationen inkl. transitiver Abhängigkeiten, KSP-Prozessoren
+// und des Plugin-Classpaths (AGP, Kotlin, Hilt, KSP).
+allprojects {
+    buildscript.dependencyLocking.lockAllConfigurations()
+    dependencyLocking.lockAllConfigurations()
+}
