@@ -13,17 +13,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ZoomInMap
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,6 +37,8 @@ import kotlinx.coroutines.launch
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
+import com.kevin.hrtracker.ui.shared.ChartViewport
+import com.kevin.hrtracker.ui.shared.chartZoomPan
 import com.kevin.shared.ui.StatItem
 import com.kevin.shared.ui.chart.ChartToggleButton
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
@@ -69,6 +77,15 @@ fun DetailScreen(
     var reportJson by remember { mutableStateOf<String?>(null) }
     var dynamicScaleOverride by rememberSaveable { mutableStateOf<Boolean?>(null) }
     val dynamicScale = dynamicScaleOverride ?: chartDynamicScaleDefault
+    // Zoom/Pan-Ausschnitt des Diagramms (Anteile 0..1 der Sitzung)
+    var viewport by rememberSaveable(
+        stateSaver = listSaver<ChartViewport, Float>(
+            save = { listOf(it.start, it.end) },
+            restore = { ChartViewport(it[0], it[1]) }
+        )
+    ) { mutableStateOf(ChartViewport.Full) }
+    var chartWidthPx by remember { mutableStateOf(0) }
+    val chartLeftPadPx = with(LocalDensity.current) { 54.dp.toPx() }
     var editingMilestoneId by remember { mutableStateOf<Long?>(null) }
     var editingMilestoneLabel by remember { mutableStateOf("") }
 
@@ -195,6 +212,9 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         // BPM Zone Chart Header with Toggle
+        val totalSessionSeconds = session?.endedAt?.let { end ->
+            ((end - (session?.startedAt ?: end)) / 1000L)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,21 +227,44 @@ fun DetailScreen(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            ChartToggleButton(
-                checked = dynamicScale,
-                onCheckedChange = { dynamicScaleOverride = it },
-                icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
-                contentDescription = if (dynamicScale)
-                    "Dynamische Skalierung" else
-                    "Statische Skalierung",
-                contentColor = PrimaryPurple
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!viewport.isFull) {
+                    // Zeitbereich des sichtbaren Ausschnitts + Zurücksetzen
+                    if (totalSessionSeconds != null && totalSessionSeconds > 0) {
+                        val fromSec = (viewport.start * totalSessionSeconds).toLong()
+                        val toSec = (viewport.end * totalSessionSeconds).toLong()
+                        Text(
+                            text = "${formatChartTime(fromSec)} – ${formatChartTime(toSec)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { viewport = ChartViewport.Full }) {
+                        Icon(
+                            Icons.Default.ZoomOut,
+                            contentDescription = "Zoom zurücksetzen",
+                            tint = PrimaryPurple
+                        )
+                    }
+                }
+                ChartToggleButton(
+                    checked = dynamicScale,
+                    onCheckedChange = { dynamicScaleOverride = it },
+                    icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
+                    contentDescription = if (dynamicScale)
+                        "Dynamische Skalierung" else
+                        "Statische Skalierung",
+                    contentColor = PrimaryPurple
+                )
+            }
         }
 
         // BPM Zone Chart
-        val totalSessionSeconds = session?.endedAt?.let { end ->
-            ((end - (session?.startedAt ?: end)) / 1000L)
-        }
+        // Mindest-Sichtbreite: 20 s (Fallback 5 %)
+        val minSpan = if (totalSessionSeconds != null && totalSessionSeconds > 20) 20f / totalSessionSeconds else 0.05f
+        val drawWidthPx = (chartWidthPx - chartLeftPadPx).coerceAtLeast(1f)
+        var scrubX by remember { mutableStateOf<Float?>(null) }
+        val haptic = LocalHapticFeedback.current
         BpmZoneChart(
             bpmHistory = bpmHistory,
             currentBpm = bpmHistory.lastOrNull(),
@@ -229,13 +272,36 @@ fun DetailScreen(
             targetZone = dominantZone,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
+                .height(220.dp)
+                .onSizeChanged { chartWidthPx = it.width }
+                .chartZoomPan(
+                    panEnabled = { !viewport.isFull },
+                    onZoom = { factor, anchorX ->
+                        val anchor = ((anchorX - chartLeftPadPx) / drawWidthPx).coerceIn(0f, 1f)
+                        viewport = viewport.zoomBy(factor, anchor, minSpan)
+                    },
+                    onPan = { dxPx -> viewport = viewport.panBy(dxPx / drawWidthPx) },
+                    onDoubleTap = { x ->
+                        viewport = if (!viewport.isFull) {
+                            ChartViewport.Full
+                        } else {
+                            val anchor = ((x - chartLeftPadPx) / drawWidthPx).coerceIn(0f, 1f)
+                            viewport.zoomBy(3f, anchor, minSpan)
+                        }
+                    },
+                    onScrub = { x ->
+                        if (scrubX == null && x != null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        scrubX = x
+                    }
+                ),
             dynamicScale = dynamicScale,
             reachedZones = reachedZones,
             detailMilestones = milestones,
             totalSessionSeconds = totalSessionSeconds,
             gaps = gapFractions,
-            meanBpm = stats?.avgBpm
+            meanBpm = stats?.avgBpm,
+            viewport = viewport,
+            scrubX = { scrubX }
         )
 
         Spacer(Modifier.height(12.dp))
@@ -541,3 +607,7 @@ private fun EditNoteDialog(
         }
     )
 }
+/** Zeitangabe für den Diagramm-Ausschnitt: mm:ss, ab einer Stunde h:mm:ss. */
+private fun formatChartTime(totalSeconds: Long): String =
+    if (totalSeconds >= 3600) formatDuration(totalSeconds)
+    else "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
