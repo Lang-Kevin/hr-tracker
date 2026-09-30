@@ -15,6 +15,7 @@ import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.ZoneModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -37,6 +38,10 @@ class SessionRepository @Inject constructor(
     private val bleManager: HrBleManager,
     private val settingsRepository: SettingsRepository
 ) {
+    companion object {
+        private const val TAG = "SessionRepository"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _activeSessionId = MutableStateFlow<Long?>(null)
@@ -57,16 +62,32 @@ class SessionRepository @Inject constructor(
 
     init {
         scope.launch {
-            db.sessionDao().closeOrphanedSessions(
-                cutoff = System.currentTimeMillis(),
-                endedAt = System.currentTimeMillis()
-            )
-            db.sessionDao().permanentlyDeleteTrashed()
-            Log.d("HRTracker", "Orphaned sessions closed, trash purged")
-            // Einmalig nach Update/Formeländerung: fehlende oder veraltete Kennzahlen nachrechnen
-            val stale = db.sessionDao().getWithStaleMetrics(SessionMetrics.VERSION)
-            stale.forEach { refreshMetrics(it) }
-            if (stale.isNotEmpty()) Log.d("HRTracker", "Metrics backfilled: ${stale.size} sessions")
+            try {
+                db.sessionDao().closeOrphanedSessions(
+                    cutoff = System.currentTimeMillis(),
+                    endedAt = System.currentTimeMillis()
+                )
+                db.sessionDao().permanentlyDeleteTrashed()
+                Log.d("HRTracker", "Orphaned sessions closed, trash purged")
+                // Einmalig nach Update/Formeländerung: fehlende oder veraltete Kennzahlen nachrechnen
+                val stale = db.sessionDao().getWithStaleMetrics(SessionMetrics.VERSION)
+                var successful = 0
+                stale.forEach { session ->
+                    try {
+                        refreshMetrics(session)
+                        successful++
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error refreshing metrics for session ${session.id}", e)
+                    }
+                }
+                if (successful > 0) Log.d("HRTracker", "Metrics backfilled: $successful sessions")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Error during initialization", e)
+            }
         }
     }
 
@@ -154,9 +175,15 @@ class SessionRepository @Inject constructor(
         Log.d("HRTracker", "Session $id stopped")
         // Im Repository-Scope, damit die Navigation zum Detail-Screen nicht auf HRR & Co. wartet
         scope.launch {
-            val session = db.sessionDao().getById(id) ?: return@launch
-            refreshMetrics(session)
-            if (session.isHrvMeasurement) updateRestingHrFromHrv()
+            try {
+                val session = db.sessionDao().getById(id) ?: return@launch
+                refreshMetrics(session)
+                if (session.isHrvMeasurement) updateRestingHrFromHrv()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Error finalizing session $id", e)
+            }
         }
         return id
     }
