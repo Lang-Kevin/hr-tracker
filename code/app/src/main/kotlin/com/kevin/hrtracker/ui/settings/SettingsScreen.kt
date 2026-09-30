@@ -425,7 +425,7 @@ fun SettingsScreen(
                                 ) {}
                                 Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
                             }
-                            Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium)
+                            Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium) // i18n-ignore: unit/acronym, same in every language
                         }
                     }
                 }
