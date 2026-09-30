@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import com.kevin.hrtracker.R
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -62,6 +64,7 @@ fun BpmZoneChart(
     sampleFractions: List<Float>? = null
 ) {
     val density = LocalDensity.current
+    val targetBadgeText = stringResource(R.string.common_chart_target_badge)
 
     Canvas(modifier = modifier.clipToBounds()) {
         if (zoneBounds.isEmpty()) return@Canvas
@@ -196,7 +199,7 @@ fun BpmZoneChart(
                     textAlign = Paint.Align.CENTER
                 }
                 drawContext.canvas.nativeCanvas.drawText(
-                    "ZIEL",
+                    targetBadgeText,
                     bx + bw / 2,
                     by + bh / 2 + zielPaint.textSize / 3f,
                     zielPaint
@@ -469,12 +472,12 @@ fun ZeitInZoneSection(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "ZEIT IN ZONE",
+                stringResource(R.string.common_time_in_zone_title),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "${(pct * 100).toInt()}% in Ziel-Zone",
+                stringResource(R.string.common_time_in_zone_percent_in_target, (pct * 100).toInt()),
                 color = PrimaryPurple,
                 style = MaterialTheme.typography.labelSmall
             )
@@ -514,7 +517,10 @@ fun ZeitInZoneSection(
             (1..5).forEach { z ->
                 val secs = timeInZone[z] ?: 0L
                 val isTarget = z == targetZone
-                val label = "Zone $z: ${formatDuration(secs)}${if (isTarget) ", Zielzone" else ""}"
+                val label = stringResource(
+                    if (isTarget) R.string.common_time_in_zone_target_zone_cd else R.string.common_time_in_zone_zone_cd,
+                    z, formatDuration(secs)
+                )
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier

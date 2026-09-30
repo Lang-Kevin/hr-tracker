@@ -10,9 +10,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kevin.hrtracker.R
 import com.kevin.shared.ui.theme.BackgroundDark
 import com.kevin.shared.ui.theme.OnPrimary
 import com.kevin.shared.ui.theme.PrimaryPurple
@@ -72,7 +74,7 @@ fun OnboardingScreen(
                         onComplete()
                     },
                     modifier = Modifier.align(Alignment.CenterEnd)
-                ) { Text("Überspringen", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                ) { Text(stringResource(R.string.onboarding_skip), color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
 
@@ -106,13 +108,13 @@ fun OnboardingScreen(
 @Composable
 private fun ColumnScope.StepWelcome(onNext: () -> Unit) {
     Text(
-        "Willkommen bei HR-Tracker",
+        stringResource(R.string.onboarding_welcome_title),
         style = MaterialTheme.typography.headlineMedium,
         color = Color.White
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Zeichne deine Herzfrequenz mit deinem BLE-Brustgurt auf und behalte deine Trainingszonen im Blick.",
+        stringResource(R.string.onboarding_welcome_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -121,7 +123,7 @@ private fun ColumnScope.StepWelcome(onNext: () -> Unit) {
         onClick = onNext,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text("Weiter") }
+    ) { Text(stringResource(R.string.onboarding_next)) }
 }
 
 @Composable
@@ -133,13 +135,13 @@ private fun ColumnScope.Step1(
     onNext: () -> Unit
 ) {
     Text(
-        "Wie alt bist du?",
+        stringResource(R.string.onboarding_age_title),
         style = MaterialTheme.typography.headlineMedium,
         color = Color.White
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Wir berechnen damit deine maximale Herzfrequenz nach der Tanaka-Formel.",
+        stringResource(R.string.onboarding_age_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -147,13 +149,13 @@ private fun ColumnScope.Step1(
     OutlinedTextField(
         value = ageText,
         onValueChange = onAgeChange,
-        label = { Text("Alter (Jahre)") },
+        label = { Text(stringResource(R.string.onboarding_age_label)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         isError = ageText.isNotEmpty() && !ageValid,
         supportingText = if (ageText.isNotEmpty() && !ageValid) {
-            { Text("Alter muss zwischen 10 und 99 liegen") }
+            { Text(stringResource(R.string.onboarding_age_error)) }
         } else null
     )
     computedMaxHr?.let {
@@ -166,7 +168,7 @@ private fun ColumnScope.Step1(
                 modifier = Modifier.padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Maximale Herzfrequenz", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.onboarding_max_hr), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("$it BPM", color = PrimaryPurple, style = MaterialTheme.typography.titleMedium)
             }
         }
@@ -177,7 +179,7 @@ private fun ColumnScope.Step1(
         enabled = ageValid,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text("Weiter") }
+    ) { Text(stringResource(R.string.onboarding_next)) }
 }
 
 @Composable
@@ -187,13 +189,13 @@ private fun ColumnScope.Step2(
     onComplete: () -> Unit
 ) {
     Text(
-        "Ruhepuls (optional)",
+        stringResource(R.string.onboarding_resting_hr_title),
         style = MaterialTheme.typography.headlineMedium,
         color = Color.White
     )
     Spacer(Modifier.height(8.dp))
     Text(
-        "Nötig, falls du in den Einstellungen das Karvonen-Modell wählst. Standard bleibt %HRmax. Typisch: 50–70 BPM morgens nach dem Aufwachen.",
+        stringResource(R.string.onboarding_resting_hr_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -201,7 +203,7 @@ private fun ColumnScope.Step2(
     OutlinedTextField(
         value = restingHrText,
         onValueChange = onRestingHrChange,
-        label = { Text("Ruhepuls (BPM)") },
+        label = { Text(stringResource(R.string.onboarding_resting_hr_label)) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
         singleLine = true
@@ -211,5 +213,5 @@ private fun ColumnScope.Step2(
         onClick = onComplete,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text("Loslegen") }
+    ) { Text(stringResource(R.string.onboarding_get_started)) }
 }

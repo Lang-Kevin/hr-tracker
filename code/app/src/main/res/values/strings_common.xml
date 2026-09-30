@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="common_tutorial_skip">Skip</string>
+    <string name="common_tutorial_next_progress">Next (%1$d/%2$d)</string>
+    <string name="common_tutorial_done">Done</string>
+    <string name="common_chart_target_badge">TARGET</string>
+    <string name="common_time_in_zone_title">TIME IN ZONE</string>
+    <string name="common_time_in_zone_percent_in_target">%1$d%% in target zone</string>
+    <string name="common_time_in_zone_zone_cd">Zone %1$d: %2$s</string>
+    <string name="common_time_in_zone_target_zone_cd">Zone %1$d: %2$s, target zone</string>
+</resources>
