@@ -36,9 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.ui.formatDuration
-import com.kevin.hrtracker.ui.theme.LightPurple
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.LightPurple
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.ZoneColors
 import com.kevin.shared.ui.chart.aggregateByChunks
 import kotlin.math.max
 import kotlin.math.min

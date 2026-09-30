@@ -16,10 +16,10 @@ import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.ui.shared.TrendChart
 import com.kevin.hrtracker.ui.shared.TrendSeries
-import com.kevin.hrtracker.ui.theme.ConnectedGreen
-import com.kevin.hrtracker.ui.theme.ErrorRed
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SecondaryBlue
+import com.kevin.shared.ui.theme.ConnectedGreen
+import com.kevin.shared.ui.theme.ErrorRed
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.SecondaryBlue
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt

@@ -21,8 +21,8 @@ import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.ZoneModel
 import com.kevin.hrtracker.domain.Sex
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.ZoneColors
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel

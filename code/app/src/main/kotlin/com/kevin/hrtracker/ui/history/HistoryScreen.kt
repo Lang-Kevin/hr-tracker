@@ -1,6 +1,5 @@
 package com.kevin.hrtracker.ui.history
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,12 +28,14 @@ import java.time.format.DateTimeFormatter
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.LoadMetric
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.selection.SelectionHeader
 import com.kevin.shared.ui.session.CategoryFilterRow
 import com.kevin.shared.ui.session.SessionListItem
 import com.kevin.shared.ui.session.SummaryCard
 import com.kevin.shared.ui.session.TrashSessionItem
 import com.kevin.shared.ui.session.SoftDeleteConfirmationDialog
+import com.kevin.shared.ui.session.TrashRetention
 import com.kevin.shared.ui.session.TrashTab
 import com.kevin.shared.ui.session.durationString
 import com.kevin.shared.ui.session.toDateString
@@ -52,13 +53,13 @@ fun HistoryScreen(
 ) {
     val sessions by viewModel.filteredSessions.collectAsStateWithLifecycle()
     val availableLabels by viewModel.availableLabels.collectAsStateWithLifecycle()
-    val selectedLabels by viewModel.selectedLabels.collectAsStateWithLifecycle()
+    val labelFilter by viewModel.labelFilter.collectAsStateWithLifecycle()
     val dateRange by viewModel.dateRange.collectAsStateWithLifecycle()
     var showDateRangePicker by remember { mutableStateOf(false) }
     var showCategoryFilter by remember { mutableStateOf(false) }
     val trashSessions by viewModel.trashSessions.collectAsStateWithLifecycle()
-    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
-    val isSelectionMode by viewModel.isSelectionMode.collectAsStateWithLifecycle()
+    val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val isSelectionMode = selection.isActive
     val summaryStats by viewModel.summaryStats.collectAsStateWithLifecycle()
     val weeklyData by viewModel.weeklyData.collectAsStateWithLifecycle()
     val trimpHistory by viewModel.trimpHistory.collectAsStateWithLifecycle()
@@ -71,10 +72,9 @@ fun HistoryScreen(
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
-    BackHandler(enabled = isSelectionMode) { viewModel.clearSelection() }
-
     SoftDeleteConfirmationDialog(
         pendingIds = pendingDeleteIds,
+        retention = TrashRetention.ON_NEXT_APP_START,
         onConfirm = { ids ->
             viewModel.moveToTrash(ids)
             pendingDeleteIds = null
@@ -115,7 +115,7 @@ fun HistoryScreen(
                 } else {
                     CategoryFilterRow(
                         categories = availableLabels,
-                        selected = selectedLabels,
+                        filter = labelFilter,
                         onToggle = { viewModel.toggleLabelFilter(it) }
                     )
                 }
@@ -135,22 +135,12 @@ fun HistoryScreen(
     ) {
         Spacer(Modifier.height(16.dp))
         if (isSelectionMode) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "${selectedIds.size} ausgewählt",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(
-                    onClick = { pendingDeleteIds = selectedIds.toList() },
-                    enabled = selectedIds.isNotEmpty()
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = "Löschen")
-                }
-            }
+            // ponytail: SelectionHeader registriert den BackHandler selbst, daher nur im Auswahlmodus komponieren.
+            SelectionHeader(
+                count = selection.size,
+                onClear = { viewModel.clearSelection() },
+                onDelete = { pendingDeleteIds = selection.ids.toList() }
+            )
         } else {
             Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
         }
@@ -182,7 +172,7 @@ fun HistoryScreen(
                     ))
                     Spacer(Modifier.height(8.dp))
                     Box(Modifier.tutorialAnchor(tutorialAnchors, "history_filter")) {
-                        if (selectedLabels.isEmpty()) {
+                        if (!labelFilter.isActive) {
                             AssistChip(
                                 onClick = { showCategoryFilter = true },
                                 label = { Text("Trainingseinheiten") },
@@ -194,7 +184,7 @@ fun HistoryScreen(
                             FilterChip(
                                 selected = true,
                                 onClick = { showCategoryFilter = true },
-                                label = { Text("Trainingseinheiten (${selectedLabels.size})") },
+                                label = { Text("Trainingseinheiten (${labelFilter.selected.size})") },
                                 leadingIcon = {
                                     Icon(Icons.Default.FilterList, contentDescription = null)
                                 }
@@ -293,7 +283,7 @@ fun HistoryScreen(
                                 label = session.label,
                                 startedAt = session.startedAt,
                                 endedAt = session.endedAt,
-                                isSelected = session.id in selectedIds,
+                                isSelected = session.id in selection,
                                 isSelectionMode = isSelectionMode,
                                 onClick = {
                                     if (isSelectionMode) viewModel.toggleSelection(session.id)
@@ -318,7 +308,11 @@ fun HistoryScreen(
                 val trashItems = remember(trashSessions) {
                     trashSessions.map { TrashSessionItem(it.id, it.label, it.startedAt) }
                 }
-                TrashTab(items = trashItems, onRestore = { viewModel.restoreSessions(listOf(it)) })
+                TrashTab(
+                    items = trashItems,
+                    retention = TrashRetention.ON_NEXT_APP_START,
+                    onRestore = { viewModel.restoreSessions(listOf(it)) }
+                )
             }
         }
     }

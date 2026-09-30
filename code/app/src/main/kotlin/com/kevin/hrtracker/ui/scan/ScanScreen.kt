@@ -25,7 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.kevin.shared.domain.DeviceType
 import com.kevin.shared.domain.DiscoveredDevice
 import com.kevin.shared.domain.SavedDevice
-import com.kevin.hrtracker.ui.theme.LightPurple
+import com.kevin.shared.ui.theme.LightPurple
 import com.kevin.shared.ui.scan.BleStatusCard
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
 import com.kevin.shared.ui.scan.SavedDeviceItem

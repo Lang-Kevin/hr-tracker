@@ -13,10 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.kevin.hrtracker.ui.theme.BackgroundDark
-import com.kevin.hrtracker.ui.theme.OnPrimary
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SurfaceDark
+import com.kevin.shared.ui.theme.BackgroundDark
+import com.kevin.shared.ui.theme.OnPrimary
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.SurfaceDark
 
 @Composable
 fun OnboardingScreen(

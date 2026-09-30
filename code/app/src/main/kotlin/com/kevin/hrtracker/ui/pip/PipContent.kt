@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.domain.WidgetVariant
-import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.ZoneColors
 
 @Composable
 fun PipContent(viewModel: PipViewModel = hiltViewModel()) {

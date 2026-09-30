@@ -3,7 +3,6 @@ package com.kevin.hrtracker.domain
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import com.kevin.shared.domain.validateZoneTexts
 import com.kevin.hrtracker.data.entity.HrSample
 
 @Serializable

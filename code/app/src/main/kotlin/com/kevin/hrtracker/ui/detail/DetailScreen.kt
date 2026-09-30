@@ -43,9 +43,9 @@ import com.kevin.hrtracker.ui.shared.chartZoomPan
 import com.kevin.shared.ui.StatItem
 import com.kevin.shared.ui.chart.ChartToggleButton
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
-import com.kevin.hrtracker.ui.theme.BackgroundDark
-import com.kevin.hrtracker.ui.theme.OnPrimary
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.BackgroundDark
+import com.kevin.shared.ui.theme.OnPrimary
+import com.kevin.shared.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.session.durationString
 import com.kevin.shared.ui.LabelPickerDialog
 import java.text.SimpleDateFormat

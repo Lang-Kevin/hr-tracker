@@ -37,7 +37,7 @@ import com.kevin.hrtracker.ui.settings.SettingsScreen
 import com.kevin.hrtracker.ui.live.LiveScreen
 import com.kevin.hrtracker.ui.scan.ScanScreen
 import com.kevin.hrtracker.ui.scan.ScanViewModel
-import com.kevin.hrtracker.ui.theme.HRTrackerTheme
+import com.kevin.shared.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            HRTrackerTheme {
+            AppTheme {
                 // ponytail: NavController muss den PiP-Wechsel ueberleben — sonst neuer
                 // BackStack -> neues LiveViewModel -> Chart und Zonentimer auf 0 (Bug).
                 val navController = rememberNavController()

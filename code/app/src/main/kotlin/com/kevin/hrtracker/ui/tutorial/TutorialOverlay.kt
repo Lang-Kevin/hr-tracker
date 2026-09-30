@@ -43,7 +43,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.PrimaryPurple
 
 data class TutorialStep(val key: String, val title: String, val text: String)
 
