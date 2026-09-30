@@ -12,7 +12,7 @@ accompanist = "0.37.3"
 room = "2.8.3"
 datastore = "1.2.1"
 serialization = "1.11.0"
-vico = "3.0.3"
+vico = "3.3.1"
 navigation = "2.9.7"
 
 [libraries]
