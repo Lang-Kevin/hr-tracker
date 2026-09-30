@@ -24,9 +24,9 @@ interface SessionDao {
     @Query("SELECT * FROM Session WHERE id = :id")
     fun getByIdFlow(id: Long): Flow<Session?>
 
-    // Closes sessions left open by a crash or app-kill (startedAt older than cutoff, endedAt null)
-    @Query("UPDATE Session SET endedAt = :endedAt WHERE endedAt IS NULL AND startedAt < :cutoff AND deletedAt IS NULL")
-    suspend fun closeOrphanedSessions(cutoff: Long, endedAt: Long)
+    // Closes sessions left open by a crash or app-kill with timestamp of last sample (or startedAt if none)
+    @Query("UPDATE Session SET endedAt = COALESCE((SELECT MAX(timestampMs) FROM HrSample WHERE HrSample.sessionId = Session.id), startedAt) WHERE endedAt IS NULL AND startedAt < :cutoff AND deletedAt IS NULL")
+    suspend fun closeOrphanedSessions(cutoff: Long)
 
     @Query("UPDATE Session SET label = :label WHERE id = :id")
     suspend fun updateLabel(id: Long, label: String)

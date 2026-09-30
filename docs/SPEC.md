@@ -86,6 +86,8 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
+Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeitstempel des letzten Samples geschlossen (ohne Samples: startedAt).
+
 ### BLE Auto-Pause / Auto-Resume
 
 Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht betroffen.
