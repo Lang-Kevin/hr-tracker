@@ -154,6 +154,7 @@ fun DetailScreen(
 
     if (reportJson != null) {
         val clipboard = LocalClipboardManager.current
+        val reportCopiedText = stringResource(R.string.detail_report_copied)
         AlertDialog(
             onDismissRequest = { reportJson = null },
             title = { Text(stringResource(R.string.detail_report_title)) },
@@ -165,7 +166,7 @@ fun DetailScreen(
             dismissButton = {
                 TextButton(onClick = {
                     clipboard.setText(AnnotatedString(reportJson!!))
-                    Toast.makeText(context, context.getString(R.string.detail_report_copied), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, reportCopiedText, Toast.LENGTH_SHORT).show()
                 }) { Text(stringResource(R.string.detail_report_copy)) }
             },
             confirmButton = {
@@ -611,11 +612,13 @@ fun DetailScreen(
         Spacer(Modifier.height(8.dp))
 
         // Action buttons
+        val exportJsonChooser = stringResource(R.string.detail_export_json)
+        val exportCsvChooser = stringResource(R.string.detail_export_csv_chooser)
         Button(
             onClick = {
                 scope.launch {
                     val intent = viewModel.export(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_export_json)))
+                    context.startActivity(Intent.createChooser(intent, exportJsonChooser))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -629,7 +632,7 @@ fun DetailScreen(
             onClick = {
                 scope.launch {
                     val intent = viewModel.exportCsv(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_export_csv_chooser)))
+                    context.startActivity(Intent.createChooser(intent, exportCsvChooser))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
