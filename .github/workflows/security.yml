@@ -48,7 +48,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       # Löst den vollständigen Abhängigkeitsbaum (inkl. transitiver Libs und Build-Plugins) auf
       # und schreibt ihn als Lockfiles. Die Lockfiles sind nicht eingecheckt, sie dienen nur dem Scan.

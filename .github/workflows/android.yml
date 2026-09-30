@@ -44,7 +44,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Hartkodierte UI-Texte
         run: python3 ws/shared-app-lib/tools/check_hardcoded_strings.py ws/hr-tracker/code/app/src/main/kotlin
