@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     steps:
       # Gleiches Layout wie android.yml: includeBuild zeigt auf ../../shared-app-lib.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: ws/hr-tracker
 
@@ -37,7 +37,7 @@ jobs:
           else
             echo "ref=$(tr -d '[:space:]' < code/shared-app-lib.ref)" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: Lang-Kevin/shared-app-lib
           ref: ${{ steps.lib.outputs.ref }}
