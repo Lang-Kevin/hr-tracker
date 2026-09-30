@@ -88,16 +88,18 @@ fun nearestIndex(fraction: Float, range: IntRange): Int? {
 }
 
 /**
- * Live-Fenster in Sekunden/Samples (1 Sample ≈ 1 s). [windowSeconds] ist die (Float-)Breite,
- * [anchorEnd] der absolute Index (in die Verlaufsliste) des rechten Rands, wenn zurückgescrollt;
- * null = folgt dem neuesten Sample. Da der Anker absolut ist, bleibt die Ansicht beim Anhängen
- * neuer Samples stehen, und viele kleine Pan-/Zoom-Schritte verlieren keine Sub-Sample-Präzision.
+ * Live-Fenster auf einer Sekunden-Domäne (aktive Sekunden seit Sessionstart, siehe
+ * [liveTotalSeconds]); "total" ist die Länge dieser Domäne in Sekunden, nicht die Sample-Anzahl.
+ * [windowSeconds] ist die (Float-)Breite, [anchorEnd] die absolute Sekunde des rechten Rands, wenn
+ * zurückgescrollt; null = folgt dem neuesten Sample. Da der Anker absolut ist, bleibt die Ansicht
+ * beim Anhängen neuer Samples stehen, und viele kleine Pan-/Zoom-Schritte verlieren keine
+ * Sub-Sekunden-Präzision. Die Zuordnung Sekunden -> Samples erfolgt per [visibleRangeBySeconds].
  */
 data class LiveWindow(val windowSeconds: Float = DEFAULT.toFloat(), val anchorEnd: Float? = null) {
 
     val isFollowing: Boolean get() = anchorEnd == null
 
-    /** Sichtbare Sample-Indizes bei [total] Samples; leer wenn total <= 0. */
+    /** Sichtbare Sekunden (inklusive) bei einer Domäne von [total] Sekunden; leer wenn total <= 0. */
     fun visibleRange(total: Int): IntRange {
         if (total <= 0) return IntRange.EMPTY
         val w = windowSeconds.roundToInt().coerceIn(1, max(1, total))

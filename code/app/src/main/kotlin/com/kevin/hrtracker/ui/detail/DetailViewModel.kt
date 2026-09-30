@@ -155,6 +155,21 @@ class DetailViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * X-Position jedes Samples als Anteil der Session-Dauer (0f..1f), gleiche Reihenfolge wie
+     * [bpmHistory] und gleiche Zeitbasis wie [gapFractions] -> Linie, Lücken, Ticks und Scrubber
+     * stimmen auch bei Verbindungslücken überein.
+     */
+    val sampleFractions: StateFlow<FloatArray> = combine(session, samples) { sess, list ->
+        if (sess == null || list.isEmpty()) return@combine FloatArray(0)
+        val startedAt = sess.startedAt
+        val endedAt = sess.endedAt ?: list.maxOf { it.timestampMs }
+        val durationMs = (endedAt - startedAt).toFloat().coerceAtLeast(1f)
+        FloatArray(list.size) { i ->
+            ((list[i].timestampMs - startedAt).toFloat() / durationMs).coerceIn(0f, 1f)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FloatArray(0))
+
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }

@@ -71,6 +71,7 @@ fun DetailScreen(
     val milestones by viewModel.milestones.collectAsStateWithLifecycle()
     val chartDynamicScaleDefault by viewModel.chartDynamicScaleDefault.collectAsStateWithLifecycle()
     val gapFractions by viewModel.gapFractions.collectAsStateWithLifecycle()
+    val sampleFractions by viewModel.sampleFractions.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -299,6 +300,7 @@ fun DetailScreen(
             detailMilestones = milestones,
             totalSessionSeconds = totalSessionSeconds,
             gaps = gapFractions,
+            sampleFractions = sampleFractions,
             meanBpm = stats?.avgBpm,
             viewport = viewport,
             scrubX = { scrubX }

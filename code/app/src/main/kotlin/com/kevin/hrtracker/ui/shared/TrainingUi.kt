@@ -39,7 +39,6 @@ import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.theme.LightPurple
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.hrtracker.ui.theme.ZoneColors
-import com.kevin.shared.ui.chart.aggregateByChunks
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -57,6 +56,9 @@ fun BpmZoneChart(
     totalSessionSeconds: Long? = null,
     gaps: List<Pair<Float, Float>> = emptyList(),
     meanBpm: Int? = null,
+    // Zeitstempel-Anteil (0..1 der Sessiondauer) je Sample, gleiche Reihenfolge wie bpmHistory.
+    // null/andere Größe -> Fallback auf gleichmäßige Index-Verteilung.
+    sampleFractions: FloatArray? = null,
     viewport: ChartViewport = ChartViewport.Full,
     scrubX: () -> Float? = { null }
 ) {
@@ -73,8 +75,12 @@ fun BpmZoneChart(
         val plotHeight = (size.height - axisPx).coerceAtLeast(1f)
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
+        // Zeitbasierte X-Positionen, wenn passende Zeitstempel-Anteile vorliegen.
+        val fr = sampleFractions?.takeIf { it.size == bpmHistory.size && it.isNotEmpty() }
+
         // Sichtbarer Ausschnitt der Historie (bei Zoom); Indizes beziehen sich auf bpmHistory.
-        val visibleRange = viewport.visibleIndexRange(bpmHistory.size)
+        val visibleRange = if (fr != null) visibleRangeByFractions(fr, viewport.start, viewport.end)
+        else viewport.visibleIndexRange(bpmHistory.size)
         val visibleSlice = if (visibleRange.isEmpty()) emptyList() else bpmHistory.subList(visibleRange.first, visibleRange.last + 1)
 
         val bpmMin: Float
@@ -249,25 +255,23 @@ fun BpmZoneChart(
             }
 
             if (bpmHistory.size >= 2 && visibleSlice.size >= 2) {
-                // ponytail: downsample via aggregateByChunks when slice size > 300 in dynamic mode
-                val historyToUse = if (dynamicScale && visibleSlice.size > 300) {
-                    val floatValues = visibleSlice.map { it.toFloat() }
-                    val aggregated = aggregateByChunks(floatValues, maxPoints = 300)
-                    aggregated.map { it.toInt() }
-                } else {
-                    visibleSlice
+                // ponytail: downsample (Chunk-Mittel) when slice size > 300 in dynamic mode.
+                // Positionen (Zeitanteil je Sample) und BPM werden identisch gechunkt, damit die
+                // x-Positionen auch nach dem Downsampling stimmen.
+                val sliceCount = visibleSlice.size
+                val slicePos = FloatArray(sliceCount) { i ->
+                    if (fr != null) fr[visibleRange.first + i]
+                    else (visibleRange.first + i).toFloat() / (bpmHistory.size - 1).toFloat()
                 }
+                val sliceBpm = FloatArray(sliceCount) { visibleSlice[it].toFloat() }
+                val (posToUse, bpmToUse) =
+                    if (dynamicScale && sliceCount > 300) downsampleMeans(slicePos, sliceBpm, maxPoints = 300)
+                    else slicePos to sliceBpm
 
-                // Aggregierte Punkte linear auf die Indexspanne des Ausschnitts zurückrechnen,
-                // damit x-Positionen (Anteil an der Gesamtdauer) auch nach dem Downsampling stimmen.
-                val totalSteps = (bpmHistory.size - 1).toFloat()
-                val firstIdx = visibleRange.first.toFloat()
-                val idxSpan = (visibleRange.last - visibleRange.first).toFloat()
                 val path = Path()
-                historyToUse.forEachIndexed { index, bpm ->
-                    val idxPos = if (historyToUse.size > 1) firstIdx + index.toFloat() / (historyToUse.size - 1) * idxSpan else firstIdx
-                    val x = leftPaddingPx + viewport.mapX(idxPos / totalSteps) * chartWidth
-                    val y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
+                for (index in posToUse.indices) {
+                    val x = leftPaddingPx + viewport.mapX(posToUse[index]) * chartWidth
+                    val y = bpmToY(bpmToUse[index].roundToInt().coerceIn(bpmMin.toInt(), bpmMax.toInt()))
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
                 // Linie nicht über die Y-Achsen-Beschriftung zeichnen
@@ -284,11 +288,11 @@ fun BpmZoneChart(
                 }
 
                 val lastBpm = bpmHistory.last()
-                val lastX = leftPaddingPx + viewport.mapX(1f) * chartWidth
+                val lastX = leftPaddingPx + viewport.mapX(fr?.last() ?: 1f) * chartWidth
                 val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
                 // Aktueller Punkt/Label nur, wenn das letzte Sample sichtbar ist
-                if (viewport.end >= 1f - 1e-4f) {
+                if (viewport.end >= (fr?.last() ?: 1f) - 1e-4f) {
                     drawCircle(
                         color = LightPurple,
                         radius = with(density) { 4.dp.toPx() },
@@ -313,11 +317,12 @@ fun BpmZoneChart(
             // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
             if (scrubXValue != null && scrubXValue >= leftPaddingPx && bpmHistory.isNotEmpty() && chartWidth > 0f) {
                 val f = ((scrubXValue - leftPaddingPx) / chartWidth).coerceIn(0f, 1f)
-                val idx = ((viewport.start + f * viewport.span) * (bpmHistory.size - 1)).roundToInt()
-                    .coerceIn(0, bpmHistory.size - 1)
+                val target = viewport.start + f * viewport.span
+                val idx = if (fr != null) nearestIndexByFraction(fr, target) ?: 0
+                else (target * (bpmHistory.size - 1)).roundToInt().coerceIn(0, bpmHistory.size - 1)
                 run {
                     val n = (bpmHistory.size - 1).coerceAtLeast(1).toFloat()
-                    val frac = idx / n
+                    val frac = fr?.get(idx) ?: (idx / n)
                     val sx = leftPaddingPx + viewport.mapX(frac) * chartWidth
                     val totalSec = if (totalSessionSeconds != null && totalSessionSeconds > 0L) {
                         totalSessionSeconds.toFloat()
