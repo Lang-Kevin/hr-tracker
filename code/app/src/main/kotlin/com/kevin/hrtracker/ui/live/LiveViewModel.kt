@@ -51,7 +51,9 @@ class LiveViewModel @Inject constructor(
     val bpmHistory: StateFlow<List<Int>> = _bpmHistory.asStateFlow()
 
     val averageBpm: StateFlow<Int?> = _bpmHistory.map { history ->
-        if (history.isEmpty()) null else history.average().toInt()
+        // Semantik unverändert: Durchschnitt über die letzten 120 Samples (Verlauf hält jetzt mehr).
+        val recent = history.takeLast(120)
+        if (recent.isEmpty()) null else recent.average().toInt()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _elapsedSeconds = MutableStateFlow(0L)
@@ -102,8 +104,13 @@ class LiveViewModel @Inject constructor(
     private val _milestones = MutableStateFlow<List<Long>>(emptyList())
     val milestones: StateFlow<List<Long>> = _milestones.asStateFlow()
 
+    /** Parallel zu [milestones]: Index des jeweils neuesten Samples beim Setzen (für die Live-Chart-Position). */
+    private val _milestoneSampleIdx = MutableStateFlow<List<Int>>(emptyList())
+    val milestoneSampleIndices: StateFlow<List<Int>> = _milestoneSampleIdx.asStateFlow()
+
     fun addMilestone() {
         _milestones.update { it + _elapsedSeconds.value }
+        _milestoneSampleIdx.update { it + (_bpmHistory.value.size - 1).coerceAtLeast(0) }
     }
 
     private var sessionStartMs = 0L
@@ -116,7 +123,10 @@ class LiveViewModel @Inject constructor(
                 .collect { parsed ->
                     _currentBpm.value = parsed.bpm
                     _lastRrMs.value = parsed.rrIntervalsMs.lastOrNull()
-                    _bpmHistory.value = (_bpmHistory.value + parsed.bpm).takeLast(120)
+                    val h = _bpmHistory.value
+                    _bpmHistory.value =
+                        if (h.size >= MAX_HISTORY_SAMPLES) h.drop(h.size - MAX_HISTORY_SAMPLES + 1) + parsed.bpm
+                        else h + parsed.bpm
                 }
         }
         viewModelScope.launch {
@@ -157,10 +167,15 @@ class LiveViewModel @Inject constructor(
                 if (id != null && sessionStartMs == 0L) {
                     sessionStartMs = sessionRepository.activeSession.first()?.startedAt
                         ?: System.currentTimeMillis()
+                    // Neue Session: Samples von vor dem Start nicht im Live-Chart anzeigen.
+                    _bpmHistory.value = emptyList()
+                    _milestoneSampleIdx.value = emptyList()
                 }
                 if (id == null) {
                     sessionStartMs = 0L
                     _elapsedSeconds.value = 0
+                    _bpmHistory.value = emptyList()
+                    _milestoneSampleIdx.value = emptyList()
                     _timeInZone.value = emptyMap()
                     pausedAccumMs = 0L
                     pauseStartedMs = 0L
@@ -202,9 +217,15 @@ class LiveViewModel @Inject constructor(
                         }
                     }
                     _milestones.value = emptyList()
+                    _milestoneSampleIdx.value = emptyList()
                 }
                 previousSessionId = id
             }
         }
+    }
+
+    private companion object {
+        /** Sicherheitsgrenze für den Live-Verlauf: 6 h bei 1 Sample/s. */
+        const val MAX_HISTORY_SAMPLES = 21_600
     }
 }
