@@ -60,7 +60,7 @@ jobs:
             :app:dependencies buildEnvironment --write-locks --no-configuration-cache -q > deps.txt
           # Nicht auflösbare Abhängigkeiten fehlen sonst stillschweigend im Scan.
           if grep -n 'FAILED' deps.txt; then echo "::error::Abhängigkeiten nicht auflösbar"; exit 1; fi
-          find . -name '*gradle.lockfile' -print
+          for f in $(find . -name '*gradle.lockfile'); do echo "::group::$f"; cat "$f"; echo "::endgroup::"; done
           # osv-scanner meldet fehlende Lockfiles nur als Warnung; hier hart abbrechen.
           test -s app/gradle.lockfile || { echo "::error::app/gradle.lockfile fehlt"; exit 1; }
 
