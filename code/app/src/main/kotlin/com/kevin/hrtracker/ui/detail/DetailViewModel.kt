@@ -150,6 +150,30 @@ class DetailViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Per-sample wall-clock fractions (0f..1f) relative to session duration. */
+    val sampleFractions: StateFlow<List<Float>> = combine(session, samples) { sess, list ->
+        if (sess == null || list.isEmpty()) return@combine emptyList()
+        val startedAt = sess.startedAt
+        val endedAt = sess.endedAt ?: list.maxOf { it.timestampMs }
+        val durationMs = (endedAt - startedAt).toFloat().coerceAtLeast(1f)
+        list.map { sample ->
+            ((sample.timestampMs - startedAt).toFloat() / durationMs).coerceIn(0f, 1f)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Milestones with atSeconds mapped from active time to wall-clock time. */
+    val chartMilestones: StateFlow<List<Milestone>> = combine(session, samples, milestones) { sess, list, msList ->
+        if (sess == null) return@combine emptyList()
+        val startedAt = sess.startedAt
+        msList.map { milestone ->
+            val offsetMs = if (list.isEmpty()) 0L else list.first().timestampMs - startedAt
+            val activeMs = (milestone.atSeconds * 1000L - offsetMs).coerceAtLeast(0)
+            val wallClockMs = SampleIntervals.activeToWallMs(list, activeMs) ?: startedAt
+            val wallClockSeconds = ((wallClockMs - startedAt) / 1000.0).toLong()
+            milestone.copy(atSeconds = wallClockSeconds)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun updateLabel(label: String) {
         viewModelScope.launch { db.sessionDao().updateLabel(sessionId, label) }
     }

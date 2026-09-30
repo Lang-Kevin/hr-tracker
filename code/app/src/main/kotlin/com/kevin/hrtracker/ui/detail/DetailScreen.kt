@@ -75,6 +75,8 @@ fun DetailScreen(
     val gapFractions by viewModel.gapFractions.collectAsStateWithLifecycle()
     val activeSeconds by viewModel.activeSeconds.collectAsStateWithLifecycle()
     val srpeLoad by viewModel.srpeLoad.collectAsStateWithLifecycle()
+    val sampleFractions by viewModel.sampleFractions.collectAsStateWithLifecycle()
+    val chartMilestones by viewModel.chartMilestones.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
@@ -322,12 +324,13 @@ fun DetailScreen(
                 ),
             dynamicScale = dynamicScale,
             reachedZones = reachedZones,
-            detailMilestones = milestones,
+            detailMilestones = chartMilestones,
             totalSessionSeconds = totalSessionSeconds,
             gaps = gapFractions,
             meanBpm = stats?.avgBpm,
             viewport = viewport,
-            scrubX = { scrubX }
+            scrubX = { scrubX },
+            sampleFractions = sampleFractions
         )
 
         Spacer(Modifier.height(12.dp))

@@ -42,4 +42,42 @@ class SampleIntervalsTest {
         assertNull(SampleIntervals.avgBpm(listOf(s(0, 100))))
         assertNull(SampleIntervals.avgBpm(listOf(s(0, 100), s(60_000, 100))))
     }
+
+    @Test
+    fun `activeToWallMs empty list returns null`() {
+        assertNull(SampleIntervals.activeToWallMs(emptyList(), 1000))
+    }
+
+    @Test
+    fun `activeToWallMs contiguous samples reaches target`() {
+        // 0 ms, +1000ms → 1000 ms, +1000ms → 2000 ms, +1000ms → 3000 ms
+        // activeToWallMs(..., 2500) should find that 2500 ms is between sample at 2000 and 3000,
+        // return timestamp of sample at 3000
+        val samples = listOf(s(0, 100), s(1000, 100), s(2000, 100), s(3000, 100), s(4000, 100))
+        assertEquals(3000L, SampleIntervals.activeToWallMs(samples, 2500))
+    }
+
+    @Test
+    fun `activeToWallMs with gap skips pause interval`() {
+        // 0→1 s (+1000 ms), 1→2 s (+1000 ms), then gap to 62 s (skipped), 62→63 s (+1000 ms)
+        // activeToWallMs(..., 2500) reaches 2000 ms after first two intervals, then 3000 ms after 62→63 interval
+        val samples = listOf(
+            s(0, 100), s(1_000, 100), s(2_000, 100), s(62_000, 100), s(63_000, 100)
+        )
+        assertEquals(63_000L, SampleIntervals.activeToWallMs(samples, 2500))
+    }
+
+    @Test
+    fun `activeToWallMs never reached returns last timestamp`() {
+        // Only 2 s of active time total
+        val samples = listOf(s(0, 100), s(1_000, 100), s(2_000, 100))
+        assertEquals(2_000L, SampleIntervals.activeToWallMs(samples, 5_000))
+    }
+
+    @Test
+    fun `activeToWallMs zero or negative active time returns first timestamp`() {
+        val samples = listOf(s(0, 100), s(1_000, 100))
+        assertEquals(0L, SampleIntervals.activeToWallMs(samples, 0))
+        assertEquals(0L, SampleIntervals.activeToWallMs(samples, -100))
+    }
 }

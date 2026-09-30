@@ -49,7 +49,7 @@ DB-Version 6 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + I
 
 ### Meilensteine
 
-Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Persistierung bei Session-Ende mit Default-Label `M{i+1}` in `NonCancellable` (kein Verlust bei VM-Zerstörung). Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Nur reguläres Session-Ende persistiert, nicht Force-Kill.
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Persistierung bei Session-Ende mit Default-Label `M{i+1}` in `NonCancellable` (kein Verlust bei VM-Zerstörung). Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Nur reguläres Session-Ende persistiert, nicht Force-Kill. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
 
 ## BLE-Flow
 

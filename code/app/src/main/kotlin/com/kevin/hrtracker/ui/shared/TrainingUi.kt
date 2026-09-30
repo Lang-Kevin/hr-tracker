@@ -58,7 +58,8 @@ fun BpmZoneChart(
     gaps: List<Pair<Float, Float>> = emptyList(),
     meanBpm: Int? = null,
     viewport: ChartViewport = ChartViewport.Full,
-    scrubX: () -> Float? = { null }
+    scrubX: () -> Float? = { null },
+    sampleFractions: List<Float>? = null
 ) {
     val density = LocalDensity.current
 
@@ -73,8 +74,16 @@ fun BpmZoneChart(
         val plotHeight = (size.height - axisPx).coerceAtLeast(1f)
         val targetBound = zoneBounds.getOrNull(targetZone - 1)
 
+        val fr = sampleFractions?.takeIf { it.size == bpmHistory.size }
+
         // Sichtbarer Ausschnitt der Historie (bei Zoom); Indizes beziehen sich auf bpmHistory.
-        val visibleRange = viewport.visibleIndexRange(bpmHistory.size)
+        val visibleRange = if (fr != null) {
+            val lo = fr.indexOfLast { it < viewport.start }.coerceAtLeast(0)
+            val hi = fr.indexOfFirst { it > viewport.end }.let { if (it < 0) fr.lastIndex else it }
+            lo..hi
+        } else {
+            viewport.visibleIndexRange(bpmHistory.size)
+        }
         val visibleSlice = if (visibleRange.isEmpty()) emptyList() else bpmHistory.subList(visibleRange.first, visibleRange.last + 1)
 
         val bpmMin: Float
@@ -266,7 +275,12 @@ fun BpmZoneChart(
                 val path = Path()
                 historyToUse.forEachIndexed { index, bpm ->
                     val idxPos = if (historyToUse.size > 1) firstIdx + index.toFloat() / (historyToUse.size - 1) * idxSpan else firstIdx
-                    val x = leftPaddingPx + viewport.mapX(idxPos / totalSteps) * chartWidth
+                    val frac = if (fr != null && idxPos.toInt() in bpmHistory.indices) {
+                        fr[idxPos.toInt()]
+                    } else {
+                        idxPos / totalSteps
+                    }
+                    val x = leftPaddingPx + viewport.mapX(frac) * chartWidth
                     val y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
                     if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
                 }
@@ -284,11 +298,12 @@ fun BpmZoneChart(
                 }
 
                 val lastBpm = bpmHistory.last()
-                val lastX = leftPaddingPx + viewport.mapX(1f) * chartWidth
+                val lastFrac = fr?.last() ?: 1f
+                val lastX = leftPaddingPx + viewport.mapX(lastFrac) * chartWidth
                 val lastY = bpmToY(lastBpm.coerceIn(bpmMin.toInt(), bpmMax.toInt()))
 
                 // Aktueller Punkt/Label nur, wenn das letzte Sample sichtbar ist
-                if (viewport.end >= 1f - 1e-4f) {
+                if (viewport.end >= lastFrac - 1e-4f) {
                     drawCircle(
                         color = LightPurple,
                         radius = with(density) { 4.dp.toPx() },
@@ -313,11 +328,24 @@ fun BpmZoneChart(
             // Scrubber (langes Drücken): exakter BPM-Wert und Zeit am Finger
             if (scrubXValue != null && scrubXValue >= leftPaddingPx && bpmHistory.isNotEmpty() && chartWidth > 0f) {
                 val f = ((scrubXValue - leftPaddingPx) / chartWidth).coerceIn(0f, 1f)
-                val idx = ((viewport.start + f * viewport.span) * (bpmHistory.size - 1)).roundToInt()
-                    .coerceIn(0, bpmHistory.size - 1)
+                val target = viewport.start + f * viewport.span
+                val idx = if (fr != null) {
+                    val searchResult = fr.binarySearch(target)
+                    val insertIdx = if (searchResult < 0) -searchResult - 1 else searchResult
+                    val idx1 = insertIdx.coerceIn(0, fr.lastIndex)
+                    val idx2 = (insertIdx - 1).coerceAtLeast(0)
+                    if (kotlin.math.abs(fr[idx1] - target) <= kotlin.math.abs(fr[idx2] - target)) idx1 else idx2
+                } else {
+                    ((target) * (bpmHistory.size - 1)).roundToInt()
+                        .coerceIn(0, bpmHistory.size - 1)
+                }
                 run {
-                    val n = (bpmHistory.size - 1).coerceAtLeast(1).toFloat()
-                    val frac = idx / n
+                    val frac = if (fr != null) {
+                        fr[idx]
+                    } else {
+                        val n = (bpmHistory.size - 1).coerceAtLeast(1).toFloat()
+                        idx / n
+                    }
                     val sx = leftPaddingPx + viewport.mapX(frac) * chartWidth
                     val totalSec = if (totalSessionSeconds != null && totalSessionSeconds > 0L) {
                         totalSessionSeconds.toFloat()
