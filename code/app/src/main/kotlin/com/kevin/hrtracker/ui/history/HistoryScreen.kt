@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.LoadMetric
 import com.kevin.shared.ui.theme.PrimaryPurple
@@ -101,13 +103,13 @@ fun HistoryScreen(
                     .padding(bottom = 24.dp)
             ) {
                 Text(
-                    "Trainingseinheiten filtern",
+                    stringResource(R.string.history_filter_sheet_title),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 if (availableLabels.isEmpty()) {
                     Text(
-                        "Keine Labels vorhanden.",
+                        stringResource(R.string.history_filter_no_labels),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)
@@ -142,7 +144,7 @@ fun HistoryScreen(
                 onDelete = { pendingDeleteIds = selection.ids.toList() }
             )
         } else {
-            Text("Verlauf", style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineMedium)
         }
 
         TabRow(
@@ -150,7 +152,12 @@ fun HistoryScreen(
             contentColor = PrimaryPurple,
             modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_tabs")
         ) {
-            listOf("Verlauf", "Statistik", "Form", "Papierkorb").forEachIndexed { index, title ->
+            listOf(
+                stringResource(R.string.history_tab_history),
+                stringResource(R.string.history_tab_stats),
+                stringResource(R.string.history_tab_form),
+                stringResource(R.string.history_tab_trash)
+            ).forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
@@ -165,17 +172,17 @@ fun HistoryScreen(
             0 -> {
                 if (sessions.isNotEmpty()) {
                     SummaryCard(listOf(
-                        "TRAININGS" to summaryStats.sessionCount.toString(),
-                        "GESAMTDAUER" to durationString(summaryStats.totalDurationS),
-                        "Ø BPM" to (summaryStats.avgBpm?.toString() ?: "—"),
-                        "LÄNGSTE" to durationString(summaryStats.longestDurationS)
+                        stringResource(R.string.history_summary_workouts) to summaryStats.sessionCount.toString(),
+                        stringResource(R.string.history_summary_total_time) to durationString(summaryStats.totalDurationS),
+                        stringResource(R.string.history_summary_avg_bpm) to (summaryStats.avgBpm?.toString() ?: "—"),
+                        stringResource(R.string.history_summary_longest) to durationString(summaryStats.longestDurationS)
                     ))
                     Spacer(Modifier.height(8.dp))
                     Box(Modifier.tutorialAnchor(tutorialAnchors, "history_filter")) {
                         if (!labelFilter.isActive) {
                             AssistChip(
                                 onClick = { showCategoryFilter = true },
-                                label = { Text("Trainingseinheiten") },
+                                label = { Text(stringResource(R.string.history_filter_chip)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.FilterList, contentDescription = null)
                                 }
@@ -184,7 +191,7 @@ fun HistoryScreen(
                             FilterChip(
                                 selected = true,
                                 onClick = { showCategoryFilter = true },
-                                label = { Text("Trainingseinheiten (${labelFilter.selected.size})") },
+                                label = { Text(stringResource(R.string.history_filter_chip_active, labelFilter.selected.size)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.FilterList, contentDescription = null)
                                 }
@@ -196,7 +203,7 @@ fun HistoryScreen(
                         if (dateRange == null) {
                             AssistChip(
                                 onClick = { showDateRangePicker = true },
-                                label = { Text("Zeitraum filtern") },
+                                label = { Text(stringResource(R.string.history_date_filter)) },
                                 leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) }
                             )
                         } else {
@@ -211,7 +218,7 @@ fun HistoryScreen(
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
-                                            contentDescription = "Zeitraum entfernen",
+                                            contentDescription = stringResource(R.string.history_date_filter_clear),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -235,11 +242,11 @@ fun HistoryScreen(
                             tint = PrimaryPurple
                         )
                         Text(
-                            "Noch keine Trainings",
+                            stringResource(R.string.history_empty_title),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            "Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.",
+                            stringResource(R.string.history_empty_text),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -319,9 +326,9 @@ fun HistoryScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("history_tabs", "Ansichten", "Wechsle zwischen Verlauf, Statistik, Form und Papierkorb."),
-                TutorialStep("history_filter", "Filter", "Filtere deine Trainings nach Art."),
-                TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
+                TutorialStep("history_tabs", stringResource(R.string.history_tutorial_tabs_title), stringResource(R.string.history_tutorial_tabs_text)),
+                TutorialStep("history_filter", stringResource(R.string.history_tutorial_filter_title), stringResource(R.string.history_tutorial_filter_text)),
+                TutorialStep("history_list", stringResource(R.string.history_tutorial_list_title), stringResource(R.string.history_tutorial_list_text))
             ),
             anchors = tutorialAnchors,
             visible = tutorialSeen == false && sessions.isNotEmpty() && selectedTab == 0,
@@ -351,15 +358,15 @@ private fun DateRangeFilterDialog(
                     if (start != null && end != null) onConfirm(start, end)
                 },
                 enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null
-            ) { Text("Übernehmen") }
+            ) { Text(stringResource(R.string.history_date_picker_apply)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Abbrechen") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.history_date_picker_cancel)) }
         }
     ) {
         DateRangePicker(
             state = state,
-            title = { Text("Zeitraum auswählen", modifier = Modifier.padding(16.dp)) }
+            title = { Text(stringResource(R.string.history_date_picker_title), modifier = Modifier.padding(16.dp)) }
         )
     }
 }
@@ -379,7 +386,7 @@ private fun StatistikTab(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Aktive Zeit pro Woche (min)",
+                        stringResource(R.string.history_stats_active_per_week),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -426,7 +433,7 @@ private fun StatistikTab(
         }
         item {
             Text(
-                "Letzte 6 Wochen",
+                stringResource(R.string.history_stats_last_6_weeks),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -435,10 +442,10 @@ private fun StatistikTab(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text("WOCHE", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                        Text("ANZ.", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
-                        Text("MIN", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
-                        Text("Ø BPM", style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
+                        Text(stringResource(R.string.history_stats_col_week), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
+                        Text(stringResource(R.string.history_stats_col_count), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
+                        Text(stringResource(R.string.history_stats_col_min), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
+                        Text(stringResource(R.string.history_stats_col_avg_bpm), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     weeklyData.forEach { week ->
@@ -475,7 +482,7 @@ private fun StatistikTab(
             item {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "TRIMP-Verlauf",
+                    stringResource(R.string.history_stats_trimp_history),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -507,7 +514,7 @@ private fun StatistikTab(
             item {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Noch keine TRIMP-Daten verfügbar.",
+                    stringResource(R.string.history_stats_no_trimp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -2,6 +2,7 @@ package com.kevin.hrtracker.ui.detail
 
 import android.content.Intent
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,12 +29,14 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.isHrvMeasurement
 import com.kevin.hrtracker.ui.formatDuration
@@ -122,10 +125,10 @@ fun DetailScreen(
 
     if (showEditDialog) {
         LabelPickerDialog(
-            title = "Trainingstyp ändern",
+            title = stringResource(R.string.detail_change_type_title),
             items = trainingLabels,
             initialSelection = session?.label ?: trainingLabels.firstOrNull()?.name,
-            confirmText = "Speichern",
+            confirmText = stringResource(R.string.detail_save),
             onConfirm = { label ->
                 viewModel.updateLabel(label)
                 showEditDialog = false
@@ -153,7 +156,7 @@ fun DetailScreen(
         val clipboard = LocalClipboardManager.current
         AlertDialog(
             onDismissRequest = { reportJson = null },
-            title = { Text("Report") },
+            title = { Text(stringResource(R.string.detail_report_title)) },
             text = {
                 SelectionContainer {
                     Text(reportJson!!)
@@ -162,11 +165,11 @@ fun DetailScreen(
             dismissButton = {
                 TextButton(onClick = {
                     clipboard.setText(AnnotatedString(reportJson!!))
-                    Toast.makeText(context, "Report kopiert", Toast.LENGTH_SHORT).show()
-                }) { Text("Kopieren") }
+                    Toast.makeText(context, context.getString(R.string.detail_report_copied), Toast.LENGTH_SHORT).show()
+                }) { Text(stringResource(R.string.detail_report_copy)) }
             },
             confirmButton = {
-                TextButton(onClick = { reportJson = null }) { Text("Schließen") }
+                TextButton(onClick = { reportJson = null }) { Text(stringResource(R.string.detail_report_close)) }
             }
         )
     }
@@ -174,13 +177,13 @@ fun DetailScreen(
     if (editingMilestoneId != null) {
         AlertDialog(
             onDismissRequest = { editingMilestoneId = null },
-            title = { Text("Meilenstein-Name") },
+            title = { Text(stringResource(R.string.detail_milestone_name_title)) },
             text = {
                 OutlinedTextField(
                     value = editingMilestoneLabel,
                     onValueChange = { editingMilestoneLabel = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.detail_milestone_name_label)) },
                     singleLine = true
                 )
             },
@@ -191,10 +194,10 @@ fun DetailScreen(
                         editingMilestoneId = null
                     },
                     enabled = editingMilestoneLabel.trim().isNotEmpty()
-                ) { Text("Speichern") }
+                ) { Text(stringResource(R.string.detail_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { editingMilestoneId = null }) { Text("Abbrechen") }
+                TextButton(onClick = { editingMilestoneId = null }) { Text(stringResource(R.string.detail_cancel)) }
             }
         )
     }
@@ -214,7 +217,7 @@ fun DetailScreen(
         ) {
             Box(modifier = Modifier.clickable { showEditDialog = true }) {
                 Text(
-                    text = session?.label?.uppercase() ?: "TRAINING",
+                    text = session?.label?.uppercase() ?: stringResource(R.string.detail_label_fallback),
                     color = PrimaryPurple,
                     style = MaterialTheme.typography.titleLarge
                 )
@@ -251,7 +254,7 @@ fun DetailScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Trainingszone",
+                text = stringResource(R.string.detail_training_zone),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -270,7 +273,7 @@ fun DetailScreen(
                     IconButton(onClick = { viewport = ChartViewport.Full }) {
                         Icon(
                             Icons.Default.ZoomOut,
-                            contentDescription = "Zoom zurücksetzen",
+                            contentDescription = stringResource(R.string.detail_zoom_reset),
                             tint = PrimaryPurple
                         )
                     }
@@ -280,8 +283,8 @@ fun DetailScreen(
                     onCheckedChange = { dynamicScaleOverride = it },
                     icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
                     contentDescription = if (dynamicScale)
-                        "Dynamische Skalierung" else
-                        "Statische Skalierung",
+                        stringResource(R.string.detail_scale_dynamic) else
+                        stringResource(R.string.detail_scale_static),
                     contentColor = PrimaryPurple
                 )
             }
@@ -343,7 +346,7 @@ fun DetailScreen(
                     .padding(bottom = 12.dp)
             ) {
                 Text(
-                    text = "Meilensteine",
+                    text = stringResource(R.string.detail_milestones),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -370,7 +373,7 @@ fun DetailScreen(
                             ) {
                                 Column {
                                     Text(
-                                        text = milestone.label.ifBlank { "Meilenstein" },
+                                        text = milestone.label.ifBlank { stringResource(R.string.detail_milestone_fallback) },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.White
                                     )
@@ -382,7 +385,7 @@ fun DetailScreen(
                                 }
                                 Icon(
                                     Icons.Default.Edit,
-                                    contentDescription = "Bearbeiten",
+                                    contentDescription = stringResource(R.string.detail_edit),
                                     tint = PrimaryPurple,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -406,9 +409,9 @@ fun DetailScreen(
 
         // Stats Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem("BPM Ø", stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem("AKTIV", activeSeconds?.let { durationString(it) } ?: "—", Modifier.weight(1f))
-            StatItem("MAX BPM", stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
+            StatItem(stringResource(R.string.detail_stat_avg_bpm), stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
+            StatItem(stringResource(R.string.detail_stat_active), activeSeconds?.let { durationString(it) } ?: "—", Modifier.weight(1f))
+            StatItem(stringResource(R.string.detail_stat_max_bpm), stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -417,7 +420,7 @@ fun DetailScreen(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem("RMSSD", rmssd?.let { "${it}ms" } ?: "—", Modifier.weight(1f))
             StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
-            StatItem("MIN BPM", stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
+            StatItem(stringResource(R.string.detail_stat_min_bpm), stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(8.dp))
@@ -425,19 +428,19 @@ fun DetailScreen(
         // Kalorien + Zonen-Basis
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             StatItem(
-                "KALORIEN",
+                stringResource(R.string.detail_stat_calories),
                 calories?.let { "$it kcal" } ?: "—",
                 Modifier.weight(1f),
                 valueColor = PrimaryPurple
             )
             StatItem("HRMAX", session?.maxHrUsed?.toString() ?: "—", Modifier.weight(1f))
-            StatItem("RUHEPULS", session?.restingHr?.toString() ?: "—", Modifier.weight(1f))
+            StatItem(stringResource(R.string.detail_stat_resting_hr), session?.restingHr?.toString() ?: "—", Modifier.weight(1f))
         }
 
         if (calories == null && session?.endedAt != null) {
             Text(
-                if (bodyDataMissing) "Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen."
-                else "Kalorien: Zu wenig Messdaten in dieser Session.",
+                if (bodyDataMissing) stringResource(R.string.detail_calories_body_data_missing)
+                else stringResource(R.string.detail_calories_not_enough_data),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp)
@@ -458,21 +461,22 @@ fun DetailScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Belastung (RPE 0–10)",
+                            stringResource(R.string.detail_rpe_title),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         val rpe = session?.rpe
                         Text(
-                            if (rpe == null) "Bewerten…"
-                            else "$rpe · ${rpeLabel(rpe)}" + (srpeLoad?.let { "  ·  Last $it" } ?: ""),
+                            if (rpe == null) stringResource(R.string.detail_rpe_rate)
+                            else srpeLoad?.let { stringResource(R.string.detail_rpe_value_with_load, rpe, stringResource(rpeLabelRes(rpe)), it) }
+                                ?: stringResource(R.string.detail_rpe_value, rpe, stringResource(rpeLabelRes(rpe))),
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (rpe == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
                         )
                     }
                     Icon(
                         Icons.Default.Edit,
-                        contentDescription = "Belastung bewerten",
+                        contentDescription = stringResource(R.string.detail_rpe_rate_description),
                         tint = PrimaryPurple,
                         modifier = Modifier.size(18.dp)
                     )
@@ -490,12 +494,14 @@ fun DetailScreen(
                 com.kevin.hrtracker.domain.HrrRating.GUT -> MaterialTheme.colorScheme.primary
                 com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> MaterialTheme.colorScheme.primary
             }
-            val ratingText = when (hrr.rating) {
-                com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> "Niedrig"
-                com.kevin.hrtracker.domain.HrrRating.NORMAL -> "Normal"
-                com.kevin.hrtracker.domain.HrrRating.GUT -> "Gut"
-                com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> "Sehr gut"
-            }
+            val ratingText = stringResource(
+                when (hrr.rating) {
+                    com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> R.string.detail_hrr_rating_low
+                    com.kevin.hrtracker.domain.HrrRating.NORMAL -> R.string.detail_hrr_rating_normal
+                    com.kevin.hrtracker.domain.HrrRating.GUT -> R.string.detail_hrr_rating_good
+                    com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> R.string.detail_hrr_rating_very_good
+                }
+            )
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -503,7 +509,7 @@ fun DetailScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        "Herzfrequenz-Erholung (1 min)",
+                        stringResource(R.string.detail_hrr_title),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -533,14 +539,14 @@ fun DetailScreen(
                     Spacer(Modifier.height(8.dp))
                     if (hrr.recoveredToTarget && hrr.secondsToTarget != null) {
                         Text(
-                            "Erholt auf Ruhebereich nach ${hrr.secondsToTarget}s",
+                            stringResource(R.string.detail_hrr_recovered_after, hrr.secondsToTarget),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(6.dp))
                     }
                     Text(
-                        "Peak ${hrr.peakBpm} → ${hrr.hrAt60s} bpm",
+                        stringResource(R.string.detail_hrr_peak, hrr.peakBpm, hrr.hrAt60s),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -553,7 +559,7 @@ fun DetailScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Herzfrequenz-Erholung (1 min)",
+                    stringResource(R.string.detail_hrr_title),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -561,7 +567,7 @@ fun DetailScreen(
                 Text("—", style = MaterialTheme.typography.headlineSmall, color = Color.White)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf.",
+                    stringResource(R.string.detail_hrr_not_enough_data),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -583,19 +589,19 @@ fun DetailScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "Notiz",
+                        stringResource(R.string.detail_note_title),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = if (noteText.isNullOrBlank()) "Notiz hinzufügen…" else noteText,
+                        text = if (noteText.isNullOrBlank()) stringResource(R.string.detail_note_add) else noteText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (noteText.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
                     )
                 }
                 Icon(
                     Icons.Default.Edit,
-                    contentDescription = "Notiz bearbeiten",
+                    contentDescription = stringResource(R.string.detail_note_edit),
                     tint = PrimaryPurple,
                     modifier = Modifier.size(18.dp)
                 )
@@ -609,7 +615,7 @@ fun DetailScreen(
             onClick = {
                 scope.launch {
                     val intent = viewModel.export(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, "JSON exportieren"))
+                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_export_json)))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -617,19 +623,19 @@ fun DetailScreen(
                 containerColor = PrimaryPurple,
                 contentColor = OnPrimary
             )
-        ) { Text("JSON exportieren") }
+        ) { Text(stringResource(R.string.detail_export_json)) }
         Spacer(Modifier.height(6.dp))
         OutlinedButton(
             onClick = {
                 scope.launch {
                     val intent = viewModel.exportCsv(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, "CSV exportieren"))
+                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.detail_export_csv_chooser)))
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             border = BorderStroke(1.dp, PrimaryPurple),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
-        ) { Text("CSV Export") }
+        ) { Text(stringResource(R.string.detail_export_csv_button)) }
         Spacer(Modifier.height(6.dp))
         OutlinedButton(
             onClick = {
@@ -639,7 +645,7 @@ fun DetailScreen(
             modifier = Modifier.fillMaxWidth(),
             border = BorderStroke(1.dp, PrimaryPurple),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
-        ) { Text("Report erzeugen") }
+        ) { Text(stringResource(R.string.detail_generate_report)) }
     }
 }
 
@@ -652,18 +658,18 @@ private fun EditNoteDialog(
     var text by remember { mutableStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Notiz") },
+        title = { Text(stringResource(R.string.detail_note_title)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("z.B. Beine sehr müde, neues PB…") },
+                placeholder = { Text(stringResource(R.string.detail_note_placeholder)) },
                 maxLines = 4
             )
         },
         confirmButton = {
-            TextButton(onClick = { onSave(text.trim()) }) { Text("Speichern") }
+            TextButton(onClick = { onSave(text.trim()) }) { Text(stringResource(R.string.detail_save)) }
         }
     )
 }
@@ -673,16 +679,17 @@ private fun formatChartTime(totalSeconds: Long): String =
     if (totalSeconds >= 3600) formatDuration(totalSeconds)
     else "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 
-/** Borg CR-10, deutsche Kurzlabels. */
-private fun rpeLabel(rpe: Int): String = when (rpe) {
-    0 -> "Ruhe"
-    1 -> "Sehr leicht"
-    2 -> "Leicht"
-    3 -> "Moderat"
-    4 -> "Etwas hart"
-    5, 6 -> "Hart"
-    7, 8, 9 -> "Sehr hart"
-    else -> "Maximal"
+/** Borg CR-10 Kurzlabels. */
+@StringRes
+private fun rpeLabelRes(rpe: Int): Int = when (rpe) {
+    0 -> R.string.detail_rpe_label_0
+    1 -> R.string.detail_rpe_label_1
+    2 -> R.string.detail_rpe_label_2
+    3 -> R.string.detail_rpe_label_3
+    4 -> R.string.detail_rpe_label_4
+    5, 6 -> R.string.detail_rpe_label_5_6
+    7, 8, 9 -> R.string.detail_rpe_label_7_9
+    else -> R.string.detail_rpe_label_10
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -695,7 +702,7 @@ private fun RpeDialog(
     var selected by remember { mutableStateOf(current) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Wie anstrengend war das Training?") },
+        title = { Text(stringResource(R.string.detail_rpe_dialog_title)) },
         text = {
             Column {
                 FlowRow(
@@ -712,18 +719,18 @@ private fun RpeDialog(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    selected?.let { rpeLabel(it) } ?: "Gesamteindruck der ganzen Einheit (CR-10-Skala).",
+                    stringResource(selected?.let { rpeLabelRes(it) } ?: R.string.detail_rpe_dialog_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(selected) }, enabled = selected != null) { Text("Speichern") }
+            TextButton(onClick = { onSave(selected) }, enabled = selected != null) { Text(stringResource(R.string.detail_save)) }
         },
         dismissButton = {
             TextButton(onClick = if (current != null) ({ onSave(null) }) else onDismiss) {
-                Text(if (current != null) "Entfernen" else "Später")
+                Text(stringResource(if (current != null) R.string.detail_rpe_remove else R.string.detail_rpe_later))
             }
         }
     )
