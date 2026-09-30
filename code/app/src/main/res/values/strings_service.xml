@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="service_notification_channel_name">HR recording</string>
+    <string name="service_notification_title">HR Tracker is running</string>
+    <string name="service_notification_bpm">%1$s BPM</string>
+    <string name="service_notification_zone">Zone %1$d</string>
+</resources>

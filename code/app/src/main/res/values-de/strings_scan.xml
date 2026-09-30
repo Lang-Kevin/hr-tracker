@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_label_picker_title">Trainingstyp wählen</string>
+    <string name="scan_label_picker_confirm">Starten</string>
+    <string name="scan_label_picker_add">Neue Art</string>
+    <string name="scan_history">Verlauf</string>
+    <string name="scan_settings_cd">Einstellungen</string>
+    <string name="scan_grant_permission">Bluetooth-Berechtigung gewähren</string>
+    <string name="scan_starting">Starte…</string>
+    <string name="scan_start_workout">Training starten</string>
+    <string name="scan_measure_hrv">HRV messen</string>
+    <string name="scan_saved_devices">Gemerkte Geräte</string>
+    <string name="scan_available_devices">Verfügbare HR-Geräte:</string>
+    <string name="scan_searching">Suche läuft…</string>
+    <string name="scan_start_search">Suche starten</string>
+    <string name="scan_scan_running">Scan läuft…</string>
+    <string name="scan_device_simulated">Simuliertes Testgerät</string>
+    <string name="scan_device_chest_strap">Brustgurt</string>
+
+    <string name="scan_tutorial_status_title">Verbindungsstatus</string>
+    <string name="scan_tutorial_status_text">Hier siehst du, ob dein Brustgurt verbunden ist.</string>
+    <string name="scan_tutorial_search_title">Geräte suchen</string>
+    <string name="scan_tutorial_search_text">Starte hier die Bluetooth-Suche nach deinem Brustgurt.</string>
+    <string name="scan_tutorial_settings_title">Einstellungen</string>
+    <string name="scan_tutorial_settings_text">Hier passt du Alter, Ruhepuls und HR-Zonen an.</string>
+
+    <string name="scan_hrv_dialog_title">HRV-Messung</string>
+    <string name="scan_hrv_super_short">Super Short</string>
+    <string name="scan_hrv_short">Short</string>
+    <string name="scan_hrv_full">Full</string>
+    <string name="scan_hrv_seconds">%1$d Sek.</string>
+    <string name="scan_hrv_minutes">%1$d Min.</string>
+    <string name="scan_hrv_option">%1$s · %2$s</string>
+    <string name="scan_cancel">Abbrechen</string>
+</resources>

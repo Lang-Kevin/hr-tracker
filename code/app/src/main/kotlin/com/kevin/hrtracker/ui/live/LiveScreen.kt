@@ -29,6 +29,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.ui.shared.LiveWindow
 import com.kevin.hrtracker.ui.shared.TIME_AXIS_HEIGHT_DP
 import com.kevin.hrtracker.ui.shared.drawTimeAxis
@@ -177,13 +179,13 @@ fun LiveScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = sessionLabel?.uppercase() ?: "LIVE-TRAINING",
+                text = sessionLabel?.uppercase() ?: stringResource(R.string.live_title_default),
                 color = PrimaryPurple,
                 style = MaterialTheme.typography.titleLarge
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "BPM",
+                    text = stringResource(R.string.live_bpm_label),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -193,7 +195,7 @@ fun LiveScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
-                        contentDescription = "Herzschlag",
+                        contentDescription = stringResource(R.string.live_heartbeat_cd),
                         tint = TertiaryPink,
                         modifier = Modifier
                             .size(20.dp)
@@ -224,7 +226,7 @@ fun LiveScreen(
                 if (!window.isFollowing) {
                     AssistChip(
                         onClick = { window = window.copy(anchorEnd = null) },
-                        label = { Text("LIVE") },
+                        label = { Text(stringResource(R.string.live_chip_live)) },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.PlayArrow,
@@ -249,8 +251,8 @@ fun LiveScreen(
                 onCheckedChange = { dynamicScaleOverride = it },
                 icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
                 contentDescription = if (dynamicScale)
-                    "Dynamische Skalierung" else
-                    "Statische Skalierung"
+                    stringResource(R.string.live_scale_dynamic_cd) else
+                    stringResource(R.string.live_scale_static_cd)
             )
         }
 
@@ -307,10 +309,10 @@ fun LiveScreen(
 
         // Stats Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem("BPM Ø", averageBpm?.toString() ?: "—", Modifier.weight(1f))
+            StatItem(stringResource(R.string.live_stat_avg_bpm), averageBpm?.toString() ?: "—", Modifier.weight(1f))
             StatItem(
-                "ZIEL-ZONE",
-                "Zone $targetZone",
+                stringResource(R.string.live_stat_target_zone),
+                stringResource(R.string.live_zone_value, targetZone),
                 Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_zone_stat"),
                 valueColor = PrimaryPurple,
                 onClick = { showTargetZoneDialog = true }
@@ -318,13 +320,13 @@ fun LiveScreen(
             if (hrvCountdown != null) {
                 val cr = hrvCountdown ?: 0
                 StatItem(
-                    "VERBLEIBEND",
+                    stringResource(R.string.live_stat_remaining),
                     "%02d:%02d".format(cr / 60, cr % 60),
                     Modifier.weight(1f),
                     valueColor = TertiaryPink
                 )
             } else {
-                StatItem("GESAMTZEIT", formatDuration(elapsed), Modifier.weight(1f))
+                StatItem(stringResource(R.string.live_stat_total_time), formatDuration(elapsed), Modifier.weight(1f))
             }
         }
 
@@ -341,21 +343,21 @@ fun LiveScreen(
             ) {
                 Icon(
                     if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                    contentDescription = if (isPaused) "Fortsetzen" else "Pause"
+                    contentDescription = if (isPaused) stringResource(R.string.live_resume_cd) else stringResource(R.string.live_pause_cd)
                 )
             }
             FilledTonalIconButton(
                 onClick = { viewModel.addMilestone() },
                 modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_milestone")
             ) {
-                Icon(Icons.Default.Flag, contentDescription = "Meilenstein setzen")
+                Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.live_milestone_cd))
             }
             FilledIconButton(
                 onClick = { showLeaveDialog = true },
                 modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_stop"),
                 colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
             ) {
-                Icon(Icons.Default.Stop, contentDescription = "Abschließen")
+                Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.live_finish_cd))
             }
         }
     }
@@ -370,7 +372,7 @@ fun LiveScreen(
                     .fillMaxWidth()
             ) {
                 Text(
-                    text = "Verbindung verloren — Messung pausiert",
+                    text = stringResource(R.string.live_connection_lost),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
@@ -380,11 +382,11 @@ fun LiveScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("live_chart", "BPM-Verlauf", "Hier siehst du deinen Herzfrequenz-Verlauf in Echtzeit, eingefärbt nach Zone. Wische zum Zurückscrollen, ziehe mit zwei Fingern zum Skalieren, Doppeltipp setzt zurück. Lange drücken zeigt den genauen Wert."),
-                TutorialStep("live_zone_stat", "Zielzone", "Tippe hier, um deine Zielzone für dieses Training zu ändern."),
-                TutorialStep("live_pause", "Pause", "Pausiere die Aufzeichnung, ohne das Training zu beenden."),
-                TutorialStep("live_milestone", "Meilenstein", "Setzt eine Markierung im Chart — z. B. für Intervallwechsel oder besondere Momente."),
-                TutorialStep("live_stop", "Abschließen", "Beendet das Training und speichert die aufgezeichneten Daten.")
+                TutorialStep("live_chart", stringResource(R.string.live_tutorial_chart_title), stringResource(R.string.live_tutorial_chart_text)),
+                TutorialStep("live_zone_stat", stringResource(R.string.live_tutorial_zone_title), stringResource(R.string.live_tutorial_zone_text)),
+                TutorialStep("live_pause", stringResource(R.string.live_tutorial_pause_title), stringResource(R.string.live_tutorial_pause_text)),
+                TutorialStep("live_milestone", stringResource(R.string.live_tutorial_milestone_title), stringResource(R.string.live_tutorial_milestone_text)),
+                TutorialStep("live_stop", stringResource(R.string.live_tutorial_finish_title), stringResource(R.string.live_tutorial_finish_text))
             ),
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
@@ -420,6 +422,11 @@ private fun LiveBpmZoneChart(
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
+    val zoneLabelFormat = stringResource(R.string.live_chart_zone_label)
+    val targetBadgeText = stringResource(R.string.live_chart_target_badge)
+    val milestoneLabelFormat = stringResource(R.string.live_chart_milestone_label)
+    val currentBpmFormat = stringResource(R.string.live_chart_current_bpm)
+    val scrubLabelFormat = stringResource(R.string.live_chart_scrub_label)
     val visible: List<Int> = remember(bpmHistory, visibleRange) {
         if (visibleRange.isEmpty() || visibleRange.first < 0 || visibleRange.last >= bpmHistory.size) {
             emptyList()
@@ -499,7 +506,7 @@ private fun LiveBpmZoneChart(
                 val labelBaselineY = yCentre + labelPaint.textSize / 3f
                 if (labelBaselineY >= labelPaint.textSize && labelBaselineY <= plotHeight) {
                     drawContext.canvas.nativeCanvas.drawText(
-                        "Z${z.zone} ${z.lo}",
+                        zoneLabelFormat.format(z.zone, z.lo),
                         4f,
                         labelBaselineY,
                         labelPaint
@@ -548,7 +555,7 @@ private fun LiveBpmZoneChart(
                     textAlign = Paint.Align.CENTER
                 }
                 drawContext.canvas.nativeCanvas.drawText(
-                    "ZIEL",
+                    targetBadgeText,
                     bx + bw / 2,
                     by + bh / 2 + zielPaint.textSize / 3f,
                     zielPaint
@@ -574,7 +581,7 @@ private fun LiveBpmZoneChart(
                             strokeWidth = with(density) { 1.5.dp.toPx() }
                         )
                         drawContext.canvas.nativeCanvas.drawText(
-                            "M${idx + 1}",
+                            milestoneLabelFormat.format(idx + 1),
                             x,
                             with(density) { 12.sp.toPx() },
                             milestonePaint
@@ -640,7 +647,7 @@ private fun LiveBpmZoneChart(
                         textAlign = Paint.Align.RIGHT
                     }
                     drawContext.canvas.nativeCanvas.drawText(
-                        "• ${currentBpm ?: lastBpm} bpm",
+                        currentBpmFormat.format(currentBpm ?: lastBpm),
                         size.width - with(density) { 2.dp.toPx() },
                         lastY - with(density) { 8.dp.toPx() },
                         bpmLabelPaint
@@ -654,7 +661,7 @@ private fun LiveBpmZoneChart(
                         drawScrubber(
                             x = leftPaddingPx + (idx - first).toFloat() / span * chartWidth,
                             y = bpmToY(bpmHistory[idx].toFloat().coerceIn(bpmMin, bpmMax)),
-                            label = "${bpmHistory[idx]} bpm · ${formatTickLabel(idx.toFloat())}",
+                            label = scrubLabelFormat.format(bpmHistory[idx], formatTickLabel(idx.toFloat())),
                             leftPaddingPx = leftPaddingPx,
                             plotHeight = plotHeight,
                             density = density

@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.shared.ui.theme.ZoneColors
 
@@ -55,12 +57,12 @@ private fun MinimalLayout(state: PipUiState, accent: Color) {
 private fun StandardLayout(state: PipUiState, accent: Color) {
     BpmRow(state.bpm, accent, valueSize = 34.sp, iconSize = 24.dp)
     Text(
-        text = state.zone?.let { "Zone $it" } ?: "Zone --",
+        text = state.zone?.let { stringResource(R.string.pip_zone_value, it) } ?: stringResource(R.string.pip_zone_none),
         fontSize = 14.sp,
         color = accent
     )
     Text(
-        text = if (state.paused) "PAUSE" else state.elapsedText,
+        text = if (state.paused) stringResource(R.string.pip_paused) else state.elapsedText,
         fontSize = 14.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -75,7 +77,7 @@ private fun ZoneLayout(state: PipUiState, accent: Color) {
         color = accent
     )
     Text(
-        text = "ZONE",
+        text = stringResource(R.string.pip_zone_caption),
         fontSize = 12.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -86,7 +88,7 @@ private fun ZoneLayout(state: PipUiState, accent: Color) {
 @Composable
 private fun TimerLayout(state: PipUiState, accent: Color) {
     Text(
-        text = if (state.paused) "PAUSE" else state.elapsedText,
+        text = if (state.paused) stringResource(R.string.pip_paused) else state.elapsedText,
         fontSize = 34.sp,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface
@@ -112,7 +114,7 @@ private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: Dp) 
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = "BPM",
+            text = stringResource(R.string.pip_bpm_label),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -122,7 +124,7 @@ private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: Dp) 
 @Composable
 private fun PauseLine() {
     Text(
-        text = "PAUSE",
+        text = stringResource(R.string.pip_paused),
         fontSize = 14.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
