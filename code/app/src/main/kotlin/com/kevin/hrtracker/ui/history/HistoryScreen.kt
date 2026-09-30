@@ -28,6 +28,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.domain.LoadMetric
 import com.kevin.hrtracker.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.session.CategoryFilterRow
 import com.kevin.shared.ui.session.SessionListItem
@@ -61,6 +62,12 @@ fun HistoryScreen(
     val summaryStats by viewModel.summaryStats.collectAsStateWithLifecycle()
     val weeklyData by viewModel.weeklyData.collectAsStateWithLifecycle()
     val trimpHistory by viewModel.trimpHistory.collectAsStateWithLifecycle()
+    val loadState by viewModel.loadState.collectAsStateWithLifecycle()
+    val loadMetric by viewModel.loadMetric.collectAsStateWithLifecycle()
+    val readiness by viewModel.readiness.collectAsStateWithLifecycle()
+    val hrrTrend by viewModel.hrrTrend.collectAsStateWithLifecycle()
+    val currentRestingHr by viewModel.currentRestingHr.collectAsStateWithLifecycle()
+    val autoRestingHr by viewModel.autoRestingHr.collectAsStateWithLifecycle()
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -153,7 +160,7 @@ fun HistoryScreen(
             contentColor = PrimaryPurple,
             modifier = Modifier.tutorialAnchor(tutorialAnchors, "history_tabs")
         ) {
-            listOf("Verlauf", "Statistik", "Papierkorb").forEachIndexed { index, title ->
+            listOf("Verlauf", "Statistik", "Form", "Papierkorb").forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
@@ -298,8 +305,16 @@ fun HistoryScreen(
                     }
                 }
             }
-            1 -> StatistikTab(weeklyData, trimpHistory)
-            2 -> {
+            1 -> StatistikTab(weeklyData, trimpHistory, loadState, loadMetric, viewModel::setLoadMetric)
+            2 -> FormTab(
+                readiness = readiness,
+                hrrTrend = hrrTrend,
+                currentRestingHr = currentRestingHr,
+                autoRestingHr = autoRestingHr,
+                onAutoRestingHrChange = { viewModel.setAutoRestingHr(it) },
+                onApplyRestingHr = { viewModel.applyRestingHrFromHrv() }
+            )
+            3 -> {
                 val trashItems = remember(trashSessions) {
                     trashSessions.map { TrashSessionItem(it.id, it.label, it.startedAt) }
                 }
@@ -310,7 +325,7 @@ fun HistoryScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("history_tabs", "Ansichten", "Wechsle zwischen Verlauf, Statistik und Papierkorb."),
+                TutorialStep("history_tabs", "Ansichten", "Wechsle zwischen Verlauf, Statistik, Form und Papierkorb."),
                 TutorialStep("history_filter", "Filter", "Filtere deine Trainings nach Art."),
                 TutorialStep("history_list", "Trainingsliste", "Wische ein Training nach links, um es zu löschen.")
             ),
@@ -358,15 +373,19 @@ private fun DateRangeFilterDialog(
 @Composable
 private fun StatistikTab(
     weeklyData: List<HistoryViewModel.WeekStats>,
-    trimpHistory: List<HistoryViewModel.SessionTrimpEntry>
+    trimpHistory: List<HistoryViewModel.SessionTrimpEntry>,
+    loadState: HistoryViewModel.LoadState,
+    loadMetric: LoadMetric,
+    onLoadMetricChange: (LoadMetric) -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { LoadCard(loadState, loadMetric, onLoadMetricChange) }
         item {
             val maxDur = weeklyData.maxOfOrNull { it.totalDurationMin }?.coerceAtLeast(1) ?: 1
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Dauer pro Woche (min)",
+                        "Aktive Zeit pro Woche (min)",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

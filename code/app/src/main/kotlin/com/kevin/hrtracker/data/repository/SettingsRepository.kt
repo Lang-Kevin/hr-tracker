@@ -41,6 +41,7 @@ class SettingsRepository @Inject constructor(
         val WEIGHT_KG        = intPreferencesKey("weight_kg")
         val SEX              = stringPreferencesKey("sex")
         val ZONE_MODEL       = stringPreferencesKey("zone_model")
+        val AUTO_RESTING_HR  = booleanPreferencesKey("auto_resting_hr")
     }
 
     val userSettings: Flow<UserSettings> = dataStore.data.map { prefs ->
@@ -58,7 +59,8 @@ class SettingsRepository @Inject constructor(
             } ?: WidgetVariant.STANDARD,
             weightKg = prefs[Keys.WEIGHT_KG],
             sex      = prefs[Keys.SEX]?.let { runCatching { Sex.valueOf(it) }.getOrNull() },
-            zoneModel = prefs[Keys.ZONE_MODEL]?.let { runCatching { ZoneModel.valueOf(it) }.getOrNull() } ?: ZoneModel.HR_MAX
+            zoneModel = prefs[Keys.ZONE_MODEL]?.let { runCatching { ZoneModel.valueOf(it) }.getOrNull() } ?: ZoneModel.HR_MAX,
+            autoRestingHr = prefs[Keys.AUTO_RESTING_HR] ?: false
         )
     }
 
@@ -88,6 +90,10 @@ class SettingsRepository @Inject constructor(
         dataStore.edit {
             if (sex != null) it[Keys.SEX] = sex.name else it.remove(Keys.SEX)
         }
+    }
+
+    suspend fun setAutoRestingHr(enabled: Boolean) {
+        dataStore.edit { it[Keys.AUTO_RESTING_HR] = enabled }
     }
 
     suspend fun setTargetZone(zone: Int) {

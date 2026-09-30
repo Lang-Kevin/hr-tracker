@@ -10,7 +10,9 @@ data class UserSettings(
     val chartDynamicScale: Boolean = true,
     val widgetVariant: WidgetVariant = WidgetVariant.STANDARD,
     val weightKg: Int? = null,
-    val sex: Sex? = null
+    val sex: Sex? = null,
+    /** Ruhepuls nach jeder HRV-Messung aus dem 7-Tage-Schnitt übernehmen. */
+    val autoRestingHr: Boolean = false
 ) {
     val maxHrUsed: Int get() = manualMaxHr ?: HrZoneCalculator.tanakaMaxHr(age)
     val effectiveZones: List<ZoneBounds>

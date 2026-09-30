@@ -6,11 +6,16 @@ import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.db.HrDatabase
 import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
+import com.kevin.hrtracker.data.entity.isHrvMeasurement
+import com.kevin.hrtracker.data.entity.toHrvMeasurements
+import com.kevin.hrtracker.domain.Readiness
+import com.kevin.hrtracker.domain.SessionMetrics
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.ZoneModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,14 +28,20 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SessionRepository @Inject constructor(
     private val db: HrDatabase,
-    private val bleManager: HrBleManager
+    private val bleManager: HrBleManager,
+    private val settingsRepository: SettingsRepository
 ) {
+    companion object {
+        private const val TAG = "SessionRepository"
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _activeSessionId = MutableStateFlow<Long?>(null)
@@ -51,12 +62,32 @@ class SessionRepository @Inject constructor(
 
     init {
         scope.launch {
-            db.sessionDao().closeOrphanedSessions(
-                cutoff = System.currentTimeMillis(),
-                endedAt = System.currentTimeMillis()
-            )
-            db.sessionDao().permanentlyDeleteTrashed()
-            Log.d("HRTracker", "Orphaned sessions closed, trash purged")
+            try {
+                db.sessionDao().closeOrphanedSessions(
+                    cutoff = System.currentTimeMillis(),
+                    endedAt = System.currentTimeMillis()
+                )
+                db.sessionDao().permanentlyDeleteTrashed()
+                Log.d("HRTracker", "Orphaned sessions closed, trash purged")
+                // Einmalig nach Update/Formeländerung: fehlende oder veraltete Kennzahlen nachrechnen
+                val stale = db.sessionDao().getWithStaleMetrics(SessionMetrics.VERSION)
+                var successful = 0
+                stale.forEach { session ->
+                    try {
+                        refreshMetrics(session)
+                        successful++
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error refreshing metrics for session ${session.id}", e)
+                    }
+                }
+                if (successful > 0) Log.d("HRTracker", "Metrics backfilled: $successful sessions")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Error during initialization", e)
+            }
         }
     }
 
@@ -142,7 +173,37 @@ class SessionRepository @Inject constructor(
         activeHrFlow = null
         db.sessionDao().closeSession(id, System.currentTimeMillis())
         Log.d("HRTracker", "Session $id stopped")
+        // Im Repository-Scope, damit die Navigation zum Detail-Screen nicht auf HRR & Co. wartet
+        scope.launch {
+            try {
+                val session = db.sessionDao().getById(id) ?: return@launch
+                refreshMetrics(session)
+                if (session.isHrvMeasurement) updateRestingHrFromHrv()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Error finalizing session $id", e)
+            }
+        }
         return id
+    }
+
+    private suspend fun refreshMetrics(session: Session) {
+        val samples = db.hrSampleDao().getSamplesOnce(session.id)
+        val m = SessionMetrics.compute(samples, session.maxHrUsed, session.restingHr)
+        db.sessionDao().updateMetrics(
+            id = session.id, activeMs = m.activeMs, avgBpm = m.avgBpm, trimp = m.trimp,
+            hrr60 = m.hrr60, rmssd = m.rmssd, version = SessionMetrics.VERSION
+        )
+    }
+
+    /** Übernimmt den 7-Tage-Ø-Ruhepuls der HRV-Messungen, wenn in den Settings aktiviert. */
+    private suspend fun updateRestingHrFromHrv() {
+        if (!settingsRepository.userSettings.first().autoRestingHr) return
+        val measurements = db.sessionDao().getByLabelFlow(Readiness.HRV_LABEL).first().toHrvMeasurements()
+        val restingHr = Readiness.summarize(measurements, LocalDate.now()).restingHr7 ?: return
+        settingsRepository.setRestingHr(restingHr.coerceIn(20, 100))
+        Log.d("HRTracker", "Ruhepuls automatisch aktualisiert: $restingHr")
     }
 
     suspend fun discardSession() {
