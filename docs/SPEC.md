@@ -271,6 +271,16 @@ Geteilter Code (`com.kevin.shared.*`):
 
 Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `LiveViewModel`, `ScanViewModel`, `ScanScreen`, `DetailScreen`, `HistoryScreen`, `Session`.
 
+## Debug-Features
+
+**Pseudo-Sensor (Test-Gerät):** Bei aktivem Debug-Modus (Einstellungen) zeigt die Scan-Liste zusätzlich ein Dummy-Gerät "Pseudo-Sensor [Test]", das eine Sinuswelle (130 BPM Basis ± Amplitude 40) über 120 Sekunden ausstrahlt und alle BLE-Flows durchläuft. Primär für Emulator-Tests ohne physisches Gerät.
+
+**Dropout-Simulation (nur Debug-Build):** Das Test-Gerät durchläuft die **echte Reconnect-Loop** mit Backoff, sodass Verbindungsverluste simulierbar sind:
+```bash
+adb shell am broadcast -n com.kevin.hrtracker/.debug.DebugDropoutReceiver --el ms 60000
+```
+Status wechselt zwischen `Verbinde…`/`Reconnecting`, die Session pausiert automatisch. Jeder Versuch während des Dropouts läuft in den 10-s-Timeout, danach Backoff (3 s → 5 s → 10 s → 30 s); Wiederverbindung beim ersten Versuch nach Ablauf von `ms` (60 s → ca. 78 s). `--el` (long) ist Pflicht, `--ei` wird ignoriert.
+
 ## Architektur-Entscheidungen
 
 1. HRmax = Tanaka + optional Override
