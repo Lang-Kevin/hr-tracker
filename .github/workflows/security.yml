@@ -61,15 +61,19 @@ jobs:
           # Nicht auflösbare Abhängigkeiten fehlen sonst stillschweigend im Scan.
           if grep -n 'FAILED' deps.txt; then echo "::error::Abhängigkeiten nicht auflösbar"; exit 1; fi
           find . -name '*gradle.lockfile' -print
+          # osv-scanner meldet fehlende Lockfiles nur als Warnung; hier hart abbrechen.
+          test -s app/gradle.lockfile || { echo "::error::app/gradle.lockfile fehlt"; exit 1; }
 
       # Schlägt fehl, sobald eine Abhängigkeit eine bekannte Schwachstelle hat.
       # Bewusst akzeptierte Funde mit Begründung in code/osv-scanner.toml eintragen
       # ([[IgnoredVulns]] id = "GHSA-…", reason = "…").
+      # --no-ignore: die Lockfiles stehen in .gitignore, osv-scanner würde sie sonst überspringen.
       - name: OSV-Scan
         uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
         with:
           scan-args: |-
             --recursive
+            --no-ignore
             ./ws/hr-tracker/code
 
       - name: Lockfiles hochladen
