@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_welcome_title">Welcome to HR-Tracker</string>
+    <string name="onboarding_welcome_text">Record your heart rate with your BLE chest strap and keep an eye on your training zones.</string>
+    <string name="onboarding_age_title">How old are you?</string>
+    <string name="onboarding_age_text">We use it to calculate your maximum heart rate with the Tanaka formula.</string>
+    <string name="onboarding_age_label">Age (years)</string>
+    <string name="onboarding_age_error">Age must be between 10 and 99</string>
+    <string name="onboarding_max_hr">Maximum heart rate</string>
+    <string name="onboarding_resting_hr_title">Resting heart rate (optional)</string>
+    <string name="onboarding_resting_hr_text" formatted="false">Needed if you choose the Karvonen model in settings. The default stays %HRmax. Typical: 50–70 BPM in the morning right after waking up.</string>
+    <string name="onboarding_resting_hr_label">Resting HR (BPM)</string>
+    <string name="onboarding_get_started">Get started</string>
+</resources>

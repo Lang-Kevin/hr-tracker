@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Live screen -->
+    <string name="live_title_default">LIVE WORKOUT</string>
+    <string name="live_bpm_label">BPM</string>
+    <string name="live_heartbeat_cd">Heartbeat</string>
+    <string name="live_chip_live">LIVE</string>
+    <string name="live_scale_dynamic_cd">Dynamic scaling</string>
+    <string name="live_scale_static_cd">Static scaling</string>
+    <string name="live_stat_avg_bpm">AVG BPM</string>
+    <string name="live_stat_target_zone">TARGET ZONE</string>
+    <string name="live_zone_value">Zone %1$d</string>
+    <string name="live_stat_remaining">REMAINING</string>
+    <string name="live_stat_total_time">TOTAL TIME</string>
+    <string name="live_resume_cd">Resume</string>
+    <string name="live_pause_cd">Pause</string>
+    <string name="live_milestone_cd">Add milestone</string>
+    <string name="live_finish_cd">Finish</string>
+    <string name="live_connection_lost">Connection lost — recording paused</string>
+
+    <!-- Live chart (drawn on canvas) -->
+    <string name="live_chart_zone_label">Z%1$d %2$d</string>
+    <string name="live_chart_target_badge">GOAL</string>
+    <string name="live_chart_milestone_label">M%1$d</string>
+    <string name="live_chart_current_bpm">• %1$d bpm</string>
+    <string name="live_chart_scrub_label">%1$d bpm · %2$s</string>
+
+    <!-- Live tutorial -->
+    <string name="live_tutorial_chart_title">BPM history</string>
+    <string name="live_tutorial_chart_text">Your heart rate in real time, colored by zone. Swipe to scroll back, pinch to zoom, double-tap to reset. Long-press to see the exact value.</string>
+    <string name="live_tutorial_zone_title">Target zone</string>
+    <string name="live_tutorial_zone_text">Tap here to change your target zone for this workout.</string>
+    <string name="live_tutorial_pause_title">Pause</string>
+    <string name="live_tutorial_pause_text">Pause recording without ending the workout.</string>
+    <string name="live_tutorial_milestone_title">Milestone</string>
+    <string name="live_tutorial_milestone_text">Adds a marker to the chart — e.g. for interval changes or special moments.</string>
+    <string name="live_tutorial_finish_title">Finish</string>
+    <string name="live_tutorial_finish_text">Ends the workout and saves the recorded data.</string>
+
+    <!-- Picture-in-picture -->
+    <string name="pip_zone_value">Zone %1$d</string>
+    <string name="pip_zone_none">Zone --</string>
+    <string name="pip_paused">PAUSED</string>
+    <string name="pip_zone_caption">ZONE</string>
+    <string name="pip_bpm_label">BPM</string>
+</resources>

@@ -16,13 +16,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.luminance
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.ZoneModel
 import com.kevin.hrtracker.domain.Sex
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.ZoneColors
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -85,7 +88,7 @@ fun SettingsScreen(
     if (showZoneInfo) {
         AlertDialog(
             onDismissRequest = { showZoneInfo = false },
-            title = { Text("Was bedeuten die Zonen?") },
+            title = { Text(stringResource(R.string.settings_zone_info_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     ZONE_DESCRIPTIONS.forEach { (z, desc) ->
@@ -107,13 +110,13 @@ fun SettingsScreen(
                                     )
                                 }
                             }
-                            Text(desc, style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(desc), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showZoneInfo = false }) { Text("Schließen") }
+                TextButton(onClick = { showZoneInfo = false }) { Text(stringResource(R.string.settings_close)) }
             }
         )
     }
@@ -126,7 +129,7 @@ fun SettingsScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Einstellungen", style = MaterialTheme.typography.headlineMedium)
+        Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium)
 
         Card(modifier = Modifier.fillMaxWidth().tutorialAnchor(tutorialAnchors, "settings_hr")) {
             Column(
@@ -134,22 +137,22 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Herzfrequenz",
+                    stringResource(R.string.settings_section_heart_rate),
                     style = MaterialTheme.typography.titleSmall,
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
 
                 NumberField(
-                    label = "Alter",
+                    label = stringResource(R.string.settings_age),
                     value = ageText,
                     onValueChange = { ageText = it },
                     onDone = { it.toIntOrNull()?.let { v -> if (v in 10..99) viewModel.setAge(v) } },
                     isError = ageError,
-                    supportingText = if (ageError) "Alter muss zwischen 10 und 99 liegen" else null
+                    supportingText = if (ageError) stringResource(R.string.settings_age_error) else null
                 )
                 Text(
-                    "Tanaka HRmax: $tanakaMaxHr  •  Aktiv: $effectiveMaxHr BPM",
+                    stringResource(R.string.settings_hrmax_summary, tanakaMaxHr, effectiveMaxHr),
                     style = MaterialTheme.typography.bodySmall
                 )
                 observedMaxHr?.takeIf { it > effectiveMaxHr }?.let { observed ->
@@ -159,40 +162,40 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            "Gemessen: $observed BPM (letzte 90 Tage)",
+                            stringResource(R.string.settings_measured_max_hr, observed),
                             style = MaterialTheme.typography.bodySmall
                         )
                         TextButton(onClick = { viewModel.setManualMaxHr(observed) }) {
-                            Text("Übernehmen")
+                            Text(stringResource(R.string.settings_apply))
                         }
                     }
                 }
 
                 NumberField(
-                    label = "Manueller HRmax (leer = Tanaka)",
+                    label = stringResource(R.string.settings_manual_hrmax),
                     value = manualMaxHrText,
                     onValueChange = { manualMaxHrText = it },
                     onDone = {
                         viewModel.setManualMaxHr(it.toIntOrNull()?.takeIf { v -> v in 100..250 })
                     },
                     isError = maxHrError,
-                    supportingText = if (maxHrError) "HRmax muss zwischen 100 und 250 liegen" else null
+                    supportingText = if (maxHrError) stringResource(R.string.settings_hrmax_error) else null
                 )
 
                 NumberField(
-                    label = "Ruhepuls (für Karvonen)",
+                    label = stringResource(R.string.settings_resting_hr),
                     value = restingHrText,
                     onValueChange = { restingHrText = it },
                     onDone = {
                         viewModel.setRestingHr(it.toIntOrNull()?.takeIf { v -> v in 20..100 })
                     },
                     isError = restingHrError,
-                    supportingText = if (restingHrError) "Ruhepuls muss zwischen 20 und 100 liegen"
-                        else if (settings.autoRestingHr) "Wird automatisch aus HRV-Messungen aktualisiert (Verlauf → Form)"
+                    supportingText = if (restingHrError) stringResource(R.string.settings_resting_hr_error)
+                        else if (settings.autoRestingHr) stringResource(R.string.settings_resting_hr_auto)
                         else null
                 )
 
-                Text("Zonen-Modell", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.settings_zone_model), style = MaterialTheme.typography.titleSmall)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     val zoneModelOptions = listOf(ZoneModel.HR_MAX to "%HRmax", ZoneModel.KARVONEN to "Karvonen")
                     zoneModelOptions.forEachIndexed { index, (value, label) ->
@@ -208,37 +211,37 @@ fun SettingsScreen(
                 }
                 if (settings.zoneModel == ZoneModel.KARVONEN && settings.restingHr == null) {
                     Text(
-                        "Ohne Ruhepuls wird %HRmax verwendet.",
+                        stringResource(R.string.settings_zone_model_no_resting_hr),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 } else {
                     Text(
-                        "%HRmax: Zonen aus dem Maximalpuls. Karvonen: nutzt zusätzlich den Ruhepuls (Herzfrequenzreserve) — die Zonengrenzen liegen dadurch deutlich höher.",
+                        stringResource(R.string.settings_zone_model_explainer),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
                 HorizontalDivider()
                 Text(
-                    "Körperdaten (für Kalorienschätzung)",
+                    stringResource(R.string.settings_section_body),
                     style = MaterialTheme.typography.titleSmall,
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
 
                 NumberField(
-                    label = "Gewicht in kg (leer = keine Kalorien)",
+                    label = stringResource(R.string.settings_weight),
                     value = weightText,
                     onValueChange = { weightText = it },
                     onDone = { viewModel.setWeightKg(it.toIntOrNull()?.takeIf { v -> v in 30..250 }) },
                     isError = weightError,
-                    supportingText = if (weightError) "Gewicht muss zwischen 30 und 250 kg liegen" else null
+                    supportingText = if (weightError) stringResource(R.string.settings_weight_error) else null
                 )
 
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    val sexOptions = listOf(Sex.MALE to "Männlich", Sex.FEMALE to "Weiblich")
-                    sexOptions.forEachIndexed { index, (value, label) ->
+                    val sexOptions = listOf(Sex.MALE, Sex.FEMALE)
+                    sexOptions.forEachIndexed { index, value ->
                         SegmentedButton(
                             selected = settings.sex == value,
                             onClick = { viewModel.setSex(if (settings.sex == value) null else value) },
@@ -246,20 +249,20 @@ fun SettingsScreen(
                             // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
                             icon = {}
                         ) {
-                            Text(label, maxLines = 1, softWrap = false)
+                            Text(stringResource(value.labelRes), maxLines = 1, softWrap = false)
                         }
                     }
                 }
                 if (settings.sex == null || settings.weightKg == null) {
                     Text(
-                        "Ohne Gewicht und Geschlecht bleibt die Kalorien-Kachel leer.",
+                        stringResource(R.string.settings_calories_hint),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
 
                 HorizontalDivider()
                 Text(
-                    "Ziel-Zone",
+                    stringResource(R.string.settings_section_target_zone),
                     style = MaterialTheme.typography.titleSmall,
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
@@ -302,7 +305,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Zonen-Vorschau",
+                        stringResource(R.string.settings_section_zone_preview),
                         style = MaterialTheme.typography.titleSmall,
                         color = PrimaryPurple,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
@@ -312,10 +315,10 @@ fun SettingsScreen(
                         IconButton(onClick = { showZoneInfo = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.HelpOutline,
-                                contentDescription = "Was bedeuten die Zonen?"
+                                contentDescription = stringResource(R.string.settings_zone_info_title)
                             )
                         }
-                        Text("Eigene Werte", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.settings_custom_values), style = MaterialTheme.typography.bodySmall)
                         Switch(
                             checked = customZonesEnabled,
                             onCheckedChange = { enabled ->
@@ -340,7 +343,7 @@ fun SettingsScreen(
                                     shape = MaterialTheme.shapes.extraSmall,
                                     modifier = Modifier.size(12.dp)
                                 ) {}
-                                Text("Zone ${i + 1}", style = MaterialTheme.typography.labelMedium)
+                                Text(stringResource(R.string.settings_zone_n, i + 1), style = MaterialTheme.typography.labelMedium)
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 // Min field — boundary index i
@@ -362,7 +365,7 @@ fun SettingsScreen(
                                             }
                                         }
                                     },
-                                    label = { Text("Min BPM") },
+                                    label = { Text(stringResource(R.string.settings_min_bpm)) },
                                     placeholder = { Text(defaultBoundaries[i].toString()) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
@@ -387,7 +390,7 @@ fun SettingsScreen(
                                             }
                                         }
                                     },
-                                    label = { Text("Max BPM") },
+                                    label = { Text(stringResource(R.string.settings_max_bpm)) },
                                     placeholder = { Text(defaultBoundaries[i + 1].toString()) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     singleLine = true,
@@ -402,7 +405,7 @@ fun SettingsScreen(
                         },
                         enabled = true,
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text("Speichern") }
+                    ) { Text(stringResource(R.string.settings_save)) }
                 } else {
                     settings.effectiveZones.forEach { z ->
                         Row(
@@ -437,7 +440,7 @@ fun SettingsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Diagramm: dynamische Skalierung (Standard)",
+                    stringResource(R.string.settings_chart_dynamic_scale),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f).padding(end = 8.dp)
                 )
@@ -454,20 +457,20 @@ fun SettingsScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "Widget-Anzeige",
+                    stringResource(R.string.settings_section_widget),
                     style = MaterialTheme.typography.titleSmall,
                     color = PrimaryPurple,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                 )
                 Text(
-                    "Gilt für das PiP-Fenster und die Benachrichtigung während der Aufzeichnung",
+                    stringResource(R.string.settings_widget_hint),
                     style = MaterialTheme.typography.bodySmall
                 )
                 val variants = listOf(
-                    WidgetVariant.MINIMAL to "BPM",
-                    WidgetVariant.STANDARD to "Standard",
-                    WidgetVariant.ZONE to "Zone",
-                    WidgetVariant.TIMER to "Zeit"
+                    WidgetVariant.MINIMAL to R.string.settings_widget_bpm,
+                    WidgetVariant.STANDARD to R.string.settings_widget_standard,
+                    WidgetVariant.ZONE to R.string.settings_widget_zone,
+                    WidgetVariant.TIMER to R.string.settings_widget_time
                 )
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth()
@@ -480,7 +483,7 @@ fun SettingsScreen(
                             // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
                             icon = {}
                         ) {
-                            Text(label, maxLines = 1, softWrap = false)
+                            Text(stringResource(label), maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -498,13 +501,13 @@ fun SettingsScreen(
             ) {
                 Column(Modifier.weight(1f).padding(end = 8.dp)) {
                     Text(
-                        "Debug-Modus",
+                        stringResource(R.string.settings_debug_mode),
                         style = MaterialTheme.typography.titleSmall,
                         color = PrimaryPurple,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
                     )
                     Text(
-                        "Schaltet Test-Funktionen frei (z. B. Pseudo-Sensor beim Scan)",
+                        stringResource(R.string.settings_debug_mode_hint),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -513,11 +516,14 @@ fun SettingsScreen(
         }
     }
 
+        val hrStep = TutorialStep("settings_hr", stringResource(R.string.settings_section_heart_rate), stringResource(R.string.settings_tutorial_hr_text))
+        val zonesStep = TutorialStep("settings_zones", stringResource(R.string.settings_section_zone_preview), stringResource(R.string.settings_tutorial_zones_text))
+        val sourceStep = TutorialStep("settings_source", stringResource(R.string.settings_tutorial_source_title), stringResource(R.string.settings_tutorial_source_text))
         TutorialOverlay(
             steps = buildList {
-                add(TutorialStep("settings_hr", "Herzfrequenz", "Trage Alter und Ruhepuls ein — daraus berechnen wir deine Trainingszonen."))
-                add(TutorialStep("settings_zones", "Zonen-Vorschau", "Hier siehst du deine berechneten Zonen oder kannst eigene Werte eintragen."))
-                if (debugMode) add(TutorialStep("settings_source", "HR-Quelle", "Wähle, ob die Herzfrequenz vom Brustgurt oder der Smartwatch kommt."))
+                add(hrStep)
+                add(zonesStep)
+                if (debugMode) add(sourceStep)
             },
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
@@ -527,12 +533,19 @@ fun SettingsScreen(
 }
 
 private val ZONE_DESCRIPTIONS = listOf(
-    1 to "Regeneration — sehr leichte Belastung, aktive Erholung",
-    2 to "Fettverbrennung — lockeres Tempo, aerobe Basis",
-    3 to "Aerob — moderates Training, Ausdaueraufbau",
-    4 to "Anaerob — intensive Belastung, Laktatschwelle",
-    5 to "VO₂max — maximale Intensität, kurze Intervalle"
+    1 to R.string.settings_zone_desc_1,
+    2 to R.string.settings_zone_desc_2,
+    3 to R.string.settings_zone_desc_3,
+    4 to R.string.settings_zone_desc_4,
+    5 to R.string.settings_zone_desc_5
 )
+
+@get:StringRes
+private val Sex.labelRes: Int
+    get() = when (this) {
+        Sex.MALE -> R.string.settings_sex_male
+        Sex.FEMALE -> R.string.settings_sex_female
+    }
 
 @Composable
 private fun NumberField(
@@ -554,7 +567,7 @@ private fun NumberField(
         isError = isError,
         supportingText = supportingText?.let { msg -> { Text(msg, color = MaterialTheme.colorScheme.error) } },
         trailingIcon = {
-            TextButton(onClick = { onDone(value) }) { Text("OK") }
+            TextButton(onClick = { onDone(value) }) { Text(stringResource(R.string.settings_ok)) }
         }
     )
 }

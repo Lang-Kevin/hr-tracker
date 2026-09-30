@@ -7,8 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.domain.AcwrZone
 import com.kevin.hrtracker.domain.LoadMetric
 import com.kevin.hrtracker.domain.ReadinessStatus
@@ -16,17 +19,17 @@ import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.ui.shared.TrendChart
 import com.kevin.hrtracker.ui.shared.TrendSeries
-import com.kevin.hrtracker.ui.theme.ConnectedGreen
-import com.kevin.hrtracker.ui.theme.ErrorRed
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
-import com.kevin.hrtracker.ui.theme.SecondaryBlue
+import com.kevin.shared.ui.theme.ConnectedGreen
+import com.kevin.shared.ui.theme.ErrorRed
+import com.kevin.shared.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.SecondaryBlue
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt
 
 private val CautionOrange = Color(0xFFFFB74D)
 
-private fun Double.fmt(decimals: Int) = String.format(Locale.GERMANY, "%.${decimals}f", this)
+private fun Double.fmt(decimals: Int) = String.format(Locale.getDefault(), "%.${decimals}f", this)
 
 @Composable
 private fun CardTitle(text: String) {
@@ -64,7 +67,7 @@ fun LoadCard(
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { CardTitle("Trainingslast") }
+                Box(Modifier.weight(1f)) { CardTitle(stringResource(R.string.history_load_title)) }
                 FilterChip(
                     selected = metric == LoadMetric.TRIMP,
                     onClick = { onMetricChange(LoadMetric.TRIMP) },
@@ -89,18 +92,20 @@ fun LoadCard(
                 null -> Color.White
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric("AKUT (7 T)", today?.acute?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric("CHRONISCH (Ø 4 W)", today?.chronic?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), SecondaryBlue)
+                Metric(stringResource(R.string.history_load_acute), today?.acute?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), PrimaryPurple)
+                Metric(stringResource(R.string.history_load_chronic), today?.chronic?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), SecondaryBlue)
                 Metric("ACWR", acwr?.fmt(2) ?: "—", Modifier.weight(0.7f), zoneColor)
             }
             Hint(
-                when (zone) {
-                    AcwrZone.LOW -> "Unter 0,8: Belastung liegt unter deinem Niveau – Steigerung möglich."
-                    AcwrZone.OPTIMAL -> "0,8–1,3: Belastung passt zu deinem Trainingsniveau."
-                    AcwrZone.CAUTION -> "1,3–1,5: Deutlicher Anstieg – nicht weiter steigern."
-                    AcwrZone.HIGH -> "Über 1,5: Belastungsspitze – erhöhtes Verletzungsrisiko."
-                    null -> "ACWR erscheint nach 4 Wochen mit Trainingsdaten."
-                },
+                stringResource(
+                    when (zone) {
+                        AcwrZone.LOW -> R.string.history_load_zone_low
+                        AcwrZone.OPTIMAL -> R.string.history_load_zone_optimal
+                        AcwrZone.CAUTION -> R.string.history_load_zone_caution
+                        AcwrZone.HIGH -> R.string.history_load_zone_high
+                        null -> R.string.history_load_zone_none
+                    }
+                ),
                 zoneColor.takeIf { zone != null } ?: MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -112,14 +117,17 @@ fun LoadCard(
                     ),
                     modifier = Modifier.fillMaxWidth().height(110.dp)
                 )
-                Legend("Akut" to PrimaryPurple, "Chronisch" to SecondaryBlue)
-                Hint("Letzte ${state.days.size} Tage, Last pro Woche.")
+                Legend(
+                    stringResource(R.string.history_load_legend_acute) to PrimaryPurple,
+                    stringResource(R.string.history_load_legend_chronic) to SecondaryBlue
+                )
+                Hint(pluralStringResource(R.plurals.history_load_chart_hint, state.days.size, state.days.size))
             }
             if (metric == LoadMetric.SRPE) {
                 Hint(
                     if (state.unratedLast28 > 0)
-                        "${state.unratedLast28} Training(s) der letzten 4 Wochen ohne RPE – im Detail-Screen bewerten, sonst fehlt deren Last."
-                    else "sRPE = Belastung (0–10) × aktive Minuten."
+                        pluralStringResource(R.plurals.history_load_unrated, state.unratedLast28, state.unratedLast28)
+                    else stringResource(R.string.history_load_srpe_hint)
                 )
             }
         }
@@ -149,27 +157,24 @@ fun FormTab(
 private fun ReadinessCard(readiness: ReadinessSummary?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardTitle("Bereitschaft (Ruhe-HRV)")
+            CardTitle(stringResource(R.string.history_readiness_title))
             if (readiness == null) {
-                Hint(
-                    "Noch keine HRV-Messungen. Miss morgens direkt nach dem Aufwachen, liegend, " +
-                        "1–5 min über „HRV messen“ im Start-Screen."
-                )
+                Hint(stringResource(R.string.history_readiness_empty))
                 return@Column
             }
-            val (statusText, statusColor) = when (readiness.status) {
-                ReadinessStatus.BELOW -> "Unter Normalbereich – Erholung priorisieren" to CautionOrange
-                ReadinessStatus.NORMAL -> "Im Normalbereich" to ConnectedGreen
-                ReadinessStatus.ABOVE -> "Über Normalbereich" to SecondaryBlue
-                null -> "Noch keine Einordnung" to MaterialTheme.colorScheme.onSurfaceVariant
+            val (statusRes, statusColor) = when (readiness.status) {
+                ReadinessStatus.BELOW -> R.string.history_readiness_below to CautionOrange
+                ReadinessStatus.NORMAL -> R.string.history_readiness_normal to ConnectedGreen
+                ReadinessStatus.ABOVE -> R.string.history_readiness_above to SecondaryBlue
+                null -> R.string.history_readiness_unclassified to MaterialTheme.colorScheme.onSurfaceVariant
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric("RMSSD Ø 7 T", readiness.rmssd7?.let { "$it ms" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric("MESSUNGEN 7 T", readiness.measurementsLast7.toString(), Modifier.weight(1f))
+                Metric(stringResource(R.string.history_readiness_rmssd_7d), readiness.rmssd7?.let { "$it ms" } ?: "—", Modifier.weight(1f), PrimaryPurple)
+                Metric(stringResource(R.string.history_readiness_readings_7d), readiness.measurementsLast7.toString(), Modifier.weight(1f))
             }
-            Text(statusText, style = MaterialTheme.typography.bodyMedium, color = statusColor)
+            Text(stringResource(statusRes), style = MaterialTheme.typography.bodyMedium, color = statusColor)
             if (readiness.status == null) {
-                Hint("Einordnung ab 3 Messungen in 7 Tagen und 7 Messungen insgesamt.")
+                Hint(stringResource(R.string.history_readiness_classification_hint))
             }
             TrendChart(
                 series = listOf(
@@ -180,11 +185,10 @@ private fun ReadinessCard(readiness: ReadinessSummary?) {
                     readiness.normalLow.toFloat()..readiness.normalHigh.toFloat() else null,
                 modifier = Modifier.fillMaxWidth().height(110.dp)
             )
-            Hint(
-                "Punkte: Tagesmessung, Linie: 7-Tage-Ø (ln RMSSD), Fläche: Normalbereich" +
-                    (readiness.normalLow?.let { " (${exp(it).roundToInt()}–${exp(readiness.normalHigh!!).roundToInt()} ms)" } ?: "") +
-                    ". Letzte ${readiness.days.size} Tage."
-            )
+            val legend = readiness.normalLow?.let {
+                stringResource(R.string.history_readiness_legend_range, exp(it).roundToInt(), exp(readiness.normalHigh!!).roundToInt())
+            } ?: stringResource(R.string.history_readiness_legend)
+            Hint(legend + " " + pluralStringResource(R.plurals.history_readiness_last_days, readiness.days.size, readiness.days.size))
         }
     }
 }
@@ -199,22 +203,22 @@ private fun RestingHrCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardTitle("Ruhepuls")
+            CardTitle(stringResource(R.string.history_resting_hr_title))
             val measured = readiness?.restingHr7
             Row(Modifier.fillMaxWidth()) {
-                Metric("GEMESSEN Ø 7 T", measured?.let { "$it bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric("EINGESTELLT", currentRestingHr?.let { "$it bpm" } ?: "—", Modifier.weight(1f))
+                Metric(stringResource(R.string.history_resting_hr_measured), measured?.let { "$it bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
+                Metric(stringResource(R.string.history_resting_hr_configured), currentRestingHr?.let { "$it bpm" } ?: "—", Modifier.weight(1f))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Automatisch übernehmen", style = MaterialTheme.typography.bodyMedium)
-                    Hint("Nach jeder HRV-Messung, sobald 3 Messungen in 7 Tagen vorliegen. Bestimmt Karvonen-Zonen und TRIMP künftiger Trainings.")
+                    Text(stringResource(R.string.history_resting_hr_auto), style = MaterialTheme.typography.bodyMedium)
+                    Hint(stringResource(R.string.history_resting_hr_auto_hint))
                 }
                 Switch(checked = autoRestingHr, onCheckedChange = onAutoRestingHrChange)
             }
             if (!autoRestingHr && measured != null && measured != currentRestingHr) {
                 OutlinedButton(onClick = onApply, modifier = Modifier.fillMaxWidth()) {
-                    Text("$measured bpm jetzt übernehmen")
+                    Text(stringResource(R.string.history_resting_hr_apply, measured))
                 }
             }
         }
@@ -225,14 +229,14 @@ private fun RestingHrCard(
 private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardTitle("Herzfrequenz-Erholung (HRR60)")
+            CardTitle(stringResource(R.string.history_hrr_title))
             if (trend.points.isEmpty()) {
-                Hint("Noch keine Trainings mit HRR60 in den letzten 8 Wochen (braucht einen Peak ≥ 70 % HRmax mit 60 s Nachlauf).")
+                Hint(stringResource(R.string.history_hrr_empty))
                 return@Column
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric("Ø LETZTE 4 W", trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric("Ø 4 W DAVOR", trend.avgPrev4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f))
+                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
+                Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f))
             }
             val cur = trend.avgLast4Weeks
             val prev = trend.avgPrev4Weeks
@@ -240,9 +244,9 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 val delta = cur - prev
                 Hint(
                     when {
-                        delta >= 1.0 -> "▲ ${delta.fmt(1)} bpm schnellere Erholung als in den 4 Wochen davor."
-                        delta <= -1.0 -> "▼ ${(-delta).fmt(1)} bpm langsamere Erholung als in den 4 Wochen davor."
-                        else -> "Erholung stabil gegenüber den 4 Wochen davor."
+                        delta >= 1.0 -> stringResource(R.string.history_hrr_faster, delta.fmt(1))
+                        delta <= -1.0 -> stringResource(R.string.history_hrr_slower, (-delta).fmt(1))
+                        else -> stringResource(R.string.history_hrr_stable)
                     },
                     when {
                         delta >= 1.0 -> ConnectedGreen
@@ -256,7 +260,7 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 referenceY = cur?.toFloat(),
                 modifier = Modifier.fillMaxWidth().height(90.dp)
             )
-            Hint("Je Training ein Punkt (letzte 8 Wochen), Linie: Ø letzte 4 Wochen. Höher = schnellere Erholung.")
+            Hint(stringResource(R.string.history_hrr_chart_hint))
         }
     }
 }

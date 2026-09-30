@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,6 +18,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.PermissionStatus
+import com.kevin.hrtracker.R
 import com.kevin.shared.ble.ConnectionState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
@@ -27,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.kevin.shared.domain.DeviceType
 import com.kevin.shared.domain.DiscoveredDevice
 import com.kevin.shared.domain.SavedDevice
-import com.kevin.hrtracker.ui.theme.LightPurple
+import com.kevin.shared.ui.theme.LightPurple
 import com.kevin.shared.ui.scan.BleStatusCard
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
 import com.kevin.shared.ui.scan.SavedDeviceItem
@@ -64,10 +66,10 @@ fun ScanScreen(
 
     if (showStartDialog) {
         LabelPickerDialog(
-            title = "Trainingstyp wählen",
+            title = stringResource(R.string.scan_label_picker_title),
             items = trainingLabels,
             initialSelection = null,
-            confirmText = "Starten",
+            confirmText = stringResource(R.string.scan_label_picker_confirm),
             onConfirm = { label ->
                 isStarting = true
                 onSessionStarted(label)
@@ -75,7 +77,7 @@ fun ScanScreen(
             },
             onDismiss = { showStartDialog = false },
             dismissText = null,
-            addFieldLabel = "Neue Art",
+            addFieldLabel = stringResource(R.string.scan_label_picker_add),
             onAdd = viewModel::addTrainingLabel,
             onDelete = null
         )
@@ -129,19 +131,19 @@ fun ScanScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "HR Tracker",
+                stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = LightPurple
             )
             TextButton(onClick = onNavigateToHistory) {
-                Text("Verlauf", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.scan_history), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             IconButton(
                 onClick = onNavigateToSettings,
                 modifier = Modifier.tutorialAnchor(tutorialAnchors, "scan_settings")
             ) {
-                Icon(Icons.Default.Settings, contentDescription = "Einstellungen",
+                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.scan_settings_cd),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -157,7 +159,7 @@ fun ScanScreen(
 
         if (!permissionState.allPermissionsGranted) {
             Button(onClick = { permissionState.launchMultiplePermissionRequest() }) {
-                Text("Bluetooth-Berechtigung gewähren")
+                Text(stringResource(R.string.scan_grant_permission))
             }
         } else {
             if (connectionState is ConnectionState.Ready) {
@@ -168,14 +170,14 @@ fun ScanScreen(
                         enabled = !isStarting,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(if (isStarting) "Starte…" else "Training starten")
+                        Text(if (isStarting) stringResource(R.string.scan_starting) else stringResource(R.string.scan_start_workout))
                     }
                     OutlinedButton(
                         onClick = { if (!isStarting) showHrvDialog = true },
                         enabled = !isStarting,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("HRV messen")
+                        Text(stringResource(R.string.scan_measure_hrv))
                     }
                 }
                 HorizontalDivider()
@@ -183,7 +185,7 @@ fun ScanScreen(
 
             if (savedDevices.isNotEmpty()) {
                 Text(
-                    "Gemerkte Geräte",
+                    stringResource(R.string.scan_saved_devices),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -204,7 +206,7 @@ fun ScanScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "Verfügbare HR-Geräte:",
+                    stringResource(R.string.scan_available_devices),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp)
@@ -217,11 +219,13 @@ fun ScanScreen(
                     .fillMaxWidth()
                     .tutorialAnchor(tutorialAnchors, "scan_start")
             ) {
-                Text(if (isScanning) "Suche läuft…" else "Suche starten")
+                Text(if (isScanning) stringResource(R.string.scan_searching) else stringResource(R.string.scan_start_search))
             }
             if (isScanning && discoveredDevices.none { it is DiscoveredDevice.Real }) {
-                Text("Scan läuft…", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.scan_scan_running), style = MaterialTheme.typography.bodySmall)
             }
+            val simulatedDeviceText = stringResource(R.string.scan_device_simulated)
+            val chestStrapText = stringResource(R.string.scan_device_chest_strap)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 items(discoveredDevices, key = { it.address }) { device ->
                     DiscoveredDeviceItem(
@@ -229,8 +233,8 @@ fun ScanScreen(
                         onClick = { viewModel.connectToDiscovered(device) },
                         iconAndSubtitle = { d ->
                             when {
-                                d is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to "Simuliertes Testgerät"
-                                d.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to "Brustgurt"
+                                d is DiscoveredDevice.Fake -> Icons.Default.Bluetooth to simulatedDeviceText
+                                d.deviceType == DeviceType.CHEST_STRAP -> Icons.Default.Favorite to chestStrapText
                                 else -> Icons.Default.Bluetooth to d.address
                             }
                         }
@@ -242,9 +246,9 @@ fun ScanScreen(
 
         TutorialOverlay(
             steps = listOf(
-                TutorialStep("scan_status", "Verbindungsstatus", "Hier siehst du, ob dein Brustgurt verbunden ist."),
-                TutorialStep("scan_start", "Geräte suchen", "Starte hier die Bluetooth-Suche nach deinem Brustgurt."),
-                TutorialStep("scan_settings", "Einstellungen", "Hier passt du Alter, Ruhepuls und HR-Zonen an.")
+                TutorialStep("scan_status", stringResource(R.string.scan_tutorial_status_title), stringResource(R.string.scan_tutorial_status_text)),
+                TutorialStep("scan_start", stringResource(R.string.scan_tutorial_search_title), stringResource(R.string.scan_tutorial_search_text)),
+                TutorialStep("scan_settings", stringResource(R.string.scan_tutorial_settings_title), stringResource(R.string.scan_tutorial_settings_text))
             ),
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
@@ -257,24 +261,24 @@ fun ScanScreen(
 private fun HrvDurationDialog(onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("HRV-Messung") },
+        title = { Text(stringResource(R.string.scan_hrv_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    Triple("Super Short", "30 Sek.", 30),
-                    Triple("Short", "1 Min.", 60),
-                    Triple("Full", "5 Min.", 300),
+                    Triple(stringResource(R.string.scan_hrv_super_short), stringResource(R.string.scan_hrv_seconds, 30), 30),
+                    Triple(stringResource(R.string.scan_hrv_short), stringResource(R.string.scan_hrv_minutes, 1), 60),
+                    Triple(stringResource(R.string.scan_hrv_full), stringResource(R.string.scan_hrv_minutes, 5), 300),
                 ).forEach { (name, duration, seconds) ->
                     OutlinedButton(
                         onClick = { onSelect(seconds) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("$name · $duration")
+                        Text(stringResource(R.string.scan_hrv_option, name, duration))
                     }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Abbrechen") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.scan_cancel)) } }
     )
 }

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="detail_change_type_title">Trainingstyp ändern</string>
+    <string name="detail_save">Speichern</string>
+    <string name="detail_cancel">Abbrechen</string>
+    <string name="detail_report_title">Report</string>
+    <string name="detail_report_copied">Report kopiert</string>
+    <string name="detail_report_copy">Kopieren</string>
+    <string name="detail_report_close">Schließen</string>
+    <string name="detail_milestone_name_title">Meilenstein-Name</string>
+    <string name="detail_milestone_name_label">Name</string>
+    <string name="detail_label_fallback">TRAINING</string>
+    <string name="detail_training_zone">Trainingszone</string>
+    <string name="detail_zoom_reset">Zoom zurücksetzen</string>
+    <string name="detail_scale_dynamic">Dynamische Skalierung</string>
+    <string name="detail_scale_static">Statische Skalierung</string>
+    <string name="detail_milestones">Meilensteine</string>
+    <string name="detail_milestone_fallback">Meilenstein</string>
+    <string name="detail_edit">Bearbeiten</string>
+    <string name="detail_stat_avg_bpm">BPM Ø</string>
+    <string name="detail_stat_active">AKTIV</string>
+    <string name="detail_stat_max_bpm">MAX BPM</string>
+    <string name="detail_stat_min_bpm">MIN BPM</string>
+    <string name="detail_stat_calories">KALORIEN</string>
+    <string name="detail_stat_resting_hr">RUHEPULS</string>
+    <string name="detail_calories_body_data_missing">Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.</string>
+    <string name="detail_calories_not_enough_data">Kalorien: Zu wenig Messdaten in dieser Session.</string>
+    <string name="detail_rpe_title">Belastung (RPE 0–10)</string>
+    <string name="detail_rpe_rate">Bewerten…</string>
+    <string name="detail_rpe_value">%1$d · %2$s</string>
+    <string name="detail_rpe_value_with_load">"%1$d · %2$s  ·  Last %3$d"</string>
+    <string name="detail_rpe_rate_description">Belastung bewerten</string>
+    <string name="detail_hrr_title">Herzfrequenz-Erholung (1 min)</string>
+    <string name="detail_hrr_rating_low">Niedrig</string>
+    <string name="detail_hrr_rating_normal">Normal</string>
+    <string name="detail_hrr_rating_good">Gut</string>
+    <string name="detail_hrr_rating_very_good">Sehr gut</string>
+    <string name="detail_hrr_recovered_after">Erholt auf Ruhebereich nach %1$ds</string>
+    <string name="detail_hrr_peak">Peak %1$d → %2$d bpm</string>
+    <string name="detail_hrr_not_enough_data" formatted="false">Zu wenig Daten oder kein Peak ≥ 70 % HRmax mit 60 s Nachlauf.</string>
+    <string name="detail_note_title">Notiz</string>
+    <string name="detail_note_add">Notiz hinzufügen…</string>
+    <string name="detail_note_edit">Notiz bearbeiten</string>
+    <string name="detail_note_placeholder">z.B. Beine sehr müde, neues PB…</string>
+    <string name="detail_export_json">JSON exportieren</string>
+    <string name="detail_export_csv_chooser">CSV exportieren</string>
+    <string name="detail_export_csv_button">CSV Export</string>
+    <string name="detail_generate_report">Report erzeugen</string>
+    <string name="detail_rpe_dialog_title">Wie anstrengend war das Training?</string>
+    <string name="detail_rpe_dialog_hint">Gesamteindruck der ganzen Einheit (CR-10-Skala).</string>
+    <string name="detail_rpe_remove">Entfernen</string>
+    <string name="detail_rpe_later">Später</string>
+    <!-- Borg CR-10 Kurzlabels -->
+    <string name="detail_rpe_label_0">Ruhe</string>
+    <string name="detail_rpe_label_1">Sehr leicht</string>
+    <string name="detail_rpe_label_2">Leicht</string>
+    <string name="detail_rpe_label_3">Moderat</string>
+    <string name="detail_rpe_label_4">Etwas hart</string>
+    <string name="detail_rpe_label_5_6">Hart</string>
+    <string name="detail_rpe_label_7_9">Sehr hart</string>
+    <string name="detail_rpe_label_10">Maximal</string>
+</resources>

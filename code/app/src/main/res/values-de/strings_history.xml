@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History screen -->
+    <string name="history_title">Verlauf</string>
+    <string name="history_tab_history">Verlauf</string>
+    <string name="history_tab_stats">Statistik</string>
+    <string name="history_tab_form">Form</string>
+    <string name="history_tab_trash">Papierkorb</string>
+    <string name="history_filter_sheet_title">Trainingseinheiten filtern</string>
+    <string name="history_filter_no_labels">Keine Labels vorhanden.</string>
+    <string name="history_filter_chip">Trainingseinheiten</string>
+    <string name="history_filter_chip_active">Trainingseinheiten (%1$d)</string>
+    <string name="history_date_filter">Zeitraum filtern</string>
+    <string name="history_date_filter_clear">Zeitraum entfernen</string>
+    <string name="history_date_picker_title">Zeitraum auswählen</string>
+    <string name="history_date_picker_apply">Übernehmen</string>
+    <string name="history_date_picker_cancel">Abbrechen</string>
+    <string name="history_summary_workouts">TRAININGS</string>
+    <string name="history_summary_total_time">GESAMTDAUER</string>
+    <string name="history_summary_avg_bpm">Ø BPM</string>
+    <string name="history_summary_longest">LÄNGSTE</string>
+    <string name="history_empty_title">Noch keine Trainings</string>
+    <string name="history_empty_text">Starte ein Training, um deine Herzfrequenz-Daten hier zu sehen.</string>
+    <string name="history_tutorial_tabs_title">Ansichten</string>
+    <string name="history_tutorial_tabs_text">Wechsle zwischen Verlauf, Statistik, Form und Papierkorb.</string>
+    <string name="history_tutorial_filter_title">Filter</string>
+    <string name="history_tutorial_filter_text">Filtere deine Trainings nach Art.</string>
+    <string name="history_tutorial_list_title">Trainingsliste</string>
+    <string name="history_tutorial_list_text">Wische ein Training nach links, um es zu löschen.</string>
+
+    <!-- Stats tab -->
+    <string name="history_stats_active_per_week">Aktive Zeit pro Woche (min)</string>
+    <string name="history_stats_last_6_weeks">Letzte 6 Wochen</string>
+    <string name="history_stats_col_week">WOCHE</string>
+    <string name="history_stats_col_count">ANZ.</string>
+    <string name="history_stats_col_min">MIN</string>
+    <string name="history_stats_col_avg_bpm">Ø BPM</string>
+    <string name="history_stats_trimp_history">TRIMP-Verlauf</string>
+    <string name="history_stats_no_trimp">Noch keine TRIMP-Daten verfügbar.</string>
+
+    <!-- Training load card -->
+    <string name="history_load_title">Trainingslast</string>
+    <string name="history_load_acute">AKUT (7 T)</string>
+    <string name="history_load_chronic">CHRONISCH (Ø 4 W)</string>
+    <string name="history_load_zone_low">Unter 0,8: Belastung liegt unter deinem Niveau – Steigerung möglich.</string>
+    <string name="history_load_zone_optimal">0,8–1,3: Belastung passt zu deinem Trainingsniveau.</string>
+    <string name="history_load_zone_caution">1,3–1,5: Deutlicher Anstieg – nicht weiter steigern.</string>
+    <string name="history_load_zone_high">Über 1,5: Belastungsspitze – erhöhtes Verletzungsrisiko.</string>
+    <string name="history_load_zone_none">ACWR erscheint nach 4 Wochen mit Trainingsdaten.</string>
+    <string name="history_load_legend_acute">Akut</string>
+    <string name="history_load_legend_chronic">Chronisch</string>
+    <plurals name="history_load_chart_hint">
+        <item quantity="one">Letzter %d Tag, Last pro Woche.</item>
+        <item quantity="other">Letzte %d Tage, Last pro Woche.</item>
+    </plurals>
+    <plurals name="history_load_unrated">
+        <item quantity="one">%d Training der letzten 4 Wochen ohne RPE – im Detail-Screen bewerten, sonst fehlt dessen Last.</item>
+        <item quantity="other">%d Trainings der letzten 4 Wochen ohne RPE – im Detail-Screen bewerten, sonst fehlt deren Last.</item>
+    </plurals>
+    <string name="history_load_srpe_hint">sRPE = Belastung (0–10) × aktive Minuten.</string>
+
+    <!-- Form tab: readiness -->
+    <string name="history_readiness_title">Bereitschaft (Ruhe-HRV)</string>
+    <string name="history_readiness_empty">Noch keine HRV-Messungen. Miss morgens direkt nach dem Aufwachen, liegend, 1–5 min über „HRV messen“ im Start-Screen.</string>
+    <string name="history_readiness_below">Unter Normalbereich – Erholung priorisieren</string>
+    <string name="history_readiness_normal">Im Normalbereich</string>
+    <string name="history_readiness_above">Über Normalbereich</string>
+    <string name="history_readiness_unclassified">Noch keine Einordnung</string>
+    <string name="history_readiness_rmssd_7d">RMSSD Ø 7 T</string>
+    <string name="history_readiness_readings_7d">MESSUNGEN 7 T</string>
+    <string name="history_readiness_classification_hint">Einordnung ab 3 Messungen in 7 Tagen und 7 Messungen insgesamt.</string>
+    <string name="history_readiness_legend">Punkte: Tagesmessung, Linie: 7-Tage-Ø (ln RMSSD), Fläche: Normalbereich.</string>
+    <string name="history_readiness_legend_range">Punkte: Tagesmessung, Linie: 7-Tage-Ø (ln RMSSD), Fläche: Normalbereich (%1$d–%2$d ms).</string>
+    <plurals name="history_readiness_last_days">
+        <item quantity="one">Letzter %d Tag.</item>
+        <item quantity="other">Letzte %d Tage.</item>
+    </plurals>
+
+    <!-- Form tab: resting HR -->
+    <string name="history_resting_hr_title">Ruhepuls</string>
+    <string name="history_resting_hr_measured">GEMESSEN Ø 7 T</string>
+    <string name="history_resting_hr_configured">EINGESTELLT</string>
+    <string name="history_resting_hr_auto">Automatisch übernehmen</string>
+    <string name="history_resting_hr_auto_hint">Nach jeder HRV-Messung, sobald 3 Messungen in 7 Tagen vorliegen. Bestimmt Karvonen-Zonen und TRIMP künftiger Trainings.</string>
+    <string name="history_resting_hr_apply">%1$d bpm jetzt übernehmen</string>
+
+    <!-- Form tab: HRR trend -->
+    <string name="history_hrr_title">Herzfrequenz-Erholung (HRR60)</string>
+    <string name="history_hrr_empty" formatted="false">Noch keine Trainings mit HRR60 in den letzten 8 Wochen (braucht einen Peak ≥ 70 % HRmax mit 60 s Nachlauf).</string>
+    <string name="history_hrr_avg_last_4w">Ø LETZTE 4 W</string>
+    <string name="history_hrr_avg_prev_4w">Ø 4 W DAVOR</string>
+    <string name="history_hrr_faster">▲ %1$s bpm schnellere Erholung als in den 4 Wochen davor.</string>
+    <string name="history_hrr_slower">▼ %1$s bpm langsamere Erholung als in den 4 Wochen davor.</string>
+    <string name="history_hrr_stable">Erholung stabil gegenüber den 4 Wochen davor.</string>
+    <string name="history_hrr_chart_hint">Je Training ein Punkt (letzte 8 Wochen), Linie: Ø letzte 4 Wochen. Höher = schnellere Erholung.</string>
+</resources>

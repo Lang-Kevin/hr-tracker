@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import com.kevin.hrtracker.MainActivity
+import com.kevin.hrtracker.R
 import com.kevin.hrtracker.ble.HrBleManager
 import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ble.ParsedHr
@@ -42,7 +43,8 @@ class HrRecordingService : BaseRecordingService() {
     private var startMs: Long = 0L
 
     override val notificationChannelId = "hr_recording"
-    override val notificationChannelName = "HR Aufzeichnung"
+    override val notificationChannelName: String
+        get() = getString(R.string.service_notification_channel_name)
     override val notificationId = 1
     @Suppress("InlinedApi")
     override val fgsType = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
@@ -58,8 +60,14 @@ class HrRecordingService : BaseRecordingService() {
             ?.let { HrZoneCalculator.zoneFor(it, currentZones) }
         return NotificationCompat.Builder(this, notificationChannelId)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle("HR Tracker läuft")
-            .setContentText(widgetNotificationText(currentVariant, lastBpmValue, zone, elapsed))
+            .setContentTitle(getString(R.string.service_notification_title))
+            .setContentText(
+                widgetNotificationText(
+                    currentVariant, lastBpmValue, zone, elapsed,
+                    bpmFormat = getString(R.string.service_notification_bpm),
+                    zoneFormat = getString(R.string.service_notification_zone)
+                )
+            )
             .setContentIntent(tapIntent)
             .setOngoing(true)
             .build()
@@ -89,6 +97,7 @@ class HrRecordingService : BaseRecordingService() {
                 when (state) {
                     is ConnectionState.Disconnected,
                     is ConnectionState.Reconnecting,
+                    is ConnectionState.Connecting,
                     is ConnectionState.Error -> sessionRepository.autoPause()
                     is ConnectionState.Ready -> sessionRepository.autoResume()
                     else -> Unit
