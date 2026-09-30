@@ -22,7 +22,7 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 | Async         | Coroutines + Flow     |
 | Datenbank     | Room                  |
 | BLE           | Nordic Kotlin BLE     |
-| Charts        | Vico                  |
+| Charts        | Compose Canvas (eigen) |
 | DI            | Hilt                  |
 | Serialization | kotlinx.serialization |
 
@@ -258,6 +258,10 @@ Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML
 Font: **Space Grotesk** (via `ui-text-google-fonts`). Theme, Farbschema und Typografie kommen aus der Shared Library (`AppTheme`, `AppTypography`).
 
 Statistik-Kachel-Werte (`StatItem`, `ui/shared/TrainingUi.kt`): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
+
+## Build & Release
+
+Release-Build: R8 (Minify + Resource-Shrinking), Log.d/v/i werden per `-assumenosideeffects` entfernt.
 
 ## Shared Library (shared-app-lib)
 

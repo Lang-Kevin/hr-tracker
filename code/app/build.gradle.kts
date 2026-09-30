@@ -23,7 +23,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -67,8 +68,6 @@ dependencies {
     implementation("com.kevin.shared:shared")
     implementation(libs.kotlinx.serialization.json)
 
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
     implementation(libs.navigation.compose)
     implementation(libs.compose.material.icons.extended)
 
