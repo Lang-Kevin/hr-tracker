@@ -20,15 +20,15 @@ jobs:
         with:
           path: ws/hr-tracker
 
-      # Gleichnamiger Branch in shared-app-lib, falls vorhanden (App- und Lib-Änderungen
+      # In PRs der gleichnamige Branch in shared-app-lib, falls vorhanden (App- und Lib-Änderungen
       # zusammen testen), sonst die in code/shared-app-lib.ref gepinnte Lib-Version.
       - name: Shared-Lib-Ref bestimmen
         id: lib
         working-directory: ws/hr-tracker
         env:
-          BRANCH: ${{ github.head_ref || github.ref_name }}
+          BRANCH: ${{ github.head_ref }}
         run: |
-          if git ls-remote --exit-code --heads https://github.com/Lang-Kevin/shared-app-lib "$BRANCH" > /dev/null; then
+          if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads https://github.com/Lang-Kevin/shared-app-lib "$BRANCH" > /dev/null; then
             echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=$(tr -d '[:space:]' < code/shared-app-lib.ref)" >> "$GITHUB_OUTPUT"
