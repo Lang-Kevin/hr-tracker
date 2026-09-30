@@ -91,6 +91,7 @@ Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `
 Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht betroffen.
 
 - **Auto-Pause**: Wechselt der BLE-Verbindungsstatus auf `Disconnected`, `Reconnecting` oder `Error`, pausiert `HrRecordingService` die laufende Aufzeichnung automatisch und setzt das interne Flag `pausedByConnectionLoss = true`.
+- **Reconnect-Mechanismus**: Solange `reconnectEnabled == true` (nach `connect()` / vor `disconnect()`), versucht `HrBleManager.startConnectionLoop()` mit Backoff (3s, 5s, 10s, 30s-Obergrenze) zu rekonnektieren. Der Loop läuft bis `disconnect()` / `connectFake()` aufgerufen wird. Permanent-Fehler (fehlende Berechtigung, falsches Gerät: HR-Characteristik/CCCD nicht gefunden) setzen `reconnectEnabled=false` und stoppen den Retry.
 - **Auto-Resume**: Erreicht der Status wieder `Ready`, wird die Aufzeichnung automatisch fortgesetzt — jedoch **nur**, wenn `pausedByConnectionLoss == true`. Eine vom Nutzer manuell gestartete Pause bleibt unberührt.
 - **Live-Screen**: Zeigt während der Auto-Pause ein Banner „Verbindung verloren — Messung pausiert".
 - **Cleanup**: Der `connectionStateJob` (Coroutine, die den BLE-Status beobachtet) wird in `onRecordingStop()` des Service gecancelt.
