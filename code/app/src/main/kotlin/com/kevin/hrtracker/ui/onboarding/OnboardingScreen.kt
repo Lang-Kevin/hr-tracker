@@ -169,7 +169,7 @@ private fun ColumnScope.Step1(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(stringResource(R.string.onboarding_max_hr), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$it BPM", color = PrimaryPurple, style = MaterialTheme.typography.titleMedium)
+                Text("$it BPM", color = PrimaryPurple, style = MaterialTheme.typography.titleMedium) // i18n-ignore: unit/acronym, same in every language
             }
         }
     }

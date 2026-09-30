@@ -359,7 +359,7 @@ fun BpmZoneChart(
                     drawScrubber(
                         x = sx.coerceIn(leftPaddingPx, size.width),
                         y = bpmToY(bpm.coerceIn(bpmMin.toInt(), bpmMax.toInt())),
-                        label = "$bpm bpm · ${formatTickLabel(frac * totalSec)}",
+                        label = "$bpm bpm · ${formatTickLabel(frac * totalSec)}", // i18n-ignore: unit/acronym, same in every language
                         leftPaddingPx = leftPaddingPx,
                         plotHeight = plotHeight,
                         density = density

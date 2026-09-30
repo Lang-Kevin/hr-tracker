@@ -21,16 +21,17 @@ jobs:
           path: ws/hr-tracker
 
       # Gleichnamiger Branch in shared-app-lib, falls vorhanden (App- und Lib-Änderungen
-      # zusammen testen), sonst master.
+      # zusammen testen), sonst die in code/shared-app-lib.ref gepinnte Lib-Version.
       - name: Shared-Lib-Ref bestimmen
         id: lib
+        working-directory: ws/hr-tracker
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           if git ls-remote --exit-code --heads https://github.com/Lang-Kevin/shared-app-lib "$BRANCH" > /dev/null; then
             echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
-            echo "ref=master" >> "$GITHUB_OUTPUT"
+            echo "ref=$(tr -d '[:space:]' < code/shared-app-lib.ref)" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/checkout@v4
         with:
@@ -45,13 +46,21 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Hartkodierte UI-Texte
+        run: python3 ws/shared-app-lib/tools/check_hardcoded_strings.py ws/hr-tracker/code/app/src/main/kotlin
+
       # Runner bringt ein Android-SDK (ANDROID_HOME) mit akzeptierten Lizenzen mit;
       # fehlende Plattformen (compileSdk 37) laedt AGP selbst nach.
+      # lintDebug prüft u. a. fehlende Übersetzungen (MissingTranslation) und Plurals.
       - name: Build und Unit-Tests
         working-directory: ws/hr-tracker/code
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:testDebugUnitTest --stacktrace
+          ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug --stacktrace
+
+      - name: Lint-Bericht ausgeben
+        if: failure()
+        run: find ws/hr-tracker/code/app/build -name 'lint-results-*.txt' -exec cat {} + || true
 
       - name: Test-Reports hochladen
         if: failure()

@@ -71,13 +71,13 @@ fun LoadCard(
                 FilterChip(
                     selected = metric == LoadMetric.TRIMP,
                     onClick = { onMetricChange(LoadMetric.TRIMP) },
-                    label = { Text("TRIMP") }
+                    label = { Text("TRIMP") } // i18n-ignore: unit/acronym, same in every language
                 )
                 Spacer(Modifier.width(6.dp))
                 FilterChip(
                     selected = metric == LoadMetric.SRPE,
                     onClick = { onMetricChange(LoadMetric.SRPE) },
-                    label = { Text("sRPE") }
+                    label = { Text("sRPE") } // i18n-ignore: unit/acronym, same in every language
                 )
             }
 
