@@ -106,7 +106,7 @@ class ScanViewModel @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun connect(device: BluetoothDevice) {
-        pendingDeviceInfo = device.address to (device.name ?: "Unbekanntes Gerät")
+        pendingDeviceInfo = device.address to (device.name ?: device.address)
         stopScan()
         bleManager.connect(device)
     }
