@@ -16,7 +16,7 @@ jobs:
     steps:
       # includeBuild zeigt (relativ zu code/) auf ../../shared-app-lib (sharedLibPath-Default):
       #   ws/hr-tracker/code  ->  ws/shared-app-lib
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: ws/hr-tracker
 
@@ -33,7 +33,7 @@ jobs:
           else
             echo "ref=$(tr -d '[:space:]' < code/shared-app-lib.ref)" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: Lang-Kevin/shared-app-lib
           ref: ${{ steps.lib.outputs.ref }}
