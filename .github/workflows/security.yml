@@ -1,0 +1,81 @@
+name: CVE-Check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Wöchentlich, damit neu veröffentlichte CVEs auch ohne Code-Änderung auffallen.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  osv-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Gleiches Layout wie android.yml: includeBuild zeigt auf ../../shared-app-lib.
+      - uses: actions/checkout@v4
+        with:
+          path: ws/hr-tracker
+
+      - name: Shared-Lib-Ref bestimmen
+        id: lib
+        working-directory: ws/hr-tracker
+        env:
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          if [ -n "$BRANCH" ] && git ls-remote --exit-code --heads https://github.com/Lang-Kevin/shared-app-lib "$BRANCH" > /dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=$(tr -d '[:space:]' < code/shared-app-lib.ref)" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        with:
+          repository: Lang-Kevin/shared-app-lib
+          ref: ${{ steps.lib.outputs.ref }}
+          path: ws/shared-app-lib
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Löst den vollständigen Abhängigkeitsbaum (inkl. transitiver Libs und Build-Plugins) auf
+      # und schreibt ihn als Lockfiles. Die Lockfiles sind nicht eingecheckt, sie dienen nur dem Scan.
+      - name: Abhängigkeiten auflösen (Lockfiles)
+        working-directory: ws/hr-tracker/code
+        run: |
+          chmod +x gradlew
+          ./gradlew -I ../.github/security/dependency-locking.init.gradle \
+            :app:dependencies buildEnvironment --write-locks --no-configuration-cache -q > deps.txt
+          # Nicht auflösbare Abhängigkeiten fehlen sonst stillschweigend im Scan.
+          if grep -n 'FAILED' deps.txt; then echo "::error::Abhängigkeiten nicht auflösbar"; exit 1; fi
+          find . -name '*gradle.lockfile' -print
+
+      # Schlägt fehl, sobald eine Abhängigkeit eine bekannte Schwachstelle hat.
+      # Bewusst akzeptierte Funde mit Begründung in code/osv-scanner.toml eintragen
+      # ([[IgnoredVulns]] id = "GHSA-…", reason = "…").
+      - name: OSV-Scan
+        uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
+        with:
+          scan-args: |-
+            --recursive
+            ./ws/hr-tracker/code
+
+      - name: Lockfiles hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-lockfiles
+          path: ws/hr-tracker/code/**/*gradle.lockfile
+          if-no-files-found: ignore
