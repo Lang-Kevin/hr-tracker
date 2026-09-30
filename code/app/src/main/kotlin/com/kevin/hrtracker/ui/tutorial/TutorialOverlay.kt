@@ -28,6 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.res.stringResource
+import com.kevin.hrtracker.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -43,7 +45,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.kevin.hrtracker.ui.theme.PrimaryPurple
+import com.kevin.shared.ui.theme.PrimaryPurple
 
 data class TutorialStep(val key: String, val title: String, val text: String)
 
@@ -136,13 +138,13 @@ fun TutorialOverlay(
                 Text(step.text, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(onClick = onFinish) {
-                        Text("Überspringen", color = Color.White.copy(alpha = 0.8f))
+                        Text(stringResource(R.string.common_tutorial_skip), color = Color.White.copy(alpha = 0.8f))
                     }
                     Button(
                         onClick = { if (index < steps.lastIndex) index++ else onFinish() },
                         colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = PrimaryPurple)
                     ) {
-                        Text(if (index < steps.lastIndex) "Weiter (${index + 1}/${steps.size})" else "Fertig")
+                        Text(if (index < steps.lastIndex) stringResource(R.string.common_tutorial_next_progress, index + 1, steps.size) else stringResource(R.string.common_tutorial_done))
                     }
                 }
             }

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_zone_info_title">What do the zones mean?</string>
+    <string name="settings_close">Close</string>
+    <string name="settings_ok">OK</string>
+    <string name="settings_section_heart_rate">Heart rate</string>
+    <string name="settings_age">Age</string>
+    <string name="settings_age_error">Age must be between 10 and 99</string>
+    <string name="settings_hrmax_summary">Tanaka HRmax: %1$d  •  Active: %2$d BPM</string>
+    <string name="settings_measured_max_hr">Measured: %1$d BPM (last 90 days)</string>
+    <string name="settings_apply">Apply</string>
+    <string name="settings_manual_hrmax">Manual HRmax (empty = Tanaka)</string>
+    <string name="settings_hrmax_error">HRmax must be between 100 and 250</string>
+    <string name="settings_resting_hr">Resting HR (for Karvonen)</string>
+    <string name="settings_resting_hr_error">Resting HR must be between 20 and 100</string>
+    <string name="settings_resting_hr_auto">Updated automatically from HRV measurements (History → Form)</string>
+    <string name="settings_zone_model">Zone model</string>
+    <string name="settings_zone_model_no_resting_hr" formatted="false">Without a resting HR, %HRmax is used.</string>
+    <string name="settings_zone_model_explainer" formatted="false">%HRmax: zones based on your max heart rate. Karvonen: also uses your resting HR (heart rate reserve) — zone limits end up noticeably higher.</string>
+    <string name="settings_section_body">Body data (for calorie estimate)</string>
+    <string name="settings_weight">Weight in kg (empty = no calories)</string>
+    <string name="settings_weight_error">Weight must be between 30 and 250 kg</string>
+    <string name="settings_sex_male">Male</string>
+    <string name="settings_sex_female">Female</string>
+    <string name="settings_calories_hint">Without weight and sex, the calories tile stays empty.</string>
+    <string name="settings_section_target_zone">Target zone</string>
+    <string name="settings_section_zone_preview">Zone preview</string>
+    <string name="settings_custom_values">Custom values</string>
+    <string name="settings_zone_n">Zone %1$d</string>
+    <string name="settings_min_bpm">Min BPM</string>
+    <string name="settings_max_bpm">Max BPM</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_chart_dynamic_scale">Chart: dynamic scaling (default)</string>
+    <string name="settings_section_widget">Widget display</string>
+    <string name="settings_widget_hint">Applies to the PiP window and the notification while recording</string>
+    <string name="settings_widget_bpm">BPM</string>
+    <string name="settings_widget_standard">Standard</string>
+    <string name="settings_widget_zone">Zone</string>
+    <string name="settings_widget_time">Time</string>
+    <string name="settings_debug_mode">Debug mode</string>
+    <string name="settings_debug_mode_hint">Unlocks test features (e.g. pseudo sensor during scan)</string>
+    <string name="settings_tutorial_hr_text">Enter your age and resting HR — we use them to calculate your training zones.</string>
+    <string name="settings_tutorial_zones_text">Here you can see your calculated zones or enter your own values.</string>
+    <string name="settings_tutorial_source_title">HR source</string>
+    <string name="settings_tutorial_source_text">Choose whether heart rate comes from the chest strap or the smartwatch.</string>
+    <string name="settings_zone_desc_1">Recovery — very light load, active recovery</string>
+    <string name="settings_zone_desc_2">Fat burn — easy pace, aerobic base</string>
+    <string name="settings_zone_desc_3">Aerobic — moderate training, endurance building</string>
+    <string name="settings_zone_desc_4">Anaerobic — intense load, lactate threshold</string>
+    <string name="settings_zone_desc_5">VO₂max — maximum intensity, short intervals</string>
+</resources>

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- History screen -->
+    <string name="history_title">History</string>
+    <string name="history_tab_history">History</string>
+    <string name="history_tab_stats">Stats</string>
+    <string name="history_tab_form">Form</string>
+    <string name="history_tab_trash">Trash</string>
+    <string name="history_filter_sheet_title">Filter workouts</string>
+    <string name="history_filter_no_labels">No labels yet.</string>
+    <string name="history_filter_chip">Workouts</string>
+    <string name="history_filter_chip_active">Workouts (%1$d)</string>
+    <string name="history_date_filter">Filter by date</string>
+    <string name="history_date_filter_clear">Clear date range</string>
+    <string name="history_date_picker_title">Select date range</string>
+    <string name="history_date_picker_apply">Apply</string>
+    <string name="history_date_picker_cancel">Cancel</string>
+    <string name="history_summary_workouts">WORKOUTS</string>
+    <string name="history_summary_total_time">TOTAL TIME</string>
+    <string name="history_summary_avg_bpm">AVG BPM</string>
+    <string name="history_summary_longest">LONGEST</string>
+    <string name="history_empty_title">No workouts yet</string>
+    <string name="history_empty_text">Start a workout to see your heart rate data here.</string>
+    <string name="history_tutorial_tabs_title">Views</string>
+    <string name="history_tutorial_tabs_text">Switch between History, Stats, Form and Trash.</string>
+    <string name="history_tutorial_filter_title">Filter</string>
+    <string name="history_tutorial_filter_text">Filter your workouts by type.</string>
+    <string name="history_tutorial_list_title">Workout list</string>
+    <string name="history_tutorial_list_text">Swipe a workout to the left to delete it.</string>
+
+    <!-- Stats tab -->
+    <string name="history_stats_active_per_week">Active time per week (min)</string>
+    <string name="history_stats_last_6_weeks">Last 6 weeks</string>
+    <string name="history_stats_col_week">WEEK</string>
+    <string name="history_stats_col_count">COUNT</string>
+    <string name="history_stats_col_min">MIN</string>
+    <string name="history_stats_col_avg_bpm">AVG BPM</string>
+    <string name="history_stats_trimp_history">TRIMP history</string>
+    <string name="history_stats_no_trimp">No TRIMP data yet.</string>
+
+    <!-- Training load card -->
+    <string name="history_load_title">Training load</string>
+    <string name="history_load_acute">ACUTE (7 D)</string>
+    <string name="history_load_chronic">CHRONIC (4-WK AVG)</string>
+    <string name="history_load_zone_low">Below 0.8: load is below your usual level – room to build.</string>
+    <string name="history_load_zone_optimal">0.8–1.3: load matches your training level.</string>
+    <string name="history_load_zone_caution">1.3–1.5: sharp increase – don\'t ramp up further.</string>
+    <string name="history_load_zone_high">Above 1.5: load spike – higher injury risk.</string>
+    <string name="history_load_zone_none">ACWR appears after 4 weeks of training data.</string>
+    <string name="history_load_legend_acute">Acute</string>
+    <string name="history_load_legend_chronic">Chronic</string>
+    <plurals name="history_load_chart_hint">
+        <item quantity="one">Last %d day, weekly load.</item>
+        <item quantity="other">Last %d days, weekly load.</item>
+    </plurals>
+    <plurals name="history_load_unrated">
+        <item quantity="one">%d workout in the last 4 weeks has no RPE – rate it on the detail screen, otherwise its load is missing.</item>
+        <item quantity="other">%d workouts in the last 4 weeks have no RPE – rate them on the detail screen, otherwise their load is missing.</item>
+    </plurals>
+    <string name="history_load_srpe_hint">sRPE = effort (0–10) × active minutes.</string>
+
+    <!-- Form tab: readiness -->
+    <string name="history_readiness_title">Readiness (resting HRV)</string>
+    <string name="history_readiness_empty">No HRV readings yet. Measure in the morning right after waking up, lying down, for 1–5 min via “Measure HRV” on the start screen.</string>
+    <string name="history_readiness_below">Below normal range – prioritize recovery</string>
+    <string name="history_readiness_normal">Within normal range</string>
+    <string name="history_readiness_above">Above normal range</string>
+    <string name="history_readiness_unclassified">Not classified yet</string>
+    <string name="history_readiness_rmssd_7d">RMSSD 7-D AVG</string>
+    <string name="history_readiness_readings_7d">READINGS 7 D</string>
+    <string name="history_readiness_classification_hint">Classification needs 3 readings in 7 days and 7 readings in total.</string>
+    <string name="history_readiness_legend">Dots: daily reading, line: 7-day avg (ln RMSSD), area: normal range.</string>
+    <string name="history_readiness_legend_range">Dots: daily reading, line: 7-day avg (ln RMSSD), area: normal range (%1$d–%2$d ms).</string>
+    <plurals name="history_readiness_last_days">
+        <item quantity="one">Last %d day.</item>
+        <item quantity="other">Last %d days.</item>
+    </plurals>
+
+    <!-- Form tab: resting HR -->
+    <string name="history_resting_hr_title">Resting heart rate</string>
+    <string name="history_resting_hr_measured">MEASURED 7-D AVG</string>
+    <string name="history_resting_hr_configured">CONFIGURED</string>
+    <string name="history_resting_hr_auto">Apply automatically</string>
+    <string name="history_resting_hr_auto_hint">After each HRV reading, once 3 readings in 7 days are available. Sets the Karvonen zones and TRIMP of future workouts.</string>
+    <string name="history_resting_hr_apply">Apply %1$d bpm now</string>
+
+    <!-- Form tab: HRR trend -->
+    <string name="history_hrr_title">Heart rate recovery (HRR60)</string>
+    <string name="history_hrr_empty" formatted="false">No workouts with HRR60 in the last 8 weeks (needs a peak ≥ 70% HRmax followed by 60 s of recording).</string>
+    <string name="history_hrr_avg_last_4w">AVG LAST 4 WK</string>
+    <string name="history_hrr_avg_prev_4w">AVG PRIOR 4 WK</string>
+    <string name="history_hrr_faster">▲ %1$s bpm faster recovery than in the previous 4 weeks.</string>
+    <string name="history_hrr_slower">▼ %1$s bpm slower recovery than in the previous 4 weeks.</string>
+    <string name="history_hrr_stable">Recovery stable compared with the previous 4 weeks.</string>
+    <string name="history_hrr_chart_hint">One dot per workout (last 8 weeks), line: avg of the last 4 weeks. Higher = faster recovery.</string>
+</resources>

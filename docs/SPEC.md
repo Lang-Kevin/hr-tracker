@@ -254,21 +254,24 @@ Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML
 | SurfaceDark   | `#252330`   | Cards, Surfaces         |
 | LightPurple   | `#CBBCFF`   | Zone 3, onSurface       |
 
-Font: **Space Grotesk** (via `ui-text-google-fonts`, `Type.kt`, `HrTrackerTypography`). Material3 darkColorScheme.
+Font: **Space Grotesk** (via `ui-text-google-fonts`). Theme, Farbschema und Typografie kommen aus der Shared Library (`AppTheme`, `AppTypography`).
 
 Statistik-Kachel-Werte (`StatItem`, `ui/shared/TrainingUi.kt`): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
 
-## Shared Library (shared-android-lib)
+## Shared Library (shared-app-lib)
 
-Gradle Composite Build, eingebunden via `includeBuild("../../shared-android-lib")` in `settings.gradle.kts`. Repo getrennt unter `C:\Code\Android\shared-android-lib`, ebenfalls eingebunden in ArmSwing (`C:\Code\Arduino\ArmSwingProject`). Kein Maven/AAR-Publishing — Solo-Dev, manuelles Deployment.
+Gradle Composite Build, eingebunden via `includeBuild(sharedLibPath)` in `code/settings.gradle.kts`. Pfad per `sharedLibPath=…` in `code/local.properties` überschreibbar, Default `../../shared-app-lib`. Kein Maven/AAR-Publishing. Neue Features wandern nur in die Lib, wenn hr-tracker und jump-tracker sie beide nutzen; ArmSwing ist deprecated.
+
+Alle UI-Texte der Lib sind String-Ressourcen (Englisch Default, Deutsch in `values-de`, Präfix `shared_`).
 
 Geteilter Code (`com.kevin.shared.*`):
 - `ble`: `BleConstants`, `ConnectionState`
-- `domain`: `SavedDevice`, `DeviceType`, `SoftDeletable`, `DiscoveredDevice`
-- `settings`: `BleDevicePrefKeys`, `BleDevicePreferences`
+- `domain`: `SavedDevice`, `DeviceType`, `SoftDeletable`, `DiscoveredDevice`, `Selection`, `LabelFilter`, `ZoneTextError`
 - `service`: `RecordingServiceContract`, `BaseRecordingService`
-
-Genutzt u. a. in `HrBleManager`, `HrRecordingService`, `SettingsRepository`, `LiveViewModel`, `ScanViewModel`, `ScanScreen`, `DetailScreen`, `HistoryScreen`, `Session`.
+- `ui.theme`: `AppTheme`, `AppTypography`, Farbpalette
+- `ui.session`: `TrashTab`, `SoftDeleteConfirmationDialog` (mit `TrashRetention.ON_NEXT_APP_START`), `SessionListItem`, `SummaryCard`, `CategoryFilterRow`, `LeaveSessionDialog`
+- `ui.selection`: `SelectionHeader`
+- `ui.scan`, `ui.zone`, `ui.chart`, `StatItem`, `LabelPickerDialog`
 
 ## Architektur-Entscheidungen
 

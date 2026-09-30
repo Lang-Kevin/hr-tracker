@@ -14,18 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      # includeBuild zeigt (relativ zu code/) auf ../../shared-android-lib bzw. nach
-      # PR #6 auf ../../../shared-android-lib. Layout deckt beide ab:
-      #   ws/src/hr-tracker/code  ->  ws/src/shared-android-lib (Symlink) und ws/shared-android-lib
+      # includeBuild zeigt (relativ zu code/) auf ../../shared-app-lib (sharedLibPath-Default):
+      #   ws/hr-tracker/code  ->  ws/shared-app-lib
       - uses: actions/checkout@v4
         with:
-          path: ws/src/hr-tracker
+          path: ws/hr-tracker
+
+      # Gleichnamiger Branch in shared-app-lib, falls vorhanden (App- und Lib-Änderungen
+      # zusammen testen), sonst master.
+      - name: Shared-Lib-Ref bestimmen
+        id: lib
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if git ls-remote --exit-code --heads https://github.com/Lang-Kevin/shared-app-lib "$BRANCH" > /dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=master" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/checkout@v4
         with:
           repository: Lang-Kevin/shared-app-lib
-          path: ws/shared-android-lib
-      - name: Shared-Lib fuer beide includeBuild-Pfade verlinken
-        run: ln -s ../shared-android-lib ws/src/shared-android-lib
+          ref: ${{ steps.lib.outputs.ref }}
+          path: ws/shared-app-lib
 
       - uses: actions/setup-java@v4
         with:
@@ -37,7 +48,7 @@ jobs:
       # Runner bringt ein Android-SDK (ANDROID_HOME) mit akzeptierten Lizenzen mit;
       # fehlende Plattformen (compileSdk 37) laedt AGP selbst nach.
       - name: Build und Unit-Tests
-        working-directory: ws/src/hr-tracker/code
+        working-directory: ws/hr-tracker/code
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug :app:testDebugUnitTest --stacktrace
@@ -47,5 +58,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: ws/src/hr-tracker/code/app/build/reports/
+          path: ws/hr-tracker/code/app/build/reports/
           if-no-files-found: ignore

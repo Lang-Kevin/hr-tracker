@@ -12,6 +12,8 @@ import com.kevin.hrtracker.domain.LoadMetric
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
+import com.kevin.shared.domain.LabelFilter
+import com.kevin.shared.domain.Selection
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -43,8 +46,8 @@ class HistoryViewModel @Inject constructor(
     val sessions: StateFlow<List<Session>> = sessionRepository.getSessionsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _selectedLabels = MutableStateFlow<Set<String>>(emptySet())
-    val selectedLabels: StateFlow<Set<String>> = _selectedLabels.asStateFlow()
+    private val _labelFilter = MutableStateFlow(LabelFilter())
+    val labelFilter: StateFlow<LabelFilter> = _labelFilter.asStateFlow()
 
     val availableLabels: StateFlow<List<String>> = sessions.map { sessionList ->
         sessionList.map { it.label }.distinct().sorted()
@@ -55,10 +58,10 @@ class HistoryViewModel @Inject constructor(
 
     val filteredSessions: StateFlow<List<Session>> = combine(
         sessions,
-        _selectedLabels,
+        _labelFilter,
         _dateRange
-    ) { all, selected, range ->
-        var result = if (selected.isEmpty()) all else all.filter { it.label in selected }
+    ) { all, filter, range ->
+        var result = filter.apply(all) { it.label }
         if (range != null) {
             val (start, end) = range
             val zone = ZoneId.systemDefault()
@@ -72,12 +75,8 @@ class HistoryViewModel @Inject constructor(
     val trashSessions: StateFlow<List<Session>> = sessionRepository.getTrashFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
-    val selectedIds: StateFlow<Set<Long>> = _selectedIds.asStateFlow()
-
-    val isSelectionMode: StateFlow<Boolean> = _selectedIds
-        .map { it.isNotEmpty() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+    private val _selection = MutableStateFlow(Selection<Long>())
+    val selection: StateFlow<Selection<Long>> = _selection.asStateFlow()
 
     data class SummaryStats(
         val sessionCount: Int,
@@ -212,8 +211,7 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun toggleLabelFilter(label: String) {
-        val current = _selectedLabels.value
-        _selectedLabels.value = if (label in current) current - label else current + label
+        _labelFilter.update { it.toggle(label) }
     }
 
     fun setDateRange(start: Long?, end: Long?) {
@@ -236,21 +234,20 @@ class HistoryViewModel @Inject constructor(
     }
 
     fun startSelection(id: Long) {
-        _selectedIds.value = setOf(id)
+        _selection.update { it.start(id) }
     }
 
     fun toggleSelection(id: Long) {
-        val current = _selectedIds.value
-        _selectedIds.value = if (id in current) current - id else current + id
+        _selection.update { it.toggle(id) }
     }
 
     fun clearSelection() {
-        _selectedIds.value = emptySet()
+        _selection.update { it.clear() }
     }
 
     fun moveToTrash(ids: List<Long>) {
         if (ids.isEmpty()) return
-        _selectedIds.value = emptySet()
+        _selection.update { it.clear() }
         viewModelScope.launch { sessionRepository.deleteSessionsByIds(ids) }
     }
 

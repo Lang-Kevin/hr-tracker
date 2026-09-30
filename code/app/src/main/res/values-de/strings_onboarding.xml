@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onboarding_skip">Überspringen</string>
+    <string name="onboarding_next">Weiter</string>
+    <string name="onboarding_welcome_title">Willkommen bei HR-Tracker</string>
+    <string name="onboarding_welcome_text">Zeichne deine Herzfrequenz mit deinem BLE-Brustgurt auf und behalte deine Trainingszonen im Blick.</string>
+    <string name="onboarding_age_title">Wie alt bist du?</string>
+    <string name="onboarding_age_text">Wir berechnen damit deine maximale Herzfrequenz nach der Tanaka-Formel.</string>
+    <string name="onboarding_age_label">Alter (Jahre)</string>
+    <string name="onboarding_age_error">Alter muss zwischen 10 und 99 liegen</string>
+    <string name="onboarding_max_hr">Maximale Herzfrequenz</string>
+    <string name="onboarding_resting_hr_title">Ruhepuls (optional)</string>
+    <string name="onboarding_resting_hr_text" formatted="false">Nötig, falls du in den Einstellungen das Karvonen-Modell wählst. Standard bleibt %HRmax. Typisch: 50–70 BPM morgens nach dem Aufwachen.</string>
+    <string name="onboarding_resting_hr_label">Ruhepuls (BPM)</string>
+    <string name="onboarding_get_started">Loslegen</string>
+</resources>

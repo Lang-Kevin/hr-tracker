@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scan_label_picker_title">Choose workout type</string>
+    <string name="scan_label_picker_confirm">Start</string>
+    <string name="scan_label_picker_add">New type</string>
+    <string name="scan_history">History</string>
+    <string name="scan_settings_cd">Settings</string>
+    <string name="scan_grant_permission">Grant Bluetooth permission</string>
+    <string name="scan_starting">Starting…</string>
+    <string name="scan_start_workout">Start workout</string>
+    <string name="scan_measure_hrv">Measure HRV</string>
+    <string name="scan_saved_devices">Saved devices</string>
+    <string name="scan_available_devices">Available HR devices:</string>
+    <string name="scan_searching">Searching…</string>
+    <string name="scan_start_search">Search for devices</string>
+    <string name="scan_scan_running">Scanning…</string>
+    <string name="scan_device_simulated">Simulated test device</string>
+    <string name="scan_device_chest_strap">Chest strap</string>
+
+    <string name="scan_tutorial_status_title">Connection status</string>
+    <string name="scan_tutorial_status_text">See whether your chest strap is connected.</string>
+    <string name="scan_tutorial_search_title">Find devices</string>
+    <string name="scan_tutorial_search_text">Start the Bluetooth search for your chest strap here.</string>
+    <string name="scan_tutorial_settings_title">Settings</string>
+    <string name="scan_tutorial_settings_text">Adjust your age, resting HR and HR zones here.</string>
+
+    <string name="scan_hrv_dialog_title">HRV measurement</string>
+    <string name="scan_hrv_super_short">Super Short</string>
+    <string name="scan_hrv_short">Short</string>
+    <string name="scan_hrv_full">Full</string>
+    <string name="scan_hrv_seconds">%1$d sec</string>
+    <string name="scan_hrv_minutes">%1$d min</string>
+    <string name="scan_hrv_option">%1$s · %2$s</string>
+    <string name="scan_cancel">Cancel</string>
+</resources>
