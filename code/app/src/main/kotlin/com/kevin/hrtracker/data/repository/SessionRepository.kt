@@ -61,12 +61,11 @@ class SessionRepository @Inject constructor(
     val pausedByConnectionLoss: StateFlow<Boolean> = _pausedByConnectionLoss.asStateFlow()
 
     init {
+        // Taken before launch: sessions started after construction must not count as orphans
+        val cutoff = System.currentTimeMillis()
         scope.launch {
             try {
-                db.sessionDao().closeOrphanedSessions(
-                    cutoff = System.currentTimeMillis(),
-                    endedAt = System.currentTimeMillis()
-                )
+                db.sessionDao().closeOrphanedSessions(cutoff = cutoff)
                 db.sessionDao().permanentlyDeleteTrashed()
                 Log.d("HRTracker", "Orphaned sessions closed, trash purged")
                 // Einmalig nach Update/Formeländerung: fehlende oder veraltete Kennzahlen nachrechnen
