@@ -235,6 +235,7 @@ class SessionRepository @Inject constructor(
 
             withContext(NonCancellable) {
                 try {
+                    db.milestoneDao().deleteBySession(id)
                     db.sessionDao().deleteById(id)
                     Log.d("HRTracker", "Session $id discarded")
                 } finally {

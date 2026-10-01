@@ -13,10 +13,13 @@ import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -28,6 +31,8 @@ class LiveViewModel @Inject constructor(
     private val milestoneDao: MilestoneDao,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val milestoneMutex = Mutex()
 
     private val _hrvCountdown = MutableStateFlow<Int?>(
         savedStateHandle.get<Int>("hrv")?.takeIf { it > 0 }
@@ -101,16 +106,34 @@ class LiveViewModel @Inject constructor(
         if (isPaused.value) sessionRepository.resume() else sessionRepository.pause()
     }
 
-    private val _milestones = MutableStateFlow<List<Long>>(emptyList())
-    val milestones: StateFlow<List<Long>> = _milestones.asStateFlow()
-
-    /** Parallel zu [milestones]: Index des jeweils neuesten Samples beim Setzen (für die Live-Chart-Position). */
+    /** Index des jeweils neuesten Samples beim Setzen (für die Live-Chart-Position). */
     private val _milestoneSampleIdx = MutableStateFlow<List<Int>>(emptyList())
     val milestoneSampleIndices: StateFlow<List<Int>> = _milestoneSampleIdx.asStateFlow()
 
     fun addMilestone() {
-        _milestones.update { it + _elapsedSeconds.value }
-        _milestoneSampleIdx.update { it + (_bpmHistory.value.size - 1).coerceAtLeast(0) }
+        viewModelScope.launch {
+            milestoneMutex.withLock {
+                val sessionId = activeSessionId.value ?: return@withLock
+                val atSeconds = _elapsedSeconds.value
+                val sampleIdx = (_bpmHistory.value.size - 1).coerceAtLeast(0)
+
+                try {
+                    val label = "M${milestoneDao.getBySession(sessionId).first().size + 1}"
+                    withContext(NonCancellable) {
+                        milestoneDao.insertAll(listOf(Milestone(
+                            sessionId = sessionId,
+                            atSeconds = atSeconds,
+                            label = label
+                        )))
+                    }
+                    _milestoneSampleIdx.update { it + sampleIdx }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("HRTracker", "Milestone-Insert fehlgeschlagen", e)
+                }
+            }
+        }
     }
 
     private var sessionStartMs = 0L
@@ -189,37 +212,6 @@ class LiveViewModel @Inject constructor(
                     delay(1_000)
                     if (!isPaused.value) _hrvCountdown.update { it?.minus(1) }
                 }
-            }
-        }
-        viewModelScope.launch {
-            var previousSessionId: Long? = null
-            activeSessionId.collect { id ->
-                if (previousSessionId != null && id == null) {
-                    // Session wurde gerade beendet — persistiere Milestones
-                    val milestonesList = _milestones.value
-                    if (milestonesList.isNotEmpty()) {
-                        val entities = milestonesList.mapIndexed { idx, seconds ->
-                            Milestone(
-                                sessionId = previousSessionId!!,
-                                atSeconds = seconds,
-                                label = "M${idx + 1}"
-                            )
-                        }
-                        // ponytail: NonCancellable, sonst gehen Milestones verloren wenn
-                        // die VM während des Inserts bei Session-Ende zerstört wird.
-                        withContext(NonCancellable) {
-                            try {
-                                milestoneDao.insertAll(entities)
-                                Log.d("HRTracker", "Milestones persistiert: ${entities.size}")
-                            } catch (e: Exception) {
-                                Log.e("HRTracker", "Milestone-Persistierung fehlgeschlagen", e)
-                            }
-                        }
-                    }
-                    _milestones.value = emptyList()
-                    _milestoneSampleIdx.value = emptyList()
-                }
-                previousSessionId = id
             }
         }
     }
