@@ -88,6 +88,17 @@ Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `
 
 Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeitstempel des letzten Samples geschlossen (ohne Samples: startedAt).
 
+### Session-Ownership
+
+Invariante: Session aktiv ⇔ Foreground Service läuft ⇔ Service hat Kommando ausgeführt.
+
+- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
+- **Service als Single Owner**: `null` Intent → `stopSelf()` + `START_NOT_STICKY`; `onDestroy()` Safety-Net-Stop.
+- **SessionRepository = State-Halter**: Mutex, idempotente `start()`, `NonCancellable` in `close()`, `activeSessionId=null` nach Close.
+- **Session-gebundener State in Repo/DB**: Meilensteine sofort beim Add in DB, auf Discard gelöscht; `ActiveClock` für Elapsed-Time (Pause ausgeschlossen); HRV-Restzeit in Service (`hrvRemainingSec` StateFlow, 1s-Ticker).
+- **HRV-Auto-Stop**: Service entscheidet, nicht ViewModel.
+- **MainActivity Lifecycle-Integration**: Navigiert bei service-seitigem Session-Ende (via `lifecycleScope`-Collector) von Live zum Detail.
+
 ### BLE Auto-Pause / Auto-Resume
 
 Gilt ausschließlich im BLE-Modus (`hrSource == BLE`). Watch-Sessions sind nicht betroffen.
