@@ -136,10 +136,6 @@ class LiveViewModel @Inject constructor(
         }
     }
 
-    private var sessionStartMs = 0L
-    private var pausedAccumMs = 0L
-    private var pauseStartedMs = 0L
-
     init {
         viewModelScope.launch {
             bleManager.hrSamples
@@ -154,11 +150,12 @@ class LiveViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (true) {
-                if (activeSessionId.value != null && sessionStartMs > 0 && !isPaused.value) {
-                    _elapsedSeconds.value =
-                        (System.currentTimeMillis() - sessionStartMs - pausedAccumMs) / 1000
-                    currentZone.value?.let { z ->
-                        _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
+                if (activeSessionId.value != null) {
+                    _elapsedSeconds.value = sessionRepository.activeElapsedMs() / 1000
+                    if (!isPaused.value) {
+                        currentZone.value?.let { z ->
+                            _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
+                        }
                     }
                 }
                 delay(1_000)
@@ -167,41 +164,28 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             combine(activeSessionId, isPaused, sessionRepository.activeSession) { id, paused, session ->
                 Triple(id, paused, session)
-            }.collect { (id, paused, session) ->
-                if (paused) {
-                    pauseStartedMs = System.currentTimeMillis()
-                } else if (pauseStartedMs > 0) {
+            }.distinctUntilChangedBy { it.first to it.second }.collect { (id, paused, session) ->
+                if (!paused && id != null && session != null) {
                     // Resume event: reload samples and seed timeInZone from persisted data
-                    pausedAccumMs += System.currentTimeMillis() - pauseStartedMs
-                    pauseStartedMs = 0L
-
-                    if (id != null && session != null) {
-                        val samples = sessionRepository.getSamplesForSession(id)
-                        val zones = HrZoneCalculator.resolveZones(
-                            session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
-                        )
-                        _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
-                    }
+                    val samples = sessionRepository.getSamplesForSession(id)
+                    val zones = HrZoneCalculator.resolveZones(
+                        session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
+                    )
+                    _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
                 }
             }
         }
         viewModelScope.launch {
             activeSessionId.collect { id ->
-                if (id != null && sessionStartMs == 0L) {
-                    sessionStartMs = sessionRepository.activeSession.first()?.startedAt
-                        ?: System.currentTimeMillis()
-                    // Neue Session: Samples von vor dem Start nicht im Live-Chart anzeigen.
-                    _bpmHistory.value = emptyList()
-                    _milestoneSampleIdx.value = emptyList()
-                }
                 if (id == null) {
-                    sessionStartMs = 0L
                     _elapsedSeconds.value = 0
                     _bpmHistory.value = emptyList()
                     _milestoneSampleIdx.value = emptyList()
                     _timeInZone.value = emptyMap()
-                    pausedAccumMs = 0L
-                    pauseStartedMs = 0L
+                } else {
+                    // Neue Session oder VM-Rekonstruktion: Samples von vor dem Start/Recreate nicht im Live-Chart anzeigen.
+                    _bpmHistory.value = emptyList()
+                    _milestoneSampleIdx.value = emptyList()
                 }
             }
         }

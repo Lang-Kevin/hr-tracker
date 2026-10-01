@@ -8,6 +8,7 @@ import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.isHrvMeasurement
 import com.kevin.hrtracker.data.entity.toHrvMeasurements
+import com.kevin.hrtracker.domain.ActiveClock
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.hrtracker.domain.SessionMetrics
 import com.kevin.hrtracker.domain.HrZoneCalculator
@@ -58,6 +59,8 @@ class SessionRepository @Inject constructor(
 
     private var sampleJob: Job? = null
     private var activeHrFlow: Flow<ParsedHr>? = null
+    @Volatile
+    private var clock: ActiveClock? = null
 
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
@@ -108,16 +111,18 @@ class SessionRepository @Inject constructor(
 
             val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr, zoneModel)
             val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
+            val startedAtMs = System.currentTimeMillis()
             val id = db.sessionDao().insert(
                 Session(
                     label = label,
-                    startedAt = System.currentTimeMillis(),
+                    startedAt = startedAtMs,
                     endedAt = null,
                     maxHrUsed = maxHrUsed,
                     restingHr = restingHr,
                     zoneSnapshotJson = zoneJson
                 )
             )
+            clock = ActiveClock(startedAtMs)
             _activeSessionId.value = id
             activeHrFlow = hrSamples
             sampleJob?.cancel()
@@ -147,6 +152,7 @@ class SessionRepository @Inject constructor(
         sampleJob?.cancel()
         sampleJob = null
         _isPaused.value = true
+        clock?.pause(System.currentTimeMillis())
     }
 
     fun resume() {
@@ -156,6 +162,7 @@ class SessionRepository @Inject constructor(
         sampleJob = null
         _pausedByConnectionLoss.value = false
         sampleJob = launchSampleJob(id, flow)
+        clock?.resume(System.currentTimeMillis())
         _isPaused.value = false
     }
 
@@ -181,6 +188,7 @@ class SessionRepository @Inject constructor(
             _isPaused.value = false
             _pausedByConnectionLoss.value = false
             activeHrFlow = null
+            clock = null
 
             withContext(NonCancellable) {
                 try {
@@ -232,6 +240,7 @@ class SessionRepository @Inject constructor(
             _isPaused.value = false
             _pausedByConnectionLoss.value = false
             activeHrFlow = null
+            clock = null
 
             withContext(NonCancellable) {
                 try {
@@ -259,6 +268,9 @@ class SessionRepository @Inject constructor(
 
     suspend fun getSamplesForSession(sessionId: Long) =
         db.hrSampleDao().getSamplesForSession(sessionId).first()
+
+    fun activeElapsedMs(nowMs: Long = System.currentTimeMillis()): Long =
+        clock?.activeElapsedMs(nowMs) ?: 0L
 
     fun observedMaxBpm(sinceMs: Long): Flow<Int?> = db.hrSampleDao().getObservedMaxBpm(sinceMs)
 
