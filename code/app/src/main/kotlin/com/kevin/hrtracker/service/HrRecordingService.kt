@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.R
@@ -21,7 +22,9 @@ import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.service.BaseRecordingService
 import com.kevin.shared.service.RecordingServiceContract
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -44,6 +47,8 @@ class HrRecordingService : BaseRecordingService() {
     @Volatile private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
     @Volatile private var currentZones: List<ZoneBounds> = emptyList()
     private var startMs: Long = 0L
+    private var hrvJob: Job? = null
+    @Volatile private var pendingHrvSeconds = 0
 
     override val notificationChannelId = "hr_recording"
     override val notificationChannelName: String
@@ -117,10 +122,31 @@ class HrRecordingService : BaseRecordingService() {
                     updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
                 }
             }
+            val hrvSeconds = pendingHrvSeconds
+            if (hrvSeconds > 0) {
+                sessionRepository.setHrvTarget(hrvSeconds)
+                hrvJob = serviceScope.launch {
+                    while (true) {
+                        val r = sessionRepository.tickHrv() ?: return@launch
+                        if (r <= 0) break
+                        delay(1_000)
+                    }
+                    // gleicher Pfad wie die UI: ACTION_STOP -> Basisklasse -> onRecordingStop() + stopSelf()
+                    try {
+                        startService(stopIntent(this@HrRecordingService))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("HRTracker", "HRV auto-stop failed", e)
+                    }
+                }
+            }
         }
     }
 
     override suspend fun onRecordingStop() {
+        hrvJob?.cancel()
+        hrvJob = null
         notificationJob?.cancel()
         notificationJob = null
         connectionStateJob?.cancel()
@@ -138,6 +164,8 @@ class HrRecordingService : BaseRecordingService() {
                 START_NOT_STICKY
             }
             intent.action == ACTION_DISCARD -> {
+                hrvJob?.cancel()
+                hrvJob = null
                 serviceScope.launch {
                     try {
                         sessionRepository.discardSession()
@@ -147,11 +175,17 @@ class HrRecordingService : BaseRecordingService() {
                 }
                 START_NOT_STICKY
             }
-            else -> super.onStartCommand(intent, flags, startId)
+            else -> {
+                if (intent.action == RecordingServiceContract.ACTION_START) {
+                    pendingHrvSeconds = intent.getIntExtra(EXTRA_HRV_SECONDS, 0)
+                }
+                super.onStartCommand(intent, flags, startId)
+            }
         }
     }
 
     override fun onDestroy() {
+        hrvJob?.cancel()
         if (sessionRepository.activeSessionId.value != null) {
             sessionRepository.stopSessionDetached()
         }
@@ -161,8 +195,11 @@ class HrRecordingService : BaseRecordingService() {
     companion object {
         private const val ACTION_DISCARD = "com.kevin.hrtracker.ACTION_DISCARD"
 
-        fun startIntent(context: Context, label: String) =
+        const val EXTRA_HRV_SECONDS = "com.kevin.hrtracker.EXTRA_HRV_SECONDS"
+
+        fun startIntent(context: Context, label: String, hrvSeconds: Int = 0) =
             RecordingServiceContract.startIntent<HrRecordingService>(context, label)
+                .putExtra(EXTRA_HRV_SECONDS, hrvSeconds)
 
         fun stopIntent(context: Context) =
             RecordingServiceContract.stopIntent<HrRecordingService>(context)

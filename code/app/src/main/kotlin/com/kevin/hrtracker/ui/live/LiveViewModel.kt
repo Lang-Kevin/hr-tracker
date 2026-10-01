@@ -11,7 +11,6 @@ import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
-import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -28,16 +27,12 @@ class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
     private val sessionRepository: SessionRepository,
     private val settingsRepository: SettingsRepository,
-    private val milestoneDao: MilestoneDao,
-    savedStateHandle: SavedStateHandle
+    private val milestoneDao: MilestoneDao
 ) : ViewModel() {
 
     private val milestoneMutex = Mutex()
 
-    private val _hrvCountdown = MutableStateFlow<Int?>(
-        savedStateHandle.get<Int>("hrv")?.takeIf { it > 0 }
-    )
-    val hrvCountdown: StateFlow<Int?> = _hrvCountdown.asStateFlow()
+    val hrvCountdown: StateFlow<Int?> = sessionRepository.hrvRemainingSec
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
@@ -186,15 +181,6 @@ class LiveViewModel @Inject constructor(
                     // Neue Session oder VM-Rekonstruktion: Samples von vor dem Start/Recreate nicht im Live-Chart anzeigen.
                     _bpmHistory.value = emptyList()
                     _milestoneSampleIdx.value = emptyList()
-                }
-            }
-        }
-        if (_hrvCountdown.value != null) {
-            viewModelScope.launch {
-                activeSessionId.first { it != null }
-                while ((_hrvCountdown.value ?: 0) > 0) {
-                    delay(1_000)
-                    if (!isPaused.value) _hrvCountdown.update { it?.minus(1) }
                 }
             }
         }

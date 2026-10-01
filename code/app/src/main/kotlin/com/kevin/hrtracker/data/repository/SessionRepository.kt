@@ -53,6 +53,23 @@ class SessionRepository @Inject constructor(
     private val _activeSessionId = MutableStateFlow<Long?>(null)
     val activeSessionId: StateFlow<Long?> = _activeSessionId.asStateFlow()
 
+    private val _hrvRemainingSec = MutableStateFlow<Int?>(null)
+    val hrvRemainingSec: StateFlow<Int?> = _hrvRemainingSec.asStateFlow()
+    @Volatile private var hrvTargetSec = 0
+
+    fun setHrvTarget(sec: Int) {
+        hrvTargetSec = sec
+        _hrvRemainingSec.value = sec
+    }
+
+    /** Aktualisiert die verbleibenden HRV-Sekunden (ohne Pausen) und gibt sie zurück. */
+    fun tickHrv(): Int? {
+        if (_activeSessionId.value == null || hrvTargetSec <= 0) return null
+        val remaining = hrvTargetSec - (activeElapsedMs() / 1000).toInt()
+        _hrvRemainingSec.value = remaining.coerceAtLeast(0)
+        return remaining
+    }
+
     val activeSession = activeSessionId.flatMapLatest { id ->
         if (id == null) flowOf(null) else db.sessionDao().getByIdFlow(id)
     }
@@ -123,6 +140,8 @@ class SessionRepository @Inject constructor(
                 )
             )
             clock = ActiveClock(startedAtMs)
+            hrvTargetSec = 0
+            _hrvRemainingSec.value = null
             _activeSessionId.value = id
             activeHrFlow = hrSamples
             sampleJob?.cancel()
@@ -189,6 +208,8 @@ class SessionRepository @Inject constructor(
             _pausedByConnectionLoss.value = false
             activeHrFlow = null
             clock = null
+            _hrvRemainingSec.value = null
+            hrvTargetSec = 0
 
             withContext(NonCancellable) {
                 try {
@@ -241,6 +262,8 @@ class SessionRepository @Inject constructor(
             _pausedByConnectionLoss.value = false
             activeHrFlow = null
             clock = null
+            _hrvRemainingSec.value = null
+            hrvTargetSec = 0
 
             withContext(NonCancellable) {
                 try {

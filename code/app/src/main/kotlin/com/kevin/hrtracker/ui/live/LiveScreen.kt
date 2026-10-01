@@ -119,10 +119,6 @@ fun LiveScreen(
     }
     val visibleRange = window.visibleRange(bpmHistory.size)
 
-    LaunchedEffect(hrvCountdown) {
-        if (hrvCountdown == 0) onStopSession()
-    }
-
     val pulseScale = remember { Animatable(1f) }
     LaunchedEffect(lastRrMs) {
         if (lastRrMs != null) {

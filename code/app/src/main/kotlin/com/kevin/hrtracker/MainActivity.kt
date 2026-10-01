@@ -47,12 +47,11 @@ import javax.inject.Inject
 private object Route {
     const val ONBOARDING = "onboarding"
     const val SCAN     = "scan"
-    const val LIVE     = "live?hrv={hrv}"
+    const val LIVE     = "live"
     const val HISTORY  = "history"
     const val DETAIL   = "detail/{sessionId}?askRpe={askRpe}"
     const val SETTINGS = "settings"
     fun detail(id: Long, askRpe: Boolean = false) = "detail/$id?askRpe=$askRpe"
-    fun live(hrv: Int = 0) = "live?hrv=$hrv"
 }
 
 @AndroidEntryPoint
@@ -61,6 +60,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var sessionRepository: SessionRepository
 
     private val inPipMode = MutableStateFlow(false)
+    @Volatile private var userEnding = false
+    private val serviceEndedSessionId = MutableStateFlow<Long?>(null)
 
     private val pipSupported: Boolean
         get() = packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
@@ -79,6 +80,19 @@ class MainActivity : ComponentActivity() {
 
         addOnPictureInPictureModeChangedListener { info ->
             inPipMode.value = info.isInPictureInPictureMode
+        }
+
+        // Service beendet die Session selbst (HRV-Timer): auch in PiP/gestoppt erkennen (nicht Teil der Composition)
+        lifecycleScope.launch {
+            var prev: Long? = null
+            sessionRepository.activeSessionId.collect { id ->
+                if (id != null) {
+                    userEnding = false
+                } else if (prev != null) {
+                    if (userEnding) userEnding = false else serviceEndedSessionId.value = prev
+                }
+                prev = id
+            }
         }
 
         // API 31+: nahtloses Auto-Enter beim Home-Swipe. Wird bei jeder
@@ -130,8 +144,20 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(activeSessionId) {
             if (activeSessionId != null &&
                 navController.currentDestination?.route?.startsWith("live") != true) {
-                navController.navigate(Route.live()) { launchSingleTop = true }
+                navController.navigate(Route.LIVE) { launchSingleTop = true }
             }
+        }
+
+        val ended by serviceEndedSessionId.collectAsStateWithLifecycle()
+        LaunchedEffect(ended) {
+            val id = ended ?: return@LaunchedEffect
+            if (navController.currentDestination?.route?.startsWith("live") == true) {
+                navController.navigate(Route.detail(id, askRpe = true)) {
+                    popUpTo(Route.SCAN)
+                    launchSingleTop = true
+                }
+            }
+            serviceEndedSessionId.value = null
         }
 
         LaunchedEffect(onboardingDone) {
@@ -157,20 +183,18 @@ class MainActivity : ComponentActivity() {
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
                     onHrvSessionStarted = { seconds ->
-                        startRecordingService(Readiness.HRV_LABEL)
-                        navController.navigate(Route.live(seconds)) { launchSingleTop = true }
+                        startRecordingService(Readiness.HRV_LABEL, seconds)
+                        navController.navigate(Route.LIVE) { launchSingleTop = true }
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
                     onNavigateToSettings = { navController.navigate(Route.SETTINGS) }
                 )
             }
 
-            composable(
-                route = Route.LIVE,
-                arguments = listOf(navArgument("hrv") { type = NavType.IntType; defaultValue = 0 })
-            ) {
+            composable(Route.LIVE) {
                 LiveScreen(
                     onStopSession = {
+                        userEnding = true
                         val finishedId = sessionRepository.activeSessionId.value
                         startService(HrRecordingService.stopIntent(this@MainActivity))
                         lifecycleScope.launch {
@@ -186,6 +210,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     onAbortSession = {
+                        userEnding = true
                         startService(HrRecordingService.discardIntent(this@MainActivity))
                         navController.popBackStack()
                     }
@@ -214,8 +239,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startRecordingService(label: String) {
-        val intent = HrRecordingService.startIntent(this, label)
+    private fun startRecordingService(label: String, hrvSeconds: Int = 0) {
+        val intent = HrRecordingService.startIntent(this, label, hrvSeconds)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
     }
