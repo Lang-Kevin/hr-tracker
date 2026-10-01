@@ -49,7 +49,7 @@ DB-Version 6 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + I
 
 ### Meilensteine
 
-Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Persistierung bei Session-Ende mit Default-Label `M{i+1}` in `NonCancellable` (kein Verlust bei VM-Zerstörung). Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Nur reguläres Session-Ende persistiert, nicht Force-Kill. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Meilensteine werden unmittelbar beim Hinzufügen persistiert (Session-ID = aktive Session, Default-Label `M{i+1}`), überstehen VM/Activity-Zerstörung und Force-Kill; das Verwerfen einer Session löscht deren Meilensteine. Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
 
 ## BLE-Flow
 
@@ -87,6 +87,17 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
 Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeitstempel des letzten Samples geschlossen (ohne Samples: startedAt).
+
+### Session-Ownership
+
+Invariante: Session aktiv ⇔ Foreground Service läuft ⇔ Service hat Kommando ausgeführt.
+
+- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
+- **Service als Single Owner**: `null` Intent → `stopSelf()` + `START_NOT_STICKY`; `onDestroy()` Safety-Net-Stop.
+- **SessionRepository = State-Halter**: Mutex, idempotente `start()`, `NonCancellable` in `close()`, `activeSessionId=null` nach Close.
+- **Session-gebundener State in Repo/DB**: Meilensteine sofort beim Add in DB, auf Discard gelöscht; `ActiveClock` für Elapsed-Time (Pause ausgeschlossen); HRV-Restzeit in Service (`hrvRemainingSec` StateFlow, 1s-Ticker).
+- **HRV-Auto-Stop**: Service entscheidet, nicht ViewModel.
+- **MainActivity Lifecycle-Integration**: Navigiert bei service-seitigem Session-Ende (via `lifecycleScope`-Collector) von Live zum Detail.
 
 ### BLE Auto-Pause / Auto-Resume
 

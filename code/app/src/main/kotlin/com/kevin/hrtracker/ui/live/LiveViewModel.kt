@@ -11,12 +11,14 @@ import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
-import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
@@ -25,14 +27,12 @@ class LiveViewModel @Inject constructor(
     private val bleManager: HrBleManager,
     private val sessionRepository: SessionRepository,
     private val settingsRepository: SettingsRepository,
-    private val milestoneDao: MilestoneDao,
-    savedStateHandle: SavedStateHandle
+    private val milestoneDao: MilestoneDao
 ) : ViewModel() {
 
-    private val _hrvCountdown = MutableStateFlow<Int?>(
-        savedStateHandle.get<Int>("hrv")?.takeIf { it > 0 }
-    )
-    val hrvCountdown: StateFlow<Int?> = _hrvCountdown.asStateFlow()
+    private val milestoneMutex = Mutex()
+
+    val hrvCountdown: StateFlow<Int?> = sessionRepository.hrvRemainingSec
 
     val connectionState: StateFlow<ConnectionState> = bleManager.connectionState
     val activeSessionId: StateFlow<Long?> = sessionRepository.activeSessionId
@@ -101,21 +101,35 @@ class LiveViewModel @Inject constructor(
         if (isPaused.value) sessionRepository.resume() else sessionRepository.pause()
     }
 
-    private val _milestones = MutableStateFlow<List<Long>>(emptyList())
-    val milestones: StateFlow<List<Long>> = _milestones.asStateFlow()
-
-    /** Parallel zu [milestones]: Index des jeweils neuesten Samples beim Setzen (für die Live-Chart-Position). */
+    /** Index des jeweils neuesten Samples beim Setzen (für die Live-Chart-Position). */
     private val _milestoneSampleIdx = MutableStateFlow<List<Int>>(emptyList())
     val milestoneSampleIndices: StateFlow<List<Int>> = _milestoneSampleIdx.asStateFlow()
 
     fun addMilestone() {
-        _milestones.update { it + _elapsedSeconds.value }
-        _milestoneSampleIdx.update { it + (_bpmHistory.value.size - 1).coerceAtLeast(0) }
-    }
+        viewModelScope.launch {
+            milestoneMutex.withLock {
+                val sessionId = activeSessionId.value ?: return@withLock
+                val atSeconds = _elapsedSeconds.value
+                val sampleIdx = (_bpmHistory.value.size - 1).coerceAtLeast(0)
 
-    private var sessionStartMs = 0L
-    private var pausedAccumMs = 0L
-    private var pauseStartedMs = 0L
+                try {
+                    val label = "M${milestoneDao.getBySession(sessionId).first().size + 1}"
+                    withContext(NonCancellable) {
+                        milestoneDao.insertAll(listOf(Milestone(
+                            sessionId = sessionId,
+                            atSeconds = atSeconds,
+                            label = label
+                        )))
+                    }
+                    _milestoneSampleIdx.update { it + sampleIdx }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e("HRTracker", "Milestone-Insert fehlgeschlagen", e)
+                }
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -131,11 +145,12 @@ class LiveViewModel @Inject constructor(
         }
         viewModelScope.launch {
             while (true) {
-                if (activeSessionId.value != null && sessionStartMs > 0 && !isPaused.value) {
-                    _elapsedSeconds.value =
-                        (System.currentTimeMillis() - sessionStartMs - pausedAccumMs) / 1000
-                    currentZone.value?.let { z ->
-                        _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
+                if (activeSessionId.value != null) {
+                    _elapsedSeconds.value = sessionRepository.activeElapsedMs() / 1000
+                    if (!isPaused.value) {
+                        currentZone.value?.let { z ->
+                            _timeInZone.update { map -> map + (z to (map.getOrDefault(z, 0L) + 1L)) }
+                        }
                     }
                 }
                 delay(1_000)
@@ -144,82 +159,29 @@ class LiveViewModel @Inject constructor(
         viewModelScope.launch {
             combine(activeSessionId, isPaused, sessionRepository.activeSession) { id, paused, session ->
                 Triple(id, paused, session)
-            }.collect { (id, paused, session) ->
-                if (paused) {
-                    pauseStartedMs = System.currentTimeMillis()
-                } else if (pauseStartedMs > 0) {
+            }.distinctUntilChangedBy { it.first to it.second }.collect { (id, paused, session) ->
+                if (!paused && id != null && session != null) {
                     // Resume event: reload samples and seed timeInZone from persisted data
-                    pausedAccumMs += System.currentTimeMillis() - pauseStartedMs
-                    pauseStartedMs = 0L
-
-                    if (id != null && session != null) {
-                        val samples = sessionRepository.getSamplesForSession(id)
-                        val zones = HrZoneCalculator.resolveZones(
-                            session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
-                        )
-                        _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
-                    }
+                    val samples = sessionRepository.getSamplesForSession(id)
+                    val zones = HrZoneCalculator.resolveZones(
+                        session.zoneSnapshotJson, session.maxHrUsed, session.restingHr
+                    )
+                    _timeInZone.value = HrZoneCalculator.aggregateTimeInZone(samples, zones)
                 }
             }
         }
         viewModelScope.launch {
             activeSessionId.collect { id ->
-                if (id != null && sessionStartMs == 0L) {
-                    sessionStartMs = sessionRepository.activeSession.first()?.startedAt
-                        ?: System.currentTimeMillis()
-                    // Neue Session: Samples von vor dem Start nicht im Live-Chart anzeigen.
-                    _bpmHistory.value = emptyList()
-                    _milestoneSampleIdx.value = emptyList()
-                }
                 if (id == null) {
-                    sessionStartMs = 0L
                     _elapsedSeconds.value = 0
                     _bpmHistory.value = emptyList()
                     _milestoneSampleIdx.value = emptyList()
                     _timeInZone.value = emptyMap()
-                    pausedAccumMs = 0L
-                    pauseStartedMs = 0L
-                }
-            }
-        }
-        if (_hrvCountdown.value != null) {
-            viewModelScope.launch {
-                activeSessionId.first { it != null }
-                while ((_hrvCountdown.value ?: 0) > 0) {
-                    delay(1_000)
-                    if (!isPaused.value) _hrvCountdown.update { it?.minus(1) }
-                }
-            }
-        }
-        viewModelScope.launch {
-            var previousSessionId: Long? = null
-            activeSessionId.collect { id ->
-                if (previousSessionId != null && id == null) {
-                    // Session wurde gerade beendet — persistiere Milestones
-                    val milestonesList = _milestones.value
-                    if (milestonesList.isNotEmpty()) {
-                        val entities = milestonesList.mapIndexed { idx, seconds ->
-                            Milestone(
-                                sessionId = previousSessionId!!,
-                                atSeconds = seconds,
-                                label = "M${idx + 1}"
-                            )
-                        }
-                        // ponytail: NonCancellable, sonst gehen Milestones verloren wenn
-                        // die VM während des Inserts bei Session-Ende zerstört wird.
-                        withContext(NonCancellable) {
-                            try {
-                                milestoneDao.insertAll(entities)
-                                Log.d("HRTracker", "Milestones persistiert: ${entities.size}")
-                            } catch (e: Exception) {
-                                Log.e("HRTracker", "Milestone-Persistierung fehlgeschlagen", e)
-                            }
-                        }
-                    }
-                    _milestones.value = emptyList()
+                } else {
+                    // Neue Session oder VM-Rekonstruktion: Samples von vor dem Start/Recreate nicht im Live-Chart anzeigen.
+                    _bpmHistory.value = emptyList()
                     _milestoneSampleIdx.value = emptyList()
                 }
-                previousSessionId = id
             }
         }
     }

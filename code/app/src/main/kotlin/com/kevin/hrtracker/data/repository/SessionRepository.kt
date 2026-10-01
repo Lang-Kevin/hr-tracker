@@ -8,6 +8,7 @@ import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.isHrvMeasurement
 import com.kevin.hrtracker.data.entity.toHrvMeasurements
+import com.kevin.hrtracker.domain.ActiveClock
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.hrtracker.domain.SessionMetrics
 import com.kevin.hrtracker.domain.HrZoneCalculator
@@ -19,6 +20,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +30,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,9 +48,27 @@ class SessionRepository @Inject constructor(
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mutex = Mutex()
 
     private val _activeSessionId = MutableStateFlow<Long?>(null)
     val activeSessionId: StateFlow<Long?> = _activeSessionId.asStateFlow()
+
+    private val _hrvRemainingSec = MutableStateFlow<Int?>(null)
+    val hrvRemainingSec: StateFlow<Int?> = _hrvRemainingSec.asStateFlow()
+    @Volatile private var hrvTargetSec = 0
+
+    fun setHrvTarget(sec: Int) {
+        hrvTargetSec = sec
+        _hrvRemainingSec.value = sec
+    }
+
+    /** Aktualisiert die verbleibenden HRV-Sekunden (ohne Pausen) und gibt sie zurück. */
+    fun tickHrv(): Int? {
+        if (_activeSessionId.value == null || hrvTargetSec <= 0) return null
+        val remaining = hrvTargetSec - (activeElapsedMs() / 1000).toInt()
+        _hrvRemainingSec.value = remaining.coerceAtLeast(0)
+        return remaining
+    }
 
     val activeSession = activeSessionId.flatMapLatest { id ->
         if (id == null) flowOf(null) else db.sessionDao().getByIdFlow(id)
@@ -53,6 +76,8 @@ class SessionRepository @Inject constructor(
 
     private var sampleJob: Job? = null
     private var activeHrFlow: Flow<ParsedHr>? = null
+    @Volatile
+    private var clock: ActiveClock? = null
 
     private val _isPaused = MutableStateFlow(false)
     val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
@@ -98,23 +123,32 @@ class SessionRepository @Inject constructor(
         hrSamples: Flow<ParsedHr> = bleManager.hrSamples,
         customZones: List<ZoneBounds>? = null
     ): Long {
-        val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr, zoneModel)
-        val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
-        val id = db.sessionDao().insert(
-            Session(
-                label = label,
-                startedAt = System.currentTimeMillis(),
-                endedAt = null,
-                maxHrUsed = maxHrUsed,
-                restingHr = restingHr,
-                zoneSnapshotJson = zoneJson
+        return mutex.withLock {
+            _activeSessionId.value?.let { return@withLock it }
+
+            val zones = customZones ?: HrZoneCalculator.calculateZones(maxHrUsed, restingHr, zoneModel)
+            val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
+            val startedAtMs = System.currentTimeMillis()
+            val id = db.sessionDao().insert(
+                Session(
+                    label = label,
+                    startedAt = startedAtMs,
+                    endedAt = null,
+                    maxHrUsed = maxHrUsed,
+                    restingHr = restingHr,
+                    zoneSnapshotJson = zoneJson
+                )
             )
-        )
-        _activeSessionId.value = id
-        activeHrFlow = hrSamples
-        sampleJob = launchSampleJob(id, hrSamples)
-        Log.d("HRTracker", "Session $id started: $label")
-        return id
+            clock = ActiveClock(startedAtMs)
+            hrvTargetSec = 0
+            _hrvRemainingSec.value = null
+            _activeSessionId.value = id
+            activeHrFlow = hrSamples
+            sampleJob?.cancel()
+            sampleJob = launchSampleJob(id, hrSamples)
+            Log.d("HRTracker", "Session $id started: $label")
+            id
+        }
     }
 
     private fun launchSampleJob(id: Long, hrSamples: Flow<ParsedHr>): Job = scope.launch {
@@ -133,9 +167,11 @@ class SessionRepository @Inject constructor(
     }
 
     fun pause() {
+        _activeSessionId.value ?: return
         sampleJob?.cancel()
         sampleJob = null
         _isPaused.value = true
+        clock?.pause(System.currentTimeMillis())
     }
 
     fun resume() {
@@ -145,6 +181,7 @@ class SessionRepository @Inject constructor(
         sampleJob = null
         _pausedByConnectionLoss.value = false
         sampleJob = launchSampleJob(id, flow)
+        clock?.resume(System.currentTimeMillis())
         _isPaused.value = false
     }
 
@@ -163,28 +200,39 @@ class SessionRepository @Inject constructor(
     }
 
     suspend fun stopSession(): Long? {
-        val id = _activeSessionId.value ?: return null
-        sampleJob?.cancel()
-        sampleJob = null
-        _activeSessionId.value = null
-        _isPaused.value = false
-        _pausedByConnectionLoss.value = false
-        activeHrFlow = null
-        db.sessionDao().closeSession(id, System.currentTimeMillis())
-        Log.d("HRTracker", "Session $id stopped")
-        // Im Repository-Scope, damit die Navigation zum Detail-Screen nicht auf HRR & Co. wartet
-        scope.launch {
-            try {
-                val session = db.sessionDao().getById(id) ?: return@launch
-                refreshMetrics(session)
-                if (session.isHrvMeasurement) updateRestingHrFromHrv()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.w(TAG, "Error finalizing session $id", e)
+        return mutex.withLock {
+            val id = _activeSessionId.value ?: return@withLock null
+            sampleJob?.cancel()
+            sampleJob = null
+            _isPaused.value = false
+            _pausedByConnectionLoss.value = false
+            activeHrFlow = null
+            clock = null
+            _hrvRemainingSec.value = null
+            hrvTargetSec = 0
+
+            withContext(NonCancellable) {
+                try {
+                    db.sessionDao().closeSession(id, System.currentTimeMillis())
+                    Log.d("HRTracker", "Session $id stopped")
+                } finally {
+                    _activeSessionId.value = null
+                }
+                // Im Repository-Scope, damit die Navigation zum Detail-Screen nicht auf HRR & Co. wartet
+                scope.launch {
+                    try {
+                        val session = db.sessionDao().getById(id) ?: return@launch
+                        refreshMetrics(session)
+                        if (session.isHrvMeasurement) updateRestingHrFromHrv()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error finalizing session $id", e)
+                    }
+                }
             }
+            id
         }
-        return id
     }
 
     private suspend fun refreshMetrics(session: Session) {
@@ -206,19 +254,46 @@ class SessionRepository @Inject constructor(
     }
 
     suspend fun discardSession() {
-        val id = _activeSessionId.value ?: return
-        sampleJob?.cancel()
-        sampleJob = null
-        _activeSessionId.value = null
-        _isPaused.value = false
-        _pausedByConnectionLoss.value = false
-        activeHrFlow = null
-        db.sessionDao().deleteById(id)
-        Log.d("HRTracker", "Session $id discarded")
+        mutex.withLock {
+            val id = _activeSessionId.value ?: return@withLock
+            sampleJob?.cancel()
+            sampleJob = null
+            _isPaused.value = false
+            _pausedByConnectionLoss.value = false
+            activeHrFlow = null
+            clock = null
+            _hrvRemainingSec.value = null
+            hrvTargetSec = 0
+
+            withContext(NonCancellable) {
+                try {
+                    db.milestoneDao().deleteBySession(id)
+                    db.sessionDao().deleteById(id)
+                    Log.d("HRTracker", "Session $id discarded")
+                } finally {
+                    _activeSessionId.value = null
+                }
+            }
+        }
+    }
+
+    fun stopSessionDetached() {
+        scope.launch {
+            try {
+                stopSession()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Detached stop failed", e)
+            }
+        }
     }
 
     suspend fun getSamplesForSession(sessionId: Long) =
         db.hrSampleDao().getSamplesForSession(sessionId).first()
+
+    fun activeElapsedMs(nowMs: Long = System.currentTimeMillis()): Long =
+        clock?.activeElapsedMs(nowMs) ?: 0L
 
     fun observedMaxBpm(sinceMs: Long): Flow<Int?> = db.hrSampleDao().getObservedMaxBpm(sinceMs)
 

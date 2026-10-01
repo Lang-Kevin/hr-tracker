@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.R
@@ -21,10 +22,14 @@ import com.kevin.shared.ble.ConnectionState
 import com.kevin.shared.service.BaseRecordingService
 import com.kevin.shared.service.RecordingServiceContract
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -34,6 +39,7 @@ class HrRecordingService : BaseRecordingService() {
     @Inject lateinit var sessionRepository: SessionRepository
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    private val startMutex = Mutex()
     private var notificationJob: Job? = null
     private var connectionStateJob: Job? = null
     private var settingsJob: Job? = null
@@ -41,6 +47,8 @@ class HrRecordingService : BaseRecordingService() {
     @Volatile private var currentVariant: WidgetVariant = WidgetVariant.STANDARD
     @Volatile private var currentZones: List<ZoneBounds> = emptyList()
     private var startMs: Long = 0L
+    private var hrvJob: Job? = null
+    @Volatile private var pendingHrvSeconds = 0
 
     override val notificationChannelId = "hr_recording"
     override val notificationChannelName: String
@@ -74,46 +82,71 @@ class HrRecordingService : BaseRecordingService() {
     }
 
     override suspend fun onRecordingStart(label: String) {
-        val s = settingsRepository.userSettings.first()
-        val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
-        sessionRepository.startSession(
-            label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
-            hrSamples = hrFlow, customZones = s.customZones
-        )
-        currentVariant = s.widgetVariant
-        currentZones = s.effectiveZones
-        startMs = System.currentTimeMillis()
-        settingsJob = serviceScope.launch {
-            settingsRepository.userSettings.collect {
-                currentVariant = it.widgetVariant
-                currentZones = it.effectiveZones
-                val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
-            }
-        }
-        connectionStateJob = serviceScope.launch {
-            bleManager.connectionState.collect { state ->
-                if (sessionRepository.activeSessionId.value == null) return@collect
-                when (state) {
-                    is ConnectionState.Disconnected,
-                    is ConnectionState.Reconnecting,
-                    is ConnectionState.Connecting,
-                    is ConnectionState.Error -> sessionRepository.autoPause()
-                    is ConnectionState.Ready -> sessionRepository.autoResume()
-                    else -> Unit
+        startMutex.withLock {
+            if (notificationJob?.isActive == true) return@withLock
+
+            val s = settingsRepository.userSettings.first()
+            val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
+            sessionRepository.startSession(
+                label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
+                hrSamples = hrFlow, customZones = s.customZones
+            )
+            currentVariant = s.widgetVariant
+            currentZones = s.effectiveZones
+            startMs = System.currentTimeMillis()
+            settingsJob = serviceScope.launch {
+                settingsRepository.userSettings.collect {
+                    currentVariant = it.widgetVariant
+                    currentZones = it.effectiveZones
+                    val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                    updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
                 }
             }
-        }
-        notificationJob = serviceScope.launch {
-            hrFlow.collect { parsed: ParsedHr ->
-                lastBpmValue = parsed.bpm
-                val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
+            connectionStateJob = serviceScope.launch {
+                bleManager.connectionState.collect { state ->
+                    if (sessionRepository.activeSessionId.value == null) return@collect
+                    when (state) {
+                        is ConnectionState.Disconnected,
+                        is ConnectionState.Reconnecting,
+                        is ConnectionState.Connecting,
+                        is ConnectionState.Error -> sessionRepository.autoPause()
+                        is ConnectionState.Ready -> sessionRepository.autoResume()
+                        else -> Unit
+                    }
+                }
+            }
+            notificationJob = serviceScope.launch {
+                hrFlow.collect { parsed: ParsedHr ->
+                    lastBpmValue = parsed.bpm
+                    val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                    updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
+                }
+            }
+            val hrvSeconds = pendingHrvSeconds
+            if (hrvSeconds > 0) {
+                sessionRepository.setHrvTarget(hrvSeconds)
+                hrvJob = serviceScope.launch {
+                    while (true) {
+                        val r = sessionRepository.tickHrv() ?: return@launch
+                        if (r <= 0) break
+                        delay(1_000)
+                    }
+                    // gleicher Pfad wie die UI: ACTION_STOP -> Basisklasse -> onRecordingStop() + stopSelf()
+                    try {
+                        startService(stopIntent(this@HrRecordingService))
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w("HRTracker", "HRV auto-stop failed", e)
+                    }
+                }
             }
         }
     }
 
     override suspend fun onRecordingStop() {
+        hrvJob?.cancel()
+        hrvJob = null
         notificationJob?.cancel()
         notificationJob = null
         connectionStateJob?.cancel()
@@ -123,11 +156,55 @@ class HrRecordingService : BaseRecordingService() {
         sessionRepository.stopSession()
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return when {
+            intent == null -> {
+                // process-death sticky restart: no session to resume (H3), don't run as zombie
+                stopSelf(startId)
+                START_NOT_STICKY
+            }
+            intent.action == ACTION_DISCARD -> {
+                hrvJob?.cancel()
+                hrvJob = null
+                serviceScope.launch {
+                    try {
+                        sessionRepository.discardSession()
+                    } finally {
+                        stopSelf(startId)
+                    }
+                }
+                START_NOT_STICKY
+            }
+            else -> {
+                if (intent.action == RecordingServiceContract.ACTION_START) {
+                    pendingHrvSeconds = intent.getIntExtra(EXTRA_HRV_SECONDS, 0)
+                }
+                super.onStartCommand(intent, flags, startId)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        hrvJob?.cancel()
+        if (sessionRepository.activeSessionId.value != null) {
+            sessionRepository.stopSessionDetached()
+        }
+        super.onDestroy()
+    }
+
     companion object {
-        fun startIntent(context: Context, label: String) =
+        private const val ACTION_DISCARD = "com.kevin.hrtracker.ACTION_DISCARD"
+
+        const val EXTRA_HRV_SECONDS = "com.kevin.hrtracker.EXTRA_HRV_SECONDS"
+
+        fun startIntent(context: Context, label: String, hrvSeconds: Int = 0) =
             RecordingServiceContract.startIntent<HrRecordingService>(context, label)
+                .putExtra(EXTRA_HRV_SECONDS, hrvSeconds)
 
         fun stopIntent(context: Context) =
             RecordingServiceContract.stopIntent<HrRecordingService>(context)
+
+        fun discardIntent(context: Context) =
+            Intent(context, HrRecordingService::class.java).apply { action = ACTION_DISCARD }
     }
 }
