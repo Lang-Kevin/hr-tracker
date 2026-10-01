@@ -30,7 +30,7 @@ Native Android app for recording heart rate data from a BLE chest strap.
 | Async          | Coroutines + Flow                 |
 | Database       | Room (v2, migration included)     |
 | BLE            | Nordic Kotlin BLE                 |
-| Charts         | Vico                              |
+| Charts         | Compose Canvas (eigen)            |
 | DI             | Hilt                              |
 | Serialization  | kotlinx.serialization             |
 | Min SDK        | 26 · Target SDK: 35               |
