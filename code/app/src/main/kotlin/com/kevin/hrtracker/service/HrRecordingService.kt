@@ -25,6 +25,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -34,6 +36,7 @@ class HrRecordingService : BaseRecordingService() {
     @Inject lateinit var sessionRepository: SessionRepository
     @Inject lateinit var settingsRepository: SettingsRepository
 
+    private val startMutex = Mutex()
     private var notificationJob: Job? = null
     private var connectionStateJob: Job? = null
     private var settingsJob: Job? = null
@@ -74,41 +77,45 @@ class HrRecordingService : BaseRecordingService() {
     }
 
     override suspend fun onRecordingStart(label: String) {
-        val s = settingsRepository.userSettings.first()
-        val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
-        sessionRepository.startSession(
-            label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
-            hrSamples = hrFlow, customZones = s.customZones
-        )
-        currentVariant = s.widgetVariant
-        currentZones = s.effectiveZones
-        startMs = System.currentTimeMillis()
-        settingsJob = serviceScope.launch {
-            settingsRepository.userSettings.collect {
-                currentVariant = it.widgetVariant
-                currentZones = it.effectiveZones
-                val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
-            }
-        }
-        connectionStateJob = serviceScope.launch {
-            bleManager.connectionState.collect { state ->
-                if (sessionRepository.activeSessionId.value == null) return@collect
-                when (state) {
-                    is ConnectionState.Disconnected,
-                    is ConnectionState.Reconnecting,
-                    is ConnectionState.Connecting,
-                    is ConnectionState.Error -> sessionRepository.autoPause()
-                    is ConnectionState.Ready -> sessionRepository.autoResume()
-                    else -> Unit
+        startMutex.withLock {
+            if (notificationJob?.isActive == true) return@withLock
+
+            val s = settingsRepository.userSettings.first()
+            val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
+            sessionRepository.startSession(
+                label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
+                hrSamples = hrFlow, customZones = s.customZones
+            )
+            currentVariant = s.widgetVariant
+            currentZones = s.effectiveZones
+            startMs = System.currentTimeMillis()
+            settingsJob = serviceScope.launch {
+                settingsRepository.userSettings.collect {
+                    currentVariant = it.widgetVariant
+                    currentZones = it.effectiveZones
+                    val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                    updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
                 }
             }
-        }
-        notificationJob = serviceScope.launch {
-            hrFlow.collect { parsed: ParsedHr ->
-                lastBpmValue = parsed.bpm
-                val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
+            connectionStateJob = serviceScope.launch {
+                bleManager.connectionState.collect { state ->
+                    if (sessionRepository.activeSessionId.value == null) return@collect
+                    when (state) {
+                        is ConnectionState.Disconnected,
+                        is ConnectionState.Reconnecting,
+                        is ConnectionState.Connecting,
+                        is ConnectionState.Error -> sessionRepository.autoPause()
+                        is ConnectionState.Ready -> sessionRepository.autoResume()
+                        else -> Unit
+                    }
+                }
+            }
+            notificationJob = serviceScope.launch {
+                hrFlow.collect { parsed: ParsedHr ->
+                    lastBpmValue = parsed.bpm
+                    val elapsed = (System.currentTimeMillis() - startMs) / 1000
+                    updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
+                }
             }
         }
     }
@@ -123,11 +130,44 @@ class HrRecordingService : BaseRecordingService() {
         sessionRepository.stopSession()
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        return when {
+            intent == null -> {
+                // process-death sticky restart: no session to resume (H3), don't run as zombie
+                stopSelf(startId)
+                START_NOT_STICKY
+            }
+            intent.action == ACTION_DISCARD -> {
+                serviceScope.launch {
+                    try {
+                        sessionRepository.discardSession()
+                    } finally {
+                        stopSelf(startId)
+                    }
+                }
+                START_NOT_STICKY
+            }
+            else -> super.onStartCommand(intent, flags, startId)
+        }
+    }
+
+    override fun onDestroy() {
+        if (sessionRepository.activeSessionId.value != null) {
+            sessionRepository.stopSessionDetached()
+        }
+        super.onDestroy()
+    }
+
     companion object {
+        private const val ACTION_DISCARD = "com.kevin.hrtracker.ACTION_DISCARD"
+
         fun startIntent(context: Context, label: String) =
             RecordingServiceContract.startIntent<HrRecordingService>(context, label)
 
         fun stopIntent(context: Context) =
             RecordingServiceContract.stopIntent<HrRecordingService>(context)
+
+        fun discardIntent(context: Context) =
+            Intent(context, HrRecordingService::class.java).apply { action = ACTION_DISCARD }
     }
 }

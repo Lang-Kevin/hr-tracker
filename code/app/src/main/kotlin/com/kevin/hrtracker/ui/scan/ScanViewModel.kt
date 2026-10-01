@@ -138,17 +138,6 @@ class ScanViewModel @Inject constructor(
         settingsRepository.setAutoConnect(!autoConnect.value)
     }
 
-    fun startSession(label: String = "Training") = viewModelScope.launch {
-        val s = settingsRepository.userSettings.first()
-        sessionRepository.startSession(label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel, customZones = s.customZones)
-    }
-
-    fun stopSession(onStopped: (Long?) -> Unit = {}) = viewModelScope.launch {
-        onStopped(sessionRepository.stopSession())
-    }
-
-    fun discardSession() = viewModelScope.launch { sessionRepository.discardSession() }
-
     override fun onCleared() {
         super.onCleared()
         stopScan()

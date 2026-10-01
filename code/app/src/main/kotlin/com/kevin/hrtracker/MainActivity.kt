@@ -40,6 +40,7 @@ import com.kevin.hrtracker.ui.scan.ScanViewModel
 import com.kevin.shared.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -170,7 +171,10 @@ class MainActivity : ComponentActivity() {
             ) {
                 LiveScreen(
                     onStopSession = {
-                        scanViewModel.stopSession { finishedId ->
+                        val finishedId = sessionRepository.activeSessionId.value
+                        startService(HrRecordingService.stopIntent(this@MainActivity))
+                        lifecycleScope.launch {
+                            sessionRepository.activeSessionId.first { it == null }
                             if (finishedId != null) {
                                 navController.navigate(Route.detail(finishedId, askRpe = true)) {
                                     popUpTo(Route.SCAN)
@@ -180,11 +184,9 @@ class MainActivity : ComponentActivity() {
                                 navController.popBackStack()
                             }
                         }
-                        stopService(HrRecordingService.stopIntent(this@MainActivity))
                     },
                     onAbortSession = {
-                        scanViewModel.discardSession()
-                        stopService(HrRecordingService.stopIntent(this@MainActivity))
+                        startService(HrRecordingService.discardIntent(this@MainActivity))
                         navController.popBackStack()
                     }
                 )
