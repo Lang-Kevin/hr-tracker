@@ -52,10 +52,6 @@ object DatabaseModule {
                 "activeMs INTEGER", "avgBpm INTEGER", "trimp INTEGER", "hrr60 INTEGER", "rmssd INTEGER",
                 "metricsVersion INTEGER NOT NULL DEFAULT 0", "rpe INTEGER"
             ).forEach { database.execSQL("ALTER TABLE Session ADD COLUMN $it") }
-            database.execSQL(
-                "UPDATE Session SET posture = '${HrvPosture.SITTING.name}' " +
-                    "WHERE label = '${Readiness.HRV_LABEL}' AND posture IS NULL"
-            )
         }
     }
 
@@ -63,6 +59,10 @@ object DatabaseModule {
         override fun migrate(database: SupportSQLiteDatabase) {
             listOf("rmssdArtefactPct REAL", "rmssdValidBeats INTEGER", "posture TEXT")
                 .forEach { database.execSQL("ALTER TABLE Session ADD COLUMN $it") }
+            database.execSQL(
+                "UPDATE Session SET posture = '${HrvPosture.SITTING.name}' " +
+                    "WHERE label = '${Readiness.HRV_LABEL}' AND posture IS NULL"
+            )
         }
     }
 
