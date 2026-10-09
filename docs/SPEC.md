@@ -197,7 +197,7 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 ## Analytics (DetailScreen)
 
 - **Aktive Zeit** (`SampleIntervals.activeMs`): Summe der Sample-Intervalle ≤ 5 000 ms — Pausen (manuell und Auto-Pause) und Dropouts zählen nicht. Stat „AKTIV“; der Header zeigt weiter die Gesamtdauer. **Ø-BPM** zeitgewichtet über dieselben Intervalle (`SampleIntervals.avgBpm`).
-- **RMSSD** aus RR-Intervallen (`HrvCalculator.rmssd`; Watch-Sessions haben keine RR → "–"). Über eine Sample-Lücke > 5 000 ms wird nicht differenziert.
+- **RMSSD** aus RR-Intervallen (`HrvCalculator.analyze`, Wrapper `rmssd()`; Watch-Sessions haben keine RR → "–"). Artefakt: RR außerhalb 300–2000 ms oder > 30 % vom Median des 11-Schlag-Fensters; Differenzen, die einen Artefakt berühren, entfallen (keine Interpolation); gerundet. Über eine Sample-Lücke > 5 000 ms wird nicht differenziert. Qualitäts-Gates (`HrvQuality`): ≥ 180 s, ≥ 180 gültige Schläge, ≤ 5 % Artefakte, sonst unzuverlässig.
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer), sample-weise integriert (`TrimpCalculator`): pro Intervall zwischen zwei Samples `Δt[min] × r × e^(1.92 r)` bzw. `Δt[min] × BPM/HRmax × 100`. Intervalle > 5 000 ms (Pause, BLE-Dropout) zählen nicht. Detail-Screen und TRIMP-Verlauf (History, letzte 15 Sessions) nutzen dieselbe Berechnung.
 - **Kalorien** (Aktivkalorien, Keytel minus Grundumsatz): On-read aus den HR-Samples, Gewicht, Alter und Geschlecht berechnet (`CalorieCalculator.estimateActiveKcal`).
   - **Brutto (Keytel, kcal/min):** Männer `(-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184`, Frauen `(-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184` (Formel liefert kJ/min, daher `/ 4.184`).
