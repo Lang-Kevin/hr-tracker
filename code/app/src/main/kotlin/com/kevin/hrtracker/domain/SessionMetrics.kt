@@ -23,8 +23,8 @@ data class SessionMetrics(
         const val VERSION = 2
 
         fun compute(
-                samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false
-            ): SessionMetrics {
+            samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false
+        ): SessionMetrics {
             val hrv = HrvCalculator.analyze(samples, HrvQuality.discardMsFor(isHrvMeasurement))
             return SessionMetrics(
                 activeMs = SampleIntervals.activeMs(samples),

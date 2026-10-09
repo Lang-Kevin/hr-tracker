@@ -8,7 +8,7 @@ Eine Doppeldetektion des Brustgurts (z. B. 799, 401, 280 ms) blieb im 300–2000
 - Ergebnisobjekt `HrvResult` (rmssd, validBeats, artefactPct, analysedSeconds), RMSSD wird gerundet.
 - Optional: erste 60 s (aktive Zeit) verwerfen; kürzere Aufnahmen werden komplett ausgewertet.
 - `HrvQuality`: Gates ≥ 180 s, ≥ 180 gültige Schläge, ≤ 5 % Artefakte, sonst `HrvUnreliableReason`.
-- `rmssd()` bleibt als Wrapper. Gecachtes `Session.rmssd` bleibt bis zur Schema-/Metrics-Version-Anhebung (Folge-Milestone) alt.
+- `rmssd()` bleibt als Wrapper.
 - Test mit synthetischem Fixture (kein echtes Session-Datum).
 
 **Betroffene Dateien:**

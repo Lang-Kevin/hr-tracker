@@ -81,7 +81,7 @@ class DetailViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val hrv: StateFlow<HrvResult?> = combine(session, samples) { sess, list ->
-        HrvCalculator.analyze(list, HrvQuality.discardMsFor(sess?.isHrvMeasurement == true))
+        if (sess == null) null else HrvCalculator.analyze(list, HrvQuality.discardMsFor(sess.isHrvMeasurement))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Nur für HRV-Messungen; null = verlässlich oder keine HRV-Messung. */

@@ -58,7 +58,7 @@ object Readiness {
     const val MIN_RESTING_HR = 3
 
     fun summarize(measurements: List<HrvMeasurement>, today: LocalDate, chartDays: Int = 30): ReadinessSummary {
-        val posture = measurements.maxByOrNull { it.timestampMs }?.posture
+        val posture = measurements.filter { it.reliable && it.rmssd > 0 }.maxByOrNull { it.timestampMs }?.posture
         val perDay = measurements
             .filter { it.rmssd > 0 && it.reliable && it.posture == posture }
             .groupBy { it.date }

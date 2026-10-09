@@ -2,6 +2,7 @@ package com.kevin.hrtracker.domain
 
 import com.kevin.hrtracker.data.entity.toHrvMeasurements
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.LocalDate
@@ -93,6 +94,32 @@ class ReadinessTest {
         assertEquals(HrvPosture.SITTING, s.posture)
         assertEquals(1, s.baselineCount)
         assertEquals(ReadinessBlock.BASELINE_BUILDING, s.block)
+    }
+
+    @Test
+    fun `posture group comes from latest reliable reading`() {
+        val list = (1..30).map { m(it, 60, posture = HrvPosture.LYING) } + m(0, 60, posture = HrvPosture.SITTING, reliable = false)
+        val s = Readiness.summarize(list, today)
+        assertEquals(HrvPosture.LYING, s.posture)
+        assertEquals(30, s.baselineCount)
+        assertNotNull(s.status)
+    }
+
+    @Test
+    fun `null quality columns map to unreliable`() {
+        val sess = com.kevin.hrtracker.data.entity.Session(
+            label = Readiness.HRV_LABEL, startedAt = 0L, endedAt = null, maxHrUsed = 190, restingHr = null, rmssd = 50
+        )
+        assertEquals(false, listOf(sess).toHrvMeasurements().single().reliable)
+    }
+
+    @Test
+    fun `good quality columns map to reliable`() {
+        val sess = com.kevin.hrtracker.data.entity.Session(
+            label = Readiness.HRV_LABEL, startedAt = 0L, endedAt = null, maxHrUsed = 190, restingHr = null, rmssd = 50,
+            activeMs = 300_259L, rmssdValidBeats = 268, rmssdArtefactPct = 0.0
+        )
+        assertEquals(true, listOf(sess).toHrvMeasurements().single().reliable)
     }
 
     @Test
