@@ -11,12 +11,14 @@ import com.kevin.hrtracker.data.entity.HrSample
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.data.entity.SportLabel
+import com.kevin.hrtracker.data.entity.isHrvMeasurement
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.CalorieCalculator
 import com.kevin.hrtracker.domain.HrRecovery
 import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.HrvCalculator
+import com.kevin.hrtracker.domain.HrvQuality
 import com.kevin.hrtracker.domain.SampleIntervals
 import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.domain.TrimpCalculator
@@ -76,8 +78,9 @@ class DetailViewModel @Inject constructor(
         else HrZoneCalculator.resolveZones(sess.zoneSnapshotJson, sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val rmssd: StateFlow<Int?> = samples.map { HrvCalculator.rmssd(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val rmssd: StateFlow<Int?> = combine(session, samples) { sess, list ->
+        HrvCalculator.analyze(list, HrvQuality.discardMsFor(sess?.isHrvMeasurement == true))?.rmssd
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Aktive Zeit ohne Pausen/Dropouts, null solange die Session läuft. */
     val activeSeconds: StateFlow<Long?> = combine(session, samples) { sess, list ->

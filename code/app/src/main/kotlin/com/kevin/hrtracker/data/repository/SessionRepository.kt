@@ -237,10 +237,14 @@ class SessionRepository @Inject constructor(
 
     private suspend fun refreshMetrics(session: Session) {
         val samples = db.hrSampleDao().getSamplesOnce(session.id)
-        val m = SessionMetrics.compute(samples, session.maxHrUsed, session.restingHr)
+        val m = SessionMetrics.compute(
+            samples, session.maxHrUsed, session.restingHr, session.isHrvMeasurement
+        )
         db.sessionDao().updateMetrics(
             id = session.id, activeMs = m.activeMs, avgBpm = m.avgBpm, trimp = m.trimp,
-            hrr60 = m.hrr60, rmssd = m.rmssd, version = SessionMetrics.VERSION
+            hrr60 = m.hrr60, rmssd = m.rmssd,
+            rmssdValidBeats = m.rmssdValidBeats, rmssdArtefactPct = m.rmssdArtefactPct,
+            version = SessionMetrics.VERSION
         )
     }
 

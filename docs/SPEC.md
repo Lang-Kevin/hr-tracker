@@ -31,7 +31,8 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 ```kotlin
 Session(id, label, startedAt, endedAt, maxHrUsed, restingHr, note,
         zoneSnapshotJson /* DB v2 */, deletedAt /* DB v4 */,
-        activeMs, avgBpm, trimp, hrr60, rmssd, metricsVersion, rpe /* DB v6 */)
+        activeMs, avgBpm, trimp, hrr60, rmssd, metricsVersion, rpe /* DB v6 */,
+        rmssdArtefactPct, rmssdValidBeats, posture /* DB v7 */)
 
 HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 
@@ -45,7 +46,7 @@ UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone,
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 6 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`). **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
+DB-Version 7 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`). `SessionMetrics.VERSION` 2: HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 

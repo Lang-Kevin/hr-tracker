@@ -28,7 +28,13 @@ data class Session(
     val rmssd: Int? = null,
     @ColumnInfo(defaultValue = "0") val metricsVersion: Int = 0,
     /** Subjektive Belastung (CR-10, 0–10), null = nicht bewertet. */
-    val rpe: Int? = null
+    val rpe: Int? = null,
+    /** Anteil geflaggter Schläge in %, DB v7, aus SessionMetrics. */
+    val rmssdArtefactPct: Double? = null,
+    /** Anzahl gültiger Schläge der RMSSD-Auswertung, DB v7, aus SessionMetrics. */
+    val rmssdValidBeats: Int? = null,
+    /** Körperhaltung (HrvPosture.name), DB v7, nur HRV-Messungen. */
+    val posture: String? = null
 ) : SoftDeletable
 
 /** Ruhe-HRV-Messung statt Training — zählt nicht in Trainings-Statistiken und Last. */

@@ -53,13 +53,20 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            listOf("rmssdArtefactPct REAL", "rmssdValidBeats INTEGER", "posture TEXT")
+                .forEach { database.execSQL("ALTER TABLE Session ADD COLUMN $it") }
+        }
+    }
+
     private val predefinedLabels = listOf("Allg. Training", "Beachvolleyball", "Trainingsbike", "Volleyball")
 
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): HrDatabase =
         Room.databaseBuilder(context, HrDatabase::class.java, "hr_tracker.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
             .addCallback(object : androidx.room.RoomDatabase.Callback() {
                 override fun onCreate(db: SupportSQLiteDatabase) {
                     predefinedLabels.forEach { name ->
