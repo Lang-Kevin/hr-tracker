@@ -61,16 +61,20 @@
 
     <!-- Form tab: readiness -->
     <string name="history_readiness_title">Bereitschaft (Ruhe-HRV)</string>
-    <string name="history_readiness_empty">Noch keine HRV-Messungen. Miss morgens direkt nach dem Aufwachen, liegend, 1–5 min über „HRV messen“ im Start-Screen.</string>
+    <string name="history_readiness_empty">Noch keine HRV-Messungen. Miss morgens direkt nach dem Aufwachen, immer in derselben Haltung, 5 min über „HRV messen“ im Start-Screen.</string>
     <string name="history_readiness_below">Unter Normalbereich – Erholung priorisieren</string>
     <string name="history_readiness_normal">Im Normalbereich</string>
     <string name="history_readiness_above">Über Normalbereich</string>
-    <string name="history_readiness_unclassified">Noch keine Einordnung</string>
     <string name="history_readiness_rmssd_7d">RMSSD Ø 7 T</string>
     <string name="history_readiness_readings_7d">MESSUNGEN 7 T</string>
-    <string name="history_readiness_classification_hint">Einordnung ab 3 Messungen in 7 Tagen und 7 Messungen insgesamt.</string>
     <string name="history_readiness_legend">Punkte: Tagesmessung, Linie: 7-Tage-Ø (ln RMSSD), Fläche: Normalbereich.</string>
     <string name="history_readiness_legend_range">Punkte: Tagesmessung, Linie: 7-Tage-Ø (ln RMSSD), Fläche: Normalbereich (%1$d–%2$d ms).</string>
+    <string name="history_readiness_baseline_building">Keine verlässliche Einordnung: Basis im Aufbau (%1$d/%2$d Messungen)</string>
+    <string name="history_readiness_too_few_recent">Keine verlässliche Einordnung: zu wenige aktuelle Messungen (%1$d/%2$d in 7 Tagen)</string>
+    <string name="history_readiness_posture_lying">Nur mit Messungen im Liegen verglichen.</string>
+    <string name="history_readiness_posture_sitting">Nur mit Messungen im Sitzen verglichen.</string>
+    <string name="history_readiness_posture_standing">Nur mit Messungen im Stehen verglichen.</string>
+    <string name="history_readiness_disclaimer">Nur Trainingshinweis, keine medizinische Bewertung.</string>
     <plurals name="history_readiness_last_days">
         <item quantity="one">Letzter %d Tag.</item>
         <item quantity="other">Letzte %d Tage.</item>

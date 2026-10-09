@@ -25,10 +25,12 @@
     <string name="scan_tutorial_settings_text">Adjust your age, resting HR and HR zones here.</string>
 
     <string name="scan_hrv_dialog_title">HRV measurement</string>
-    <string name="scan_hrv_super_short">Super Short</string>
-    <string name="scan_hrv_short">Short</string>
+    <string name="scan_hrv_posture_label">Posture</string>
+    <string name="scan_hrv_posture_lying">Lying</string>
+    <string name="scan_hrv_posture_sitting">Sitting</string>
+    <string name="scan_hrv_posture_standing">Standing</string>
+    <string name="scan_hrv_posture_hint">Always measure in the same posture.</string>
     <string name="scan_hrv_full">Full</string>
-    <string name="scan_hrv_seconds">%1$d sec</string>
     <string name="scan_hrv_minutes">%1$d min</string>
     <string name="scan_hrv_option">%1$s · %2$s</string>
     <string name="scan_cancel">Cancel</string>

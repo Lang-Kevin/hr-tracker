@@ -25,10 +25,12 @@
     <string name="scan_tutorial_settings_text">Hier passt du Alter, Ruhepuls und HR-Zonen an.</string>
 
     <string name="scan_hrv_dialog_title">HRV-Messung</string>
-    <string name="scan_hrv_super_short">Super Short</string>
-    <string name="scan_hrv_short">Short</string>
+    <string name="scan_hrv_posture_label">Körperhaltung</string>
+    <string name="scan_hrv_posture_lying">Liegend</string>
+    <string name="scan_hrv_posture_sitting">Sitzend</string>
+    <string name="scan_hrv_posture_standing">Stehend</string>
+    <string name="scan_hrv_posture_hint">Immer in derselben Haltung messen.</string>
     <string name="scan_hrv_full">Full</string>
-    <string name="scan_hrv_seconds">%1$d Sek.</string>
     <string name="scan_hrv_minutes">%1$d Min.</string>
     <string name="scan_hrv_option">%1$s · %2$s</string>
     <string name="scan_cancel">Abbrechen</string>

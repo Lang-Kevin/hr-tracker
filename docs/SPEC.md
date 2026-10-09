@@ -31,7 +31,8 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 ```kotlin
 Session(id, label, startedAt, endedAt, maxHrUsed, restingHr, note,
         zoneSnapshotJson /* DB v2 */, deletedAt /* DB v4 */,
-        activeMs, avgBpm, trimp, hrr60, rmssd, metricsVersion, rpe /* DB v6 */)
+        activeMs, avgBpm, trimp, hrr60, rmssd, metricsVersion, rpe /* DB v6 */,
+        rmssdArtefactPct, rmssdValidBeats, posture /* DB v7 */)
 
 HrSample(id, sessionId, timestampMs, bpm, rrIntervalsMs)
 
@@ -45,7 +46,7 @@ UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone,
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 6 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`). **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
+DB-Version 7 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`; bestehende HRV-Messungen erhalten `posture = SITTING`). `SessionMetrics.VERSION` 2: HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 
@@ -92,7 +93,7 @@ Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeit
 
 Invariante: Session aktiv ⇔ Foreground Service läuft ⇔ Service hat Kommando ausgeführt.
 
-- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
+- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`, `EXTRA_HRV_POSTURE`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
 - **Service als Single Owner**: `null` Intent → `stopSelf()` + `START_NOT_STICKY`; `onDestroy()` Safety-Net-Stop.
 - **SessionRepository = State-Halter**: Mutex, idempotente `start()`, `NonCancellable` in `close()`, `activeSessionId=null` nach Close.
 - **Session-gebundener State in Repo/DB**: Meilensteine sofort beim Add in DB, auf Discard gelöscht; `ActiveClock` für Elapsed-Time (Pause ausgeschlossen); HRV-Restzeit in Service (`hrvRemainingSec` StateFlow, 1s-Ticker).
@@ -150,7 +151,7 @@ Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overl
 
 Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen hat keinen eigenen Session-Zweig: bei aktiver Session navigiert `LaunchedEffect(activeSessionId)` in `MainActivity` immer zu Live; Stoppen/Verwerfen nur über Live.
 
-HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen. HRV-Messungen (`Session.isHrvMeasurement`, Label `Readiness.HRV_LABEL`) zählen nicht als Training: sie fehlen in Summary, Wochenstatistik, TRIMP-Verlauf, Trainingslast und HRR-Trend und werden stattdessen im Form-Tab ausgewertet. Keine RPE-Abfrage für HRV-Messungen.
+HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (nur Full 5min; kürzere Optionen entfallen, da sie das 60-s-Verwerfen plus 180-s-Analyse nie erfüllen). Der Dialog fragt zusätzlich die Körperhaltung ab (Liegend/Sitzend/Stehend, Default Liegend); sie wird in `Session.posture` gespeichert und per `EXTRA_HRV_POSTURE` an den Service übergeben. Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen. HRV-Messungen (`Session.isHrvMeasurement`, Label `Readiness.HRV_LABEL`) zählen nicht als Training: sie fehlen in Summary, Wochenstatistik, TRIMP-Verlauf, Trainingslast und HRR-Trend und werden stattdessen im Form-Tab ausgewertet. Keine RPE-Abfrage für HRV-Messungen.
 
 Belastung (Session-RPE): Nach „Speichern“ im Live-Screen öffnet der Detail-Screen (`detail/{id}?askRpe=true`) einmalig den `RpeDialog` (CR-10, 0–10), sofern noch kein RPE gesetzt ist; „Später“ schließt ohne Wert. Die Karte „Belastung (RPE 0–10)“ im Detail-Screen öffnet den Dialog jederzeit (inkl. „Entfernen“) und zeigt die sRPE-Last = RPE × aktive Minuten (Foster).
 
@@ -164,7 +165,7 @@ History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzelt
 
 ### Form (History → Form)
 
-- **Bereitschaft (Ruhe-HRV):** `Readiness.summarize` über HRV-Messungen; pro Tag zählt die erste Messung. Auswertung auf ln(RMSSD): 7-Tage-Ø (ab 3 Messungen) gegen den Normalbereich = Mittel ± 0,5 SD der letzten 60 Tage (ab 7 Messungen, Plews et al.) → „Unter / Im / Über Normalbereich“. Chart: Tageswerte (Punkte), 7-Tage-Ø (Linie), Normalbereich (Fläche), 30 Tage.
+- **Bereitschaft (Ruhe-HRV):** `Readiness.summarize` über HRV-Messungen; pro Tag zählt die erste **verlässliche** Messung (Qualitäts-Gates, siehe Analytics); unzuverlässige Messungen fließen nicht ein. Es werden nur Messungen mit der Körperhaltung der letzten Messung verglichen (Legacy ohne Haltung bildet eine eigene Gruppe). Auswertung auf ln(RMSSD): 7-Tage-Ø (ab 5 Messungen) gegen den Normalbereich = Mittel ± 0,5 SD der letzten 60 Tage (ab 14 Messungen, Plews et al.) → „Unter / Im / Über Normalbereich“. Sonst Grund statt Einordnung: „Basis im Aufbau (x/14)“ bzw. „zu wenige aktuelle Messungen (x/5 in 7 Tagen)“. Auto-Ruhepuls aus verlässlichen Messungen gleicher Haltung (ab 3, `MIN_RESTING_HR`). Eine Zeile Disclaimer: nur Trainingshinweis, keine medizinische Bewertung. Chart: Tageswerte (Punkte), 7-Tage-Ø (Linie), Normalbereich (Fläche), 30 Tage.
 - **Ruhepuls:** 7-Tage-Ø des Ø-Pulses der HRV-Messungen (ab 3 Messungen). „Automatisch übernehmen“ (`UserSettings.autoRestingHr`, Default aus) setzt den Ruhepuls nach jeder HRV-Messung (`SessionRepository.updateRestingHrFromHrv`), sonst Button „jetzt übernehmen“. Betrifft nur künftige Sessions (Zonen-Snapshot).
 - **HRR60-Trend:** HRR60 je Training der letzten 8 Wochen, Ø letzte 4 Wochen vs. 4 Wochen davor (`Readiness.compareWindows`); Differenz ≥ 1 bpm wird als schneller/langsamer markiert.
 
@@ -197,7 +198,7 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 ## Analytics (DetailScreen)
 
 - **Aktive Zeit** (`SampleIntervals.activeMs`): Summe der Sample-Intervalle ≤ 5 000 ms — Pausen (manuell und Auto-Pause) und Dropouts zählen nicht. Stat „AKTIV“; der Header zeigt weiter die Gesamtdauer. **Ø-BPM** zeitgewichtet über dieselben Intervalle (`SampleIntervals.avgBpm`).
-- **RMSSD** aus RR-Intervallen (`HrvCalculator.rmssd`; Watch-Sessions haben keine RR → "–"). Über eine Sample-Lücke > 5 000 ms wird nicht differenziert.
+- **RMSSD** aus RR-Intervallen (`HrvCalculator.analyze`, Wrapper `rmssd()`; Watch-Sessions haben keine RR → "–"). Artefakt: RR außerhalb 300–2000 ms oder > 30 % vom Median des 11-Schlag-Fensters; Differenzen, die einen Artefakt berühren, entfallen (keine Interpolation); gerundet. Über eine Sample-Lücke > 5 000 ms wird nicht differenziert. Qualitäts-Gates (`HrvQuality`): ≥ 180 s, ≥ 180 gültige Schläge, ≤ 5 % Artefakte, sonst unzuverlässig. Detail-Screen: Qualitätszeile („Qualität: n Schläge, x % Artefakte“) bzw. „Nicht verlässlich: <Grund>“ mit ausgegrauter RMSSD.
 - **TRIMP** (Bannister, Karvonen-Ratio; Fallback %HRmax × Dauer), sample-weise integriert (`TrimpCalculator`): pro Intervall zwischen zwei Samples `Δt[min] × r × e^(1.92 r)` bzw. `Δt[min] × BPM/HRmax × 100`. Intervalle > 5 000 ms (Pause, BLE-Dropout) zählen nicht. Detail-Screen und TRIMP-Verlauf (History, letzte 15 Sessions) nutzen dieselbe Berechnung.
 - **Kalorien** (Aktivkalorien, Keytel minus Grundumsatz): On-read aus den HR-Samples, Gewicht, Alter und Geschlecht berechnet (`CalorieCalculator.estimateActiveKcal`).
   - **Brutto (Keytel, kcal/min):** Männer `(-55.0969 + 0.6309 × BPM + 0.1988 × Gewicht + 0.2017 × Alter) / 4.184`, Frauen `(-20.4022 + 0.4472 × BPM − 0.1263 × Gewicht + 0.074 × Alter) / 4.184` (Formel liefert kJ/min, daher `/ 4.184`).
