@@ -59,4 +59,8 @@
     <string name="detail_rpe_label_5_6">Hart</string>
     <string name="detail_rpe_label_7_9">Sehr hart</string>
     <string name="detail_rpe_label_10">Maximal</string>
+    <string name="detail_hrv_quality">Qualität: %1$d Schläge, %2$.1f %% Artefakte</string>
+    <string name="detail_hrv_unreliable_too_short">Nicht verlässlich: zu kurz (3 min nach 1 min Einschwingen nötig)</string>
+    <string name="detail_hrv_unreliable_too_few_beats">Nicht verlässlich: zu wenige saubere Schläge (%1$d/%2$d)</string>
+    <string name="detail_hrv_unreliable_too_many_artefacts">Nicht verlässlich: zu viele Artefakte (%1$.1f %%, max. %2$d %%)</string>
 </resources>

@@ -43,6 +43,8 @@ import com.kevin.hrtracker.ui.formatDuration
 import com.kevin.hrtracker.ui.shared.BpmZoneChart
 import com.kevin.hrtracker.ui.shared.ChartViewport
 import com.kevin.hrtracker.ui.shared.chartZoomPan
+import com.kevin.hrtracker.domain.HrvQuality
+import com.kevin.hrtracker.domain.HrvUnreliableReason
 import com.kevin.shared.ui.StatItem
 import com.kevin.shared.ui.chart.ChartToggleButton
 import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
@@ -67,7 +69,8 @@ fun DetailScreen(
     val timeInZone by viewModel.timeInZone.collectAsStateWithLifecycle()
     val dominantZone by viewModel.dominantZone.collectAsStateWithLifecycle()
     val percentInTargetZone by viewModel.percentInTargetZone.collectAsStateWithLifecycle()
-    val rmssd by viewModel.rmssd.collectAsStateWithLifecycle()
+    val hrv by viewModel.hrv.collectAsStateWithLifecycle()
+    val hrvReason by viewModel.hrvReason.collectAsStateWithLifecycle()
     val trimp by viewModel.trimp.collectAsStateWithLifecycle()
     val calories by viewModel.calories.collectAsStateWithLifecycle()
     val bodyDataMissing by viewModel.bodyDataMissing.collectAsStateWithLifecycle()
@@ -419,9 +422,31 @@ fun DetailScreen(
 
         // Analytics Row
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem("RMSSD", rmssd?.let { "${it}ms" } ?: "—", Modifier.weight(1f))
+            StatItem(
+                "RMSSD",
+                hrv?.rmssd?.let { "${it}ms" } ?: "—",
+                Modifier.weight(1f),
+                valueColor = if (hrvReason != null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
+            )
             StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
             StatItem(stringResource(R.string.detail_stat_min_bpm), stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
+        }
+
+        val hrvResult = hrv
+        if (session?.isHrvMeasurement == true && hrvResult != null) {
+            Text(
+                when (hrvReason) {
+                    null -> stringResource(R.string.detail_hrv_quality, hrvResult.validBeats, hrvResult.artefactPct)
+                    HrvUnreliableReason.TOO_SHORT -> stringResource(R.string.detail_hrv_unreliable_too_short)
+                    HrvUnreliableReason.TOO_FEW_BEATS ->
+                        stringResource(R.string.detail_hrv_unreliable_too_few_beats, hrvResult.validBeats, HrvQuality.MIN_VALID_BEATS)
+                    HrvUnreliableReason.TOO_MANY_ARTEFACTS ->
+                        stringResource(R.string.detail_hrv_unreliable_too_many_artefacts, hrvResult.artefactPct, HrvQuality.MAX_ARTEFACT_PCT.toInt())
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
 
         Spacer(Modifier.height(8.dp))

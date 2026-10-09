@@ -19,6 +19,8 @@ import com.kevin.hrtracker.domain.HrrResult
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.HrvCalculator
 import com.kevin.hrtracker.domain.HrvQuality
+import com.kevin.hrtracker.domain.HrvResult
+import com.kevin.hrtracker.domain.HrvUnreliableReason
 import com.kevin.hrtracker.domain.SampleIntervals
 import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.domain.TrimpCalculator
@@ -78,8 +80,13 @@ class DetailViewModel @Inject constructor(
         else HrZoneCalculator.resolveZones(sess.zoneSnapshotJson, sess.maxHrUsed, sess.restingHr)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val rmssd: StateFlow<Int?> = combine(session, samples) { sess, list ->
-        HrvCalculator.analyze(list, HrvQuality.discardMsFor(sess?.isHrvMeasurement == true))?.rmssd
+    val hrv: StateFlow<HrvResult?> = combine(session, samples) { sess, list ->
+        HrvCalculator.analyze(list, HrvQuality.discardMsFor(sess?.isHrvMeasurement == true))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Nur für HRV-Messungen; null = verlässlich oder keine HRV-Messung. */
+    val hrvReason: StateFlow<HrvUnreliableReason?> = combine(session, hrv) { sess, r ->
+        if (sess?.isHrvMeasurement != true || r == null) null else HrvQuality.reason(r)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Aktive Zeit ohne Pausen/Dropouts, null solange die Session läuft. */

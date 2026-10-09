@@ -61,16 +61,20 @@
 
     <!-- Form tab: readiness -->
     <string name="history_readiness_title">Readiness (resting HRV)</string>
-    <string name="history_readiness_empty">No HRV readings yet. Measure in the morning right after waking up, lying down, for 1–5 min via “Measure HRV” on the start screen.</string>
+    <string name="history_readiness_empty">No HRV readings yet. Measure in the morning right after waking up, always in the same posture, for 5 min via “Measure HRV” on the start screen.</string>
     <string name="history_readiness_below">Below normal range – prioritize recovery</string>
     <string name="history_readiness_normal">Within normal range</string>
     <string name="history_readiness_above">Above normal range</string>
-    <string name="history_readiness_unclassified">Not classified yet</string>
     <string name="history_readiness_rmssd_7d">RMSSD 7-D AVG</string>
     <string name="history_readiness_readings_7d">READINGS 7 D</string>
-    <string name="history_readiness_classification_hint">Classification needs 3 readings in 7 days and 7 readings in total.</string>
     <string name="history_readiness_legend">Dots: daily reading, line: 7-day avg (ln RMSSD), area: normal range.</string>
     <string name="history_readiness_legend_range">Dots: daily reading, line: 7-day avg (ln RMSSD), area: normal range (%1$d–%2$d ms).</string>
+    <string name="history_readiness_baseline_building">No reliable rating: baseline still building (%1$d/%2$d readings)</string>
+    <string name="history_readiness_too_few_recent">No reliable rating: too few recent readings (%1$d/%2$d in 7 days)</string>
+    <string name="history_readiness_posture_lying">Compared with lying readings only.</string>
+    <string name="history_readiness_posture_sitting">Compared with sitting readings only.</string>
+    <string name="history_readiness_posture_standing">Compared with standing readings only.</string>
+    <string name="history_readiness_disclaimer">Training guidance only, not a medical assessment.</string>
     <plurals name="history_readiness_last_days">
         <item quantity="one">Last %d day.</item>
         <item quantity="other">Last %d days.</item>

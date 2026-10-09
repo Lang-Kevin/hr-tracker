@@ -1,5 +1,6 @@
 package com.kevin.hrtracker.domain
 
+import com.kevin.hrtracker.data.entity.toHrvMeasurements
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -10,11 +11,13 @@ class ReadinessTest {
 
     private val today = LocalDate.of(2026, 9, 25)
 
-    private fun m(back: Int, rmssd: Int, hr: Int? = 50, hour: Int = 7) = HrvMeasurement(
+    private fun m(back: Int, rmssd: Int, hr: Int? = 50, hour: Int = 7, posture: HrvPosture? = null, reliable: Boolean = true) = HrvMeasurement(
         date = today.minusDays(back.toLong()),
         timestampMs = (today.toEpochDay() - back) * 86_400_000L + hour * 3_600_000L,
         rmssd = rmssd,
-        restingHr = hr
+        restingHr = hr,
+        posture = posture,
+        reliable = reliable
     )
 
     @Test
@@ -24,12 +27,13 @@ class ReadinessTest {
     }
 
     @Test
-    fun `rolling average needs three measurements`() {
-        val two = Readiness.summarize(listOf(m(0, 60), m(1, 60)), today)
-        assertNull(two.rmssd7)
-        assertNull(two.restingHr7)
-        val three = Readiness.summarize(listOf(m(0, 60), m(1, 60), m(2, 60)), today)
-        assertEquals(60, three.rmssd7)
+    fun `rolling average needs five readings`() {
+        val four = Readiness.summarize((0 until 4).map { m(it, 60) }, today)
+        assertNull(four.rmssd7)
+        val five = Readiness.summarize((0 until 5).map { m(it, 60) }, today)
+        assertEquals(60, five.rmssd7)
+        assertEquals(5, five.measurementsLast7)
+        val three = Readiness.summarize((0 until 3).map { m(it, 60) }, today)
         assertEquals(50, three.restingHr7)
         assertEquals(3, three.measurementsLast7)
     }
@@ -53,7 +57,10 @@ class ReadinessTest {
     @Test
     fun `no status without baseline`() {
         val list = (0 until 5).map { m(it, 60) }
-        assertNull(Readiness.summarize(list, today).status)
+        val s = Readiness.summarize(list, today)
+        assertNull(s.status)
+        assertEquals(ReadinessBlock.BASELINE_BUILDING, s.block)
+        assertEquals(5, s.baselineCount)
     }
 
     @Test
@@ -65,5 +72,55 @@ class ReadinessTest {
         val (cur, prev) = Readiness.compareWindows(points, today, windowDays = 7)
         assertEquals(25.0, cur!!, 1e-9)
         assertEquals(10.0, prev!!, 1e-9)
+    }
+
+    @Test
+    fun `unreliable reading is ignored, first reliable of day counts`() {
+        val s = Readiness.summarize(listOf(m(0, 20, hour = 6, reliable = false), m(0, 60, hour = 7)), today, chartDays = 1)
+        assertEquals(ln(60.0), s.days.last().lnRmssd!!, 1e-9)
+    }
+
+    @Test
+    fun `unreliable readings excluded from baseline`() {
+        val list = (0 until 20).map { m(it, 60) } + (20 until 30).map { m(it, 20, reliable = false) }
+        assertEquals(20, Readiness.summarize(list, today).baselineCount)
+    }
+
+    @Test
+    fun `only latest posture is compared`() {
+        val list = (1..30).map { m(it, 60, posture = HrvPosture.LYING) } + m(0, 60, posture = HrvPosture.SITTING)
+        val s = Readiness.summarize(list, today)
+        assertEquals(HrvPosture.SITTING, s.posture)
+        assertEquals(1, s.baselineCount)
+        assertEquals(ReadinessBlock.BASELINE_BUILDING, s.block)
+    }
+
+    @Test
+    fun `legacy null posture is its own group`() {
+        val list = (1..30).map { m(it, 60) } + m(0, 60, posture = HrvPosture.LYING)
+        assertEquals(1, Readiness.summarize(list, today).baselineCount)
+    }
+
+    @Test
+    fun `too few recent readings`() {
+        val list = (7..26).map { m(it, 60) } + (0 until 4).map { m(it, 60) }
+        val s = Readiness.summarize(list, today)
+        assertEquals(ReadinessBlock.TOO_FEW_RECENT, s.block)
+        assertEquals(4, s.measurementsLast7)
+    }
+
+    @Test
+    fun `above band is ABOVE`() {
+        val list = (0 until 30).map { back -> m(back, if (back < 7) 110 else if (back % 2 == 0) 60 else 70) }
+        assertEquals(ReadinessStatus.ABOVE, Readiness.summarize(list, today).status)
+    }
+
+    @Test
+    fun `unknown posture string parses to null`() {
+        val sess = com.kevin.hrtracker.data.entity.Session(
+            label = Readiness.HRV_LABEL, startedAt = 0L, endedAt = null, maxHrUsed = 190, restingHr = null,
+            rmssd = 50, posture = "GONE"
+        )
+        assertNull(listOf(sess).toHrvMeasurements().single().posture)
     }
 }

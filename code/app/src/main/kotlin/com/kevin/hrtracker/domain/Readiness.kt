@@ -7,11 +7,16 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /** Eine Ruhe-HRV-Messung (Session mit Label [Readiness.HRV_LABEL]). */
-data class HrvMeasurement(val date: LocalDate, val timestampMs: Long, val rmssd: Int, val restingHr: Int?)
+data class HrvMeasurement(val date: LocalDate, val timestampMs: Long, val rmssd: Int, val restingHr: Int?,
+    val posture: HrvPosture? = null,
+    val reliable: Boolean = true
+)
 
 enum class ReadinessStatus { BELOW, NORMAL, ABOVE }
 
 enum class HrvPosture { LYING, SITTING, STANDING }
+
+enum class ReadinessBlock { BASELINE_BUILDING, TOO_FEW_RECENT }
 
 data class ReadinessDay(
     val date: LocalDate,
@@ -31,7 +36,12 @@ data class ReadinessSummary(
     val rmssd7: Int?,
     /** Ø Ruhepuls der Messungen der letzten 7 Tage. */
     val restingHr7: Int?,
-    val measurementsLast7: Int
+    val measurementsLast7: Int,
+    /** Grund, warum keine Einordnung möglich ist; nicht null genau dann, wenn status == null. */
+    val block: ReadinessBlock?,
+    val baselineCount: Int,
+    /** Haltung der letzten Messung; nur Messungen dieser Haltung fließen ein. */
+    val posture: HrvPosture?
 )
 
 /**
@@ -43,12 +53,14 @@ object Readiness {
 
     const val HRV_LABEL = "HRV RMSSD"
     const val BASELINE_DAYS = 60
-    const val MIN_ROLLING = 3
-    const val MIN_BASELINE = 7
+    const val MIN_ROLLING = 5
+    const val MIN_BASELINE = 14
+    const val MIN_RESTING_HR = 3
 
     fun summarize(measurements: List<HrvMeasurement>, today: LocalDate, chartDays: Int = 30): ReadinessSummary {
+        val posture = measurements.maxByOrNull { it.timestampMs }?.posture
         val perDay = measurements
-            .filter { it.rmssd > 0 }
+            .filter { it.rmssd > 0 && it.reliable && it.posture == posture }
             .groupBy { it.date }
             .mapValues { (_, list) -> list.minBy { it.timestampMs } }
 
@@ -79,6 +91,12 @@ object Readiness {
             else -> ReadinessStatus.NORMAL
         }
 
+        val block = when {
+            status != null -> null
+            baseline.size < MIN_BASELINE -> ReadinessBlock.BASELINE_BUILDING
+            else -> ReadinessBlock.TOO_FEW_RECENT
+        }
+
         val last7 = window(today, 7)
         val hrs = last7.mapNotNull { it.restingHr }
         return ReadinessSummary(
@@ -87,8 +105,11 @@ object Readiness {
             normalHigh = high,
             status = status,
             rmssd7 = current?.let { exp(it).roundToInt() },
-            restingHr7 = if (hrs.size < MIN_ROLLING) null else hrs.average().roundToInt(),
-            measurementsLast7 = last7.size
+            restingHr7 = if (hrs.size < MIN_RESTING_HR) null else hrs.average().roundToInt(),
+            measurementsLast7 = last7.size,
+            block = block,
+            baselineCount = baseline.size,
+            posture = posture
         )
     }
 

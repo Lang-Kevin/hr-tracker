@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.kevin.hrtracker.domain.HrvMeasurement
+import com.kevin.hrtracker.domain.HrvPosture
+import com.kevin.hrtracker.domain.HrvQuality
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.shared.domain.SoftDeletable
 import java.time.Instant
@@ -47,6 +49,12 @@ fun List<Session>.toHrvMeasurements(zone: ZoneId = ZoneId.systemDefault()): List
             date = Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate(),
             timestampMs = it.startedAt,
             rmssd = it.rmssd!!,
-            restingHr = it.avgBpm
+            restingHr = it.avgBpm,
+            posture = it.posture?.let { p -> runCatching { HrvPosture.valueOf(p) }.getOrNull() },
+            reliable = HrvQuality.reason(
+                HrvQuality.analysedSeconds(it.activeMs ?: 0L, HrvQuality.STABILISATION_MS),
+                it.rmssdValidBeats ?: 0,
+                it.rmssdArtefactPct ?: 100.0
+            ) == null
         )
     }
