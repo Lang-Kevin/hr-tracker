@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.kevin.hrtracker.data.repository.SessionRepository
+import com.kevin.hrtracker.domain.HrvPosture
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.hrtracker.service.HrRecordingService
 import com.kevin.hrtracker.ui.detail.DetailScreen
@@ -182,8 +183,8 @@ class MainActivity : ComponentActivity() {
                 ScanScreen(
                     viewModel = scanViewModel,
                     onSessionStarted = { label -> startRecordingService(label) },
-                    onHrvSessionStarted = { seconds ->
-                        startRecordingService(Readiness.HRV_LABEL, seconds)
+                    onHrvSessionStarted = { seconds, posture ->
+                        startRecordingService(Readiness.HRV_LABEL, seconds, posture)
                         navController.navigate(Route.LIVE) { launchSingleTop = true }
                     },
                     onNavigateToHistory = { navController.navigate(Route.HISTORY) },
@@ -239,8 +240,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun startRecordingService(label: String, hrvSeconds: Int = 0) {
-        val intent = HrRecordingService.startIntent(this, label, hrvSeconds)
+    private fun startRecordingService(label: String, hrvSeconds: Int = 0, posture: HrvPosture? = null) {
+        val intent = HrRecordingService.startIntent(this, label, hrvSeconds, posture)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent)
         else startService(intent)
     }

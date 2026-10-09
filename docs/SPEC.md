@@ -93,7 +93,7 @@ Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeit
 
 Invariante: Session aktiv ⇔ Foreground Service läuft ⇔ Service hat Kommando ausgeführt.
 
-- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
+- **UI sendet nur Intents**: `ACTION_START` (optional `EXTRA_HRV_SECONDS`, `EXTRA_HRV_POSTURE`), `ACTION_STOP`, `ACTION_DISCARD` — nie direkt `stopService()`.
 - **Service als Single Owner**: `null` Intent → `stopSelf()` + `START_NOT_STICKY`; `onDestroy()` Safety-Net-Stop.
 - **SessionRepository = State-Halter**: Mutex, idempotente `start()`, `NonCancellable` in `close()`, `activeSessionId=null` nach Close.
 - **Session-gebundener State in Repo/DB**: Meilensteine sofort beim Add in DB, auf Discard gelöscht; `ActiveClock` für Elapsed-Time (Pause ausgeschlossen); HRV-Restzeit in Service (`hrvRemainingSec` StateFlow, 1s-Ticker).
@@ -151,7 +151,7 @@ Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overl
 
 Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen hat keinen eigenen Session-Zweig: bei aktiver Session navigiert `LaunchedEffect(activeSessionId)` in `MainActivity` immer zu Live; Stoppen/Verwerfen nur über Live.
 
-HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (Super Short 30s / Short 1min / Full 5min). Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen. HRV-Messungen (`Session.isHrvMeasurement`, Label `Readiness.HRV_LABEL`) zählen nicht als Training: sie fehlen in Summary, Wochenstatistik, TRIMP-Verlauf, Trainingslast und HRR-Trend und werden stattdessen im Form-Tab ausgewertet. Keine RPE-Abfrage für HRV-Messungen.
+HRV-Messung: "HRV messen"-Button im Scan-Screen öffnet `HrvDurationDialog` (nur Full 5min; kürzere Optionen entfallen, da sie das 60-s-Verwerfen plus 180-s-Analyse nie erfüllen). Der Dialog fragt zusätzlich die Körperhaltung ab (Liegend/Sitzend/Stehend, Default Liegend); sie wird in `Session.posture` gespeichert und per `EXTRA_HRV_POSTURE` an den Service übergeben. Startet Session mit Label `"HRV RMSSD"`, navigiert zu LiveScreen mit `hrv`-Nav-Arg. LiveScreen zeigt rosa "VERBLEIBEND"-Countdown statt "GESAMTZEIT" und stoppt Session automatisch bei 0. RMSSD erscheint dann im DetailScreen. HRV-Messungen (`Session.isHrvMeasurement`, Label `Readiness.HRV_LABEL`) zählen nicht als Training: sie fehlen in Summary, Wochenstatistik, TRIMP-Verlauf, Trainingslast und HRR-Trend und werden stattdessen im Form-Tab ausgewertet. Keine RPE-Abfrage für HRV-Messungen.
 
 Belastung (Session-RPE): Nach „Speichern“ im Live-Screen öffnet der Detail-Screen (`detail/{id}?askRpe=true`) einmalig den `RpeDialog` (CR-10, 0–10), sofern noch kein RPE gesetzt ist; „Später“ schließt ohne Wert. Die Karte „Belastung (RPE 0–10)“ im Detail-Screen öffnet den Dialog jederzeit (inkl. „Entfernen“) und zeigt die sRPE-Last = RPE × aktive Minuten (Foster).
 

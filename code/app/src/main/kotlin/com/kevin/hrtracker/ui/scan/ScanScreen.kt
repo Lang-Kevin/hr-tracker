@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -20,6 +21,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.shouldShowRationale
 import com.kevin.hrtracker.R
+import com.kevin.hrtracker.domain.HrvPosture
 import com.kevin.shared.ble.ConnectionState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
@@ -47,7 +49,7 @@ import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
 fun ScanScreen(
     viewModel: ScanViewModel = hiltViewModel(),
     onSessionStarted: (label: String) -> Unit = {},
-    onHrvSessionStarted: (seconds: Int) -> Unit = {},
+    onHrvSessionStarted: (seconds: Int, posture: HrvPosture) -> Unit = { _, _ -> },
     onNavigateToHistory: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {}
 ) {
@@ -85,10 +87,10 @@ fun ScanScreen(
     }
     if (showHrvDialog) {
         HrvDurationDialog(
-            onSelect = { seconds ->
+            onSelect = { seconds, posture ->
                 showHrvDialog = false
                 isStarting = true
-                onHrvSessionStarted(seconds)
+                onHrvSessionStarted(seconds, posture)
             },
             onDismiss = { showHrvDialog = false }
         )
@@ -260,19 +262,33 @@ fun ScanScreen(
 }
 
 @Composable
-private fun HrvDurationDialog(onSelect: (Int) -> Unit, onDismiss: () -> Unit) {
+private fun HrvDurationDialog(onSelect: (Int, HrvPosture) -> Unit, onDismiss: () -> Unit) {
+    var posture by rememberSaveable { mutableStateOf(HrvPosture.LYING) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.scan_hrv_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.scan_hrv_posture_label))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        HrvPosture.LYING to R.string.scan_hrv_posture_lying,
+                        HrvPosture.SITTING to R.string.scan_hrv_posture_sitting,
+                        HrvPosture.STANDING to R.string.scan_hrv_posture_standing,
+                    ).forEach { (p, label) ->
+                        FilterChip(
+                            selected = posture == p,
+                            onClick = { posture = p },
+                            label = { Text(stringResource(label)) }
+                        )
+                    }
+                }
+                Text(stringResource(R.string.scan_hrv_posture_hint), style = MaterialTheme.typography.bodySmall)
                 listOf(
-                    Triple(stringResource(R.string.scan_hrv_super_short), stringResource(R.string.scan_hrv_seconds, 30), 30),
-                    Triple(stringResource(R.string.scan_hrv_short), stringResource(R.string.scan_hrv_minutes, 1), 60),
                     Triple(stringResource(R.string.scan_hrv_full), stringResource(R.string.scan_hrv_minutes, 5), 300),
                 ).forEach { (name, duration, seconds) ->
                     OutlinedButton(
-                        onClick = { onSelect(seconds) },
+                        onClick = { onSelect(seconds, posture) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(stringResource(R.string.scan_hrv_option, name, duration))

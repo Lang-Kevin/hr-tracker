@@ -11,6 +11,8 @@ data class HrvMeasurement(val date: LocalDate, val timestampMs: Long, val rmssd:
 
 enum class ReadinessStatus { BELOW, NORMAL, ABOVE }
 
+enum class HrvPosture { LYING, SITTING, STANDING }
+
 data class ReadinessDay(
     val date: LocalDate,
     /** ln(RMSSD) der Tagesmessung, null an Tagen ohne Messung. */
