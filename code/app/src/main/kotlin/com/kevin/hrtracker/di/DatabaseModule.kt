@@ -5,6 +5,8 @@ import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.kevin.hrtracker.data.db.HrDatabase
+import com.kevin.hrtracker.domain.HrvPosture
+import com.kevin.hrtracker.domain.Readiness
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -50,6 +52,10 @@ object DatabaseModule {
                 "activeMs INTEGER", "avgBpm INTEGER", "trimp INTEGER", "hrr60 INTEGER", "rmssd INTEGER",
                 "metricsVersion INTEGER NOT NULL DEFAULT 0", "rpe INTEGER"
             ).forEach { database.execSQL("ALTER TABLE Session ADD COLUMN $it") }
+            database.execSQL(
+                "UPDATE Session SET posture = '${HrvPosture.SITTING.name}' " +
+                    "WHERE label = '${Readiness.HRV_LABEL}' AND posture IS NULL"
+            )
         }
     }
 
