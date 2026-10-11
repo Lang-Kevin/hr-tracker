@@ -45,6 +45,18 @@ class SessionRepository @Inject constructor(
 ) {
     companion object {
         private const val TAG = "SessionRepository"
+
+        internal fun newSession(
+            label: String, startedAtMs: Long, maxHrUsed: Int, restingHr: Int?, zoneJson: String, posture: String?
+        ) = Session(
+            label = label,
+            startedAt = startedAtMs,
+            endedAt = null,
+            maxHrUsed = maxHrUsed,
+            restingHr = restingHr,
+            zoneSnapshotJson = zoneJson,
+            posture = posture
+        )
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -121,7 +133,8 @@ class SessionRepository @Inject constructor(
         restingHr: Int?,
         zoneModel: ZoneModel = ZoneModel.HR_MAX,
         hrSamples: Flow<ParsedHr> = bleManager.hrSamples,
-        customZones: List<ZoneBounds>? = null
+        customZones: List<ZoneBounds>? = null,
+        posture: String? = null
     ): Long {
         return mutex.withLock {
             _activeSessionId.value?.let { return@withLock it }
@@ -130,14 +143,7 @@ class SessionRepository @Inject constructor(
             val zoneJson = Json.encodeToString<List<ZoneBounds>>(zones)
             val startedAtMs = System.currentTimeMillis()
             val id = db.sessionDao().insert(
-                Session(
-                    label = label,
-                    startedAt = startedAtMs,
-                    endedAt = null,
-                    maxHrUsed = maxHrUsed,
-                    restingHr = restingHr,
-                    zoneSnapshotJson = zoneJson
-                )
+                newSession(label, startedAtMs, maxHrUsed, restingHr, zoneJson, posture)
             )
             clock = ActiveClock(startedAtMs)
             hrvTargetSec = 0
@@ -146,7 +152,7 @@ class SessionRepository @Inject constructor(
             activeHrFlow = hrSamples
             sampleJob?.cancel()
             sampleJob = launchSampleJob(id, hrSamples)
-            Log.d("HRTracker", "Session $id started: $label")
+            Log.d("HRTracker", "Session $id started: $label posture=$posture")
             id
         }
     }
@@ -237,10 +243,14 @@ class SessionRepository @Inject constructor(
 
     private suspend fun refreshMetrics(session: Session) {
         val samples = db.hrSampleDao().getSamplesOnce(session.id)
-        val m = SessionMetrics.compute(samples, session.maxHrUsed, session.restingHr)
+        val m = SessionMetrics.compute(
+            samples, session.maxHrUsed, session.restingHr, session.isHrvMeasurement
+        )
         db.sessionDao().updateMetrics(
             id = session.id, activeMs = m.activeMs, avgBpm = m.avgBpm, trimp = m.trimp,
-            hrr60 = m.hrr60, rmssd = m.rmssd, version = SessionMetrics.VERSION
+            hrr60 = m.hrr60, rmssd = m.rmssd,
+            rmssdValidBeats = m.rmssdValidBeats, rmssdArtefactPct = m.rmssdArtefactPct,
+            version = SessionMetrics.VERSION
         )
     }
 

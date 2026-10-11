@@ -36,11 +36,13 @@ interface SessionDao {
 
     @Query("""
         UPDATE Session SET activeMs = :activeMs, avgBpm = :avgBpm, trimp = :trimp, hrr60 = :hrr60,
-            rmssd = :rmssd, metricsVersion = :version
+            rmssd = :rmssd, rmssdValidBeats = :rmssdValidBeats,
+            rmssdArtefactPct = :rmssdArtefactPct, metricsVersion = :version
         WHERE id = :id
     """)
     suspend fun updateMetrics(
-        id: Long, activeMs: Long, avgBpm: Int?, trimp: Int?, hrr60: Int?, rmssd: Int?, version: Int
+        id: Long, activeMs: Long, avgBpm: Int?, trimp: Int?, hrr60: Int?, rmssd: Int?,
+        rmssdValidBeats: Int?, rmssdArtefactPct: Double?, version: Int
     )
 
     /** Beendete Sessions (inkl. Papierkorb), deren Kennzahlen fehlen oder veraltet sind. */

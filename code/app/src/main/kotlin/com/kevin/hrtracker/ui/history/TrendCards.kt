@@ -14,6 +14,9 @@ import androidx.compose.ui.unit.dp
 import com.kevin.hrtracker.R
 import com.kevin.hrtracker.domain.AcwrZone
 import com.kevin.hrtracker.domain.LoadMetric
+import com.kevin.hrtracker.domain.HrvPosture
+import com.kevin.hrtracker.domain.Readiness
+import com.kevin.hrtracker.domain.ReadinessBlock
 import com.kevin.hrtracker.domain.ReadinessStatus
 import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
@@ -162,19 +165,29 @@ private fun ReadinessCard(readiness: ReadinessSummary?) {
                 Hint(stringResource(R.string.history_readiness_empty))
                 return@Column
             }
-            val (statusRes, statusColor) = when (readiness.status) {
-                ReadinessStatus.BELOW -> R.string.history_readiness_below to CautionOrange
-                ReadinessStatus.NORMAL -> R.string.history_readiness_normal to ConnectedGreen
-                ReadinessStatus.ABOVE -> R.string.history_readiness_above to SecondaryBlue
-                null -> R.string.history_readiness_unclassified to MaterialTheme.colorScheme.onSurfaceVariant
+            val (statusText, statusColor) = when (readiness.status) {
+                ReadinessStatus.BELOW -> stringResource(R.string.history_readiness_below) to CautionOrange
+                ReadinessStatus.NORMAL -> stringResource(R.string.history_readiness_normal) to ConnectedGreen
+                ReadinessStatus.ABOVE -> stringResource(R.string.history_readiness_above) to SecondaryBlue
+                null -> when (readiness.block) {
+                    ReadinessBlock.TOO_FEW_RECENT -> stringResource(
+                        R.string.history_readiness_too_few_recent, readiness.measurementsLast7, Readiness.MIN_ROLLING
+                    )
+                    else -> stringResource(
+                        R.string.history_readiness_baseline_building, readiness.baselineCount, Readiness.MIN_BASELINE
+                    )
+                } to MaterialTheme.colorScheme.onSurfaceVariant
             }
             Row(Modifier.fillMaxWidth()) {
                 Metric(stringResource(R.string.history_readiness_rmssd_7d), readiness.rmssd7?.let { "$it ms" } ?: "—", Modifier.weight(1f), PrimaryPurple)
                 Metric(stringResource(R.string.history_readiness_readings_7d), readiness.measurementsLast7.toString(), Modifier.weight(1f))
             }
-            Text(stringResource(statusRes), style = MaterialTheme.typography.bodyMedium, color = statusColor)
-            if (readiness.status == null) {
-                Hint(stringResource(R.string.history_readiness_classification_hint))
+            Text(statusText, style = MaterialTheme.typography.bodyMedium, color = statusColor)
+            when (readiness.posture) {
+                HrvPosture.LYING -> Hint(stringResource(R.string.history_readiness_posture_lying))
+                HrvPosture.SITTING -> Hint(stringResource(R.string.history_readiness_posture_sitting))
+                HrvPosture.STANDING -> Hint(stringResource(R.string.history_readiness_posture_standing))
+                null -> Unit
             }
             TrendChart(
                 series = listOf(
@@ -189,6 +202,7 @@ private fun ReadinessCard(readiness: ReadinessSummary?) {
                 stringResource(R.string.history_readiness_legend_range, exp(it).roundToInt(), exp(readiness.normalHigh!!).roundToInt())
             } ?: stringResource(R.string.history_readiness_legend)
             Hint(legend + " " + pluralStringResource(R.plurals.history_readiness_last_days, readiness.days.size, readiness.days.size))
+            Hint(stringResource(R.string.history_readiness_disclaimer))
         }
     }
 }

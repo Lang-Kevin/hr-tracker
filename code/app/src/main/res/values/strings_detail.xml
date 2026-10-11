@@ -59,4 +59,8 @@
     <string name="detail_rpe_label_5_6">Hard</string>
     <string name="detail_rpe_label_7_9">Very hard</string>
     <string name="detail_rpe_label_10">Maximal</string>
+    <string name="detail_hrv_quality">Quality: %1$d beats, %2$.1f%% artefacts</string>
+    <string name="detail_hrv_unreliable_too_short">Not reliable: too short (3 min needed after 1 min settling)</string>
+    <string name="detail_hrv_unreliable_too_few_beats">Not reliable: too few clean beats (%1$d/%2$d)</string>
+    <string name="detail_hrv_unreliable_too_many_artefacts">Not reliable: too many artefacts (%1$.1f%%, max %2$d%%)</string>
 </resources>

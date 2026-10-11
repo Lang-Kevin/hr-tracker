@@ -15,18 +15,26 @@ data class SessionMetrics(
     val avgBpm: Int?,
     val trimp: Int?,
     val hrr60: Int?,
-    val rmssd: Int?
+    val rmssd: Int?,
+    val rmssdValidBeats: Int?,
+    val rmssdArtefactPct: Double?
 ) {
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
 
-        fun compute(samples: List<HrSample>, maxHr: Int, restingHr: Int?): SessionMetrics =
-            SessionMetrics(
+        fun compute(
+            samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false
+        ): SessionMetrics {
+            val hrv = HrvCalculator.analyze(samples, HrvQuality.discardMsFor(isHrvMeasurement))
+            return SessionMetrics(
                 activeMs = SampleIntervals.activeMs(samples),
                 avgBpm = SampleIntervals.avgBpm(samples),
                 trimp = TrimpCalculator.compute(samples, maxHr, restingHr),
                 hrr60 = HrRecovery.computeHrRecovery(samples.sortedBy { it.timestampMs }, maxHr)?.hrr60,
-                rmssd = HrvCalculator.rmssd(samples)
+                rmssd = hrv?.rmssd,
+                rmssdValidBeats = hrv?.validBeats,
+                rmssdArtefactPct = hrv?.artefactPct
             )
+        }
     }
 }

@@ -15,6 +15,7 @@ import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
 import com.kevin.hrtracker.domain.HrZoneCalculator
+import com.kevin.hrtracker.domain.HrvPosture
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.domain.widgetNotificationText
@@ -49,6 +50,7 @@ class HrRecordingService : BaseRecordingService() {
     private var startMs: Long = 0L
     private var hrvJob: Job? = null
     @Volatile private var pendingHrvSeconds = 0
+    @Volatile private var pendingHrvPosture: String? = null
 
     override val notificationChannelId = "hr_recording"
     override val notificationChannelName: String
@@ -89,7 +91,7 @@ class HrRecordingService : BaseRecordingService() {
             val hrFlow: Flow<ParsedHr> = bleManager.hrSamples
             sessionRepository.startSession(
                 label, maxHrUsed = s.maxHrUsed, restingHr = s.restingHr, zoneModel = s.zoneModel,
-                hrSamples = hrFlow, customZones = s.customZones
+                hrSamples = hrFlow, customZones = s.customZones, posture = pendingHrvPosture
             )
             currentVariant = s.widgetVariant
             currentZones = s.effectiveZones
@@ -178,6 +180,7 @@ class HrRecordingService : BaseRecordingService() {
             else -> {
                 if (intent.action == RecordingServiceContract.ACTION_START) {
                     pendingHrvSeconds = intent.getIntExtra(EXTRA_HRV_SECONDS, 0)
+                    pendingHrvPosture = intent.getStringExtra(EXTRA_HRV_POSTURE)
                 }
                 super.onStartCommand(intent, flags, startId)
             }
@@ -196,10 +199,12 @@ class HrRecordingService : BaseRecordingService() {
         private const val ACTION_DISCARD = "com.kevin.hrtracker.ACTION_DISCARD"
 
         const val EXTRA_HRV_SECONDS = "com.kevin.hrtracker.EXTRA_HRV_SECONDS"
+        const val EXTRA_HRV_POSTURE = "com.kevin.hrtracker.EXTRA_HRV_POSTURE"
 
-        fun startIntent(context: Context, label: String, hrvSeconds: Int = 0) =
+        fun startIntent(context: Context, label: String, hrvSeconds: Int = 0, posture: HrvPosture? = null) =
             RecordingServiceContract.startIntent<HrRecordingService>(context, label)
                 .putExtra(EXTRA_HRV_SECONDS, hrvSeconds)
+                .putExtra(EXTRA_HRV_POSTURE, posture?.name)
 
         fun stopIntent(context: Context) =
             RecordingServiceContract.stopIntent<HrRecordingService>(context)

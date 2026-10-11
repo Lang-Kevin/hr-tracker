@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.kevin.hrtracker.domain.HrvMeasurement
+import com.kevin.hrtracker.domain.HrvPosture
+import com.kevin.hrtracker.domain.HrvQuality
 import com.kevin.hrtracker.domain.Readiness
 import com.kevin.shared.domain.SoftDeletable
 import java.time.Instant
@@ -28,7 +30,13 @@ data class Session(
     val rmssd: Int? = null,
     @ColumnInfo(defaultValue = "0") val metricsVersion: Int = 0,
     /** Subjektive Belastung (CR-10, 0–10), null = nicht bewertet. */
-    val rpe: Int? = null
+    val rpe: Int? = null,
+    /** Anteil geflaggter Schläge in %, DB v7, aus SessionMetrics. */
+    val rmssdArtefactPct: Double? = null,
+    /** Anzahl gültiger Schläge der RMSSD-Auswertung, DB v7, aus SessionMetrics. */
+    val rmssdValidBeats: Int? = null,
+    /** Körperhaltung (HrvPosture.name), DB v7, nur HRV-Messungen. */
+    val posture: String? = null
 ) : SoftDeletable
 
 /** Ruhe-HRV-Messung statt Training — zählt nicht in Trainings-Statistiken und Last. */
@@ -41,6 +49,12 @@ fun List<Session>.toHrvMeasurements(zone: ZoneId = ZoneId.systemDefault()): List
             date = Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate(),
             timestampMs = it.startedAt,
             rmssd = it.rmssd!!,
-            restingHr = it.avgBpm
+            restingHr = it.avgBpm,
+            posture = it.posture?.let { p -> runCatching { HrvPosture.valueOf(p) }.getOrNull() },
+            reliable = HrvQuality.reason(
+                HrvQuality.analysedSeconds(it.activeMs ?: 0L, HrvQuality.STABILISATION_MS),
+                it.rmssdValidBeats ?: 0,
+                it.rmssdArtefactPct ?: 100.0
+            ) == null
         )
     }
