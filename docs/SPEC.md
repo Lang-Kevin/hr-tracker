@@ -50,7 +50,7 @@ DB-Version 8 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + I
 
 ### Meilensteine
 
-Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Meilensteine werden unmittelbar beim Hinzufügen persistiert (Session-ID = aktive Session, Default-Label `M{i+1}`), überstehen VM/Activity-Zerstörung und Force-Kill; das Verwerfen einer Session löscht deren Meilensteine. Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Meilensteine werden unmittelbar beim Hinzufügen persistiert (Session-ID = aktive Session, Default-Label `M{i+1}`), überstehen VM/Activity-Zerstörung und Force-Kill; das Verwerfen einer Session löscht deren Meilensteine. Detail-Screen listet die Marker (`formatElapsed(seconds, DurationStyle.Hms)`), Label klickbar editierbar. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
 
 ## BLE-Flow
 
@@ -83,9 +83,9 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 - BLE-Verbindung halten
 - Samples inkrementell speichern
-- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatDuration`, immer `HH:MM:SS`)
+- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatElapsed(seconds, DurationStyle.Hms)`, immer `HH:MM:SS`)
 
-Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
+Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `formatElapsed(seconds, DurationStyle.Hms)` (shared lib) als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
 Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeitstempel des letzten Samples geschlossen (ohne Samples: startedAt).
 
@@ -147,7 +147,7 @@ Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder
 | Settings | Alter, HRmax-Override, Ruhepuls, Körperdaten (Gewicht, Geschlecht), Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
-Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken. Das Overlay ist **modal** (konsumiert alle Touches, nichts dahinter bedienbar); das Spotlight-Rect wird pro Schritt **eingefroren** statt live gelesen, off-screen-Ziele werden per `BringIntoViewRequester` automatisch in den sichtbaren Bereich gescrollt; das History-Tutorial startet erst bei mindestens einem vorhandenen Training und aktivem Verlauf-Tab.
+Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (lib `TutorialSpotlight`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, hebt das Element hervor, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Platzierung, Modalität (nichts dahinter bedienbar), Rect-Handling und Scrollen off-screen-Ziele übernimmt die lib-Komponente. Das History-Tutorial startet erst bei mindestens einem vorhandenen Training und aktivem Verlauf-Tab.
 
 Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen hat keinen eigenen Session-Zweig: bei aktiver Session navigiert `LaunchedEffect(activeSessionId)` in `MainActivity` immer zu Live; Stoppen/Verwerfen nur über Live.
 
@@ -157,7 +157,7 @@ Belastung (Session-RPE): Nach „Speichern“ im Live-Screen öffnet der Detail-
 
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
-History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Trainings (ohne HRV-Messungen); Dauern sind aktive Zeit (`activeMs`, Fallback Wanduhr bis zum Backfill), Ø-BPM ist mit der aktiven Zeit gewichtet.
+History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via lib `DateRangeFilterDialog`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich besteht aus inklusiven lokalen `LocalDate`s (Ende inklusive), gefiltert über `inDateRange` (`HistoryFilters.kt`); keine UTC-Umrechnung. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Trainings (ohne HRV-Messungen); Dauern sind aktive Zeit (`activeMs`, Fallback Wanduhr bis zum Backfill), Ø-BPM ist mit der aktiven Zeit gewichtet.
 
 ### Trainingslast (History → Statistik)
 
