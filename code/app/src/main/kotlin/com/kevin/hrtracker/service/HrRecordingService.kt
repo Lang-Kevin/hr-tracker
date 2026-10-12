@@ -10,7 +10,8 @@ import androidx.core.app.NotificationCompat
 import com.kevin.hrtracker.MainActivity
 import com.kevin.hrtracker.R
 import com.kevin.hrtracker.ble.HrBleManager
-import com.kevin.hrtracker.ui.formatDuration
+import com.kevin.shared.format.DurationStyle
+import com.kevin.shared.format.formatElapsed
 import com.kevin.hrtracker.ble.ParsedHr
 import com.kevin.hrtracker.data.repository.SessionRepository
 import com.kevin.hrtracker.data.repository.SettingsRepository
@@ -101,7 +102,7 @@ class HrRecordingService : BaseRecordingService() {
                     currentVariant = it.widgetVariant
                     currentZones = it.effectiveZones
                     val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                    updateNotification(lastBpmValue?.toString() ?: "–", formatDuration(elapsed))
+                    updateNotification(lastBpmValue?.toString() ?: "–", formatElapsed(elapsed, DurationStyle.Hms))
                 }
             }
             connectionStateJob = serviceScope.launch {
@@ -121,7 +122,7 @@ class HrRecordingService : BaseRecordingService() {
                 hrFlow.collect { parsed: ParsedHr ->
                     lastBpmValue = parsed.bpm
                     val elapsed = (System.currentTimeMillis() - startMs) / 1000
-                    updateNotification(lastBpmValue.toString(), formatDuration(elapsed))
+                    updateNotification(lastBpmValue.toString(), formatElapsed(elapsed, DurationStyle.Hms))
                 }
             }
             val hrvSeconds = pendingHrvSeconds

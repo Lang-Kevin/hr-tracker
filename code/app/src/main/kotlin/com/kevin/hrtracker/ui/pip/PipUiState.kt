@@ -3,7 +3,8 @@ package com.kevin.hrtracker.ui.pip
 import com.kevin.hrtracker.domain.HrZoneCalculator
 import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneBounds
-import com.kevin.hrtracker.ui.formatDuration
+import com.kevin.shared.format.DurationStyle
+import com.kevin.shared.format.formatElapsed
 
 data class PipUiState(
     val bpm: Int?,
@@ -30,7 +31,7 @@ fun buildPipUiState(
     return PipUiState(
         bpm = bpm,
         zone = if (bpm == null || zones.isEmpty()) null else HrZoneCalculator.zoneFor(bpm, zones),
-        elapsedText = formatDuration(elapsedSeconds),
+        elapsedText = formatElapsed(elapsedSeconds, DurationStyle.Hms),
         paused = paused,
         variant = variant
     )
