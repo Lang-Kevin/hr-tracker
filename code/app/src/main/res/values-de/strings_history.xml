@@ -64,6 +64,12 @@
         <item quantity="other">%d Trainings der letzten 4 Wochen ohne RPE – im Detail-Screen bewerten, sonst fehlt deren Last.</item>
     </plurals>
     <string name="history_load_srpe_hint">sRPE = Belastung (0–10) × aktive Minuten.</string>
+    <string name="stats_acwr_low">Niedrig</string>
+    <string name="stats_acwr_optimal">Optimal</string>
+    <string name="stats_acwr_caution">Erhöht</string>
+    <string name="stats_acwr_high">Hoch</string>
+    <string name="stats_week_short">KW %1$d</string>
+    <string name="stats_acwr_cd">ACWR-Verlauf mit Optimalbereich</string>
 
     <!-- Form tab: readiness -->
     <string name="history_readiness_title">Bereitschaft (Ruhe-HRV)</string>

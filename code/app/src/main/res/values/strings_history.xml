@@ -64,6 +64,12 @@
         <item quantity="other">%d workouts in the last 4 weeks have no RPE – rate them on the detail screen, otherwise their load is missing.</item>
     </plurals>
     <string name="history_load_srpe_hint">sRPE = effort (0–10) × active minutes.</string>
+    <string name="stats_acwr_low">Low</string>
+    <string name="stats_acwr_optimal">Optimal</string>
+    <string name="stats_acwr_caution">Caution</string>
+    <string name="stats_acwr_high">High</string>
+    <string name="stats_week_short">W%1$d</string>
+    <string name="stats_acwr_cd">ACWR trend with optimal band</string>
 
     <!-- Form tab: readiness -->
     <string name="history_readiness_title">Readiness (resting HRV)</string>
