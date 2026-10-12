@@ -22,7 +22,7 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 | Async         | Coroutines + Flow     |
 | Datenbank     | Room                  |
 | BLE           | Nordic Kotlin BLE     |
-| Charts        | Compose Canvas (eigen) |
+| Charts        | Shared Lib `LineChart` (Compose Canvas) |
 | DI            | Hilt                  |
 | Serialization | kotlinx.serialization |
 
@@ -46,7 +46,7 @@ UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone,
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 7 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`; bestehende HRV-Messungen erhalten `posture = SITTING`). `SessionMetrics.VERSION` 2: HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
+DB-Version 8 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`; bestehende HRV-Messungen erhalten `posture = SITTING`; 7→8 additiv `zoneSeconds TEXT` nullable, nie destruktiv). `SessionMetrics.VERSION` 3: Backfill füllt zusätzlich `zoneSeconds`; HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 
@@ -208,13 +208,14 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Eine gemeinsame Regel für alle sample-basierten Kennzahlen (`SampleIntervals.MAX_GAP_MS`). Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.
-- **Lücken-Visualisierung:** Der Detail-Chart markiert erkannte Dropout-Lücken als rote gestrichelte Linie auf avg-BPM-Höhe (display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
+- **Lücken-Visualisierung:** Der Detail-Chart zeigt erkannte Dropout-Lücken als Linienbruch (NaN-Punkte, display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
 
-## Charts / Visualisierung (BpmZoneChart)
+## Charts / Visualisierung (Shared-Lib `LineChart`)
 
-BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
+Der Chart (Lib `LineChart`) auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
 
-- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
+- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >600 Punkte werden von der Lib per Chunk-Mittel dezimiert (D5: Spitzen werden geglättet; Max-BPM steht weiter im Statistik-Raster).
+- **Mittellinie (D4):** Detail zeigt eine volle Breite gestrichelte Akzentlinie `Ø n` (`ChartReferenceLine`); Lücken erscheinen als Linienbrüche (NaN).
 - **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
 
 **Diagramm-Standard (Setting):** `UserSettings.chartDynamicScale: Boolean` (DataStore, Default `true`) steuert den initialen Modus auf **Live- und Detail-Screen**. Beide Screens halten einen lokalen `dynamicScaleOverride: Boolean?` (`null` = Setting gilt); der IconToggleButton setzt nur diesen Override, gültig für die aktuelle Screen-Instanz. Screens dürfen den Modus nicht hartkodiert initialisieren.
@@ -257,21 +258,18 @@ Immer: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFI
 
 ## Design-System
 
-Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML-Mockups).
+Quelle: Shared Lib (SP1–SP4) und Mockups `00-final-screens.html`. Alle Screens nutzen die **Night Drive**-Tokens der Lib (`MaterialTheme.colorScheme`, `AppTheme.colors/spacing`, `MaterialTheme.typography/shapes`, `AppTheme.pillShape`); keine eigenen Farben, dp/sp-Rohwerte oder Glows. Akzent (rot) nur für Primary-Buttons, selektierte Segmente/Tabs/Karten, Status-Punkt, Auto-Schalter, GOAL-Band und letzten Punkt/Herz.
 
-| Token         | Hex         | Verwendung              |
-| ------------- | ----------- | ----------------------- |
-| PrimaryPurple | `#B6A6F2`   | Primary, Buttons        |
-| SecondaryBlue | `#5BA9E6`   | Zone 1, Secondary       |
-| TertiaryPink  | `#F4738E`   | Zone 5, Tertiary        |
-| ErrorRed      | `#EF4444`   | Abbrechen, Error        |
-| BackgroundDark| `#1D1B20`   | App-Hintergrund         |
-| SurfaceDark   | `#252330`   | Cards, Surfaces         |
-| LightPurple   | `#CBBCFF`   | Zone 3, onSurface       |
+- **Strikter Checker:** `tools/check_design_tokens.py` der Lib läuft in der CI ohne `--warn`; Funde lassen den Build scheitern.
+- **Escape-Hatch:** `// design-ignore: <Grund>`, nur für das PiP-Fenster (D9: kleinere Schrift als `labelSmall`).
+- **Battery Service 0x180F / 0x2A19:** einmal Lesen nach erfolgreichem CCCD-Write pro (Re-)Connect (D12); die Scan-Karte zeigt nur den Gerätenamen, wenn der Service fehlt (`DeviceStatusCard`, D3).
+- **History-Filter:** Datumsgrenzen sind inklusive lokale `LocalDate`s.
+- **Zahlen-/Datumsformat:** System-Locale (`Locale.getDefault()`, D6); Dauern über `formatElapsed` (Hms/Compact/Clock).
+- **Mockup-Abweichungen (D8):** (a) Statistik-Trend nur ACWR-Linie mit Band 0,8–1,3; (b) Form-Baseline = exp(Mitte von ln Normalbereich), „Baseline 44 ms · +9 %“; (c) History behält Label- und Datumsfilter, keine „Workouts/HRV“-Chips; (d) Ruhepuls-Delta = aktuell − `restingHr7`, ausgeblendet wenn einer fehlt; (e) Wochenlabel EN „W36“, DE „KW 36“; (f) Statistik behält 6-Wochen-Tabelle und TRIMP-Verlauf.
+- **Form „Messen“ (D10):** Button navigiert zum Scan (dort HRV-Dialog).
+- **Room v8 (D2):** `Session.zoneSeconds` cached Zonensekunden für die Mini-Zonenleiste in History; `null` → keine Leiste.
 
-Font: **Space Grotesk** (via `ui-text-google-fonts`). Theme, Farbschema und Typografie kommen aus der Shared Library (`AppTheme`, `AppTypography`).
-
-Statistik-Kachel-Werte (`StatItem`, `ui/shared/TrainingUi.kt`): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
+Statistik-Kachel-Werte (`StatItem`, Shared Lib): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
 
 ## Build & Release
 
