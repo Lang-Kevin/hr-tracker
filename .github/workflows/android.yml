@@ -49,6 +49,10 @@ jobs:
       - name: Hartkodierte UI-Texte
         run: python3 ws/shared-app-lib/tools/check_hardcoded_strings.py ws/hr-tracker/code/app/src/main/kotlin
 
+      - name: Design tokens (strict)
+        working-directory: ws/hr-tracker/code
+        run: python3 ../../shared-app-lib/tools/check_design_tokens.py app/src/main
+
       # Runner bringt ein Android-SDK (ANDROID_HOME) mit akzeptierten Lizenzen mit;
       # fehlende Plattformen (compileSdk 37) laedt AGP selbst nach.
       # lintDebug prüft u. a. fehlende Übersetzungen (MissingTranslation) und Plurals.
