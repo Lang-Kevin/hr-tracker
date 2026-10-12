@@ -43,6 +43,7 @@
     <string name="history_stats_col_avg_bpm">Ø BPM</string>
     <string name="history_stats_trimp_history">TRIMP-Verlauf</string>
     <string name="history_stats_no_trimp">Noch keine TRIMP-Daten verfügbar.</string>
+    <string name="history_stats_weekly_cd">Balkendiagramm der aktiven Minuten pro Woche, letzte 6 Wochen</string>
 
     <!-- Training load card -->
     <string name="history_load_title">Trainingslast</string>

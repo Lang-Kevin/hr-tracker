@@ -43,6 +43,7 @@
     <string name="history_stats_col_avg_bpm">AVG BPM</string>
     <string name="history_stats_trimp_history">TRIMP history</string>
     <string name="history_stats_no_trimp">No TRIMP data yet.</string>
+    <string name="history_stats_weekly_cd">Bar chart of active minutes per week, last 6 weeks</string>
 
     <!-- Training load card -->
     <string name="history_load_title">Training load</string>

@@ -31,10 +31,13 @@ import com.kevin.hrtracker.domain.LoadMetric
 import com.kevin.hrtracker.domain.SessionMetrics
 import com.kevin.shared.format.DateStyle
 import com.kevin.shared.format.DurationStyle
+import com.kevin.shared.format.NO_VALUE
 import com.kevin.shared.format.formatDate
 import com.kevin.shared.format.formatDateRange
+import com.kevin.shared.format.formatDecimal
 import com.kevin.shared.format.formatElapsed
 import com.kevin.shared.format.formatMeasure
+import com.kevin.shared.ui.chart.BarChart
 import com.kevin.shared.ui.chart.ZoneDistributionBar
 import com.kevin.shared.ui.components.AppTabRow
 import com.kevin.shared.ui.components.EmptyState
@@ -391,55 +394,29 @@ private fun StatistikTab(
     loadMetric: LoadMetric,
     onLoadMetricChange: (LoadMetric) -> Unit
 ) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val locale = Locale.getDefault()
+    val zone = ZoneId.systemDefault()
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
         item { LoadCard(loadState, loadMetric, onLoadMetricChange) }
         item {
-            val maxDur = weeklyData.maxOfOrNull { it.totalDurationMin }?.coerceAtLeast(1) ?: 1
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.padding(AppTheme.spacing.md),
+                    verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+                ) {
                     Text(
                         stringResource(R.string.history_stats_active_per_week),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        weeklyData.forEach { week ->
-                            val fraction = (week.totalDurationMin.toFloat() / maxDur).coerceIn(0f, 1f)
-                            Column(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                verticalArrangement = Arrangement.Bottom
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .fillMaxHeight(fraction.coerceAtLeast(0.03f))
-                                        .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                                        .background(
-                                            if (fraction > 0f) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                        )
-                                )
-                            }
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        weeklyData.forEach { week ->
-                            Text(
-                                week.weekLabel.take(5),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                    // weeklyData holds active minutes, not load: keep the existing title (D8f).
+                    BarChart(
+                        values = weeklyData.map { it.totalDurationMin.toFloat() },
+                        highlightIndex = weeklyData.lastIndex.takeIf { it >= 0 },
+                        labels = weeklyData.map { it.weekLabel.take(5) },
+                        contentDescription = stringResource(R.string.history_stats_weekly_cd),
+                        modifier = Modifier.fillMaxWidth().height(AppTheme.spacing.xxl * 2)
+                    )
                 }
             }
         }
@@ -452,35 +429,36 @@ private fun StatistikTab(
         }
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(modifier = Modifier.padding(AppTheme.spacing.md)) {
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.history_stats_col_week), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1.2f))
-                        Text(stringResource(R.string.history_stats_col_count), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.7f))
-                        Text(stringResource(R.string.history_stats_col_min), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.8f))
-                        Text(stringResource(R.string.history_stats_col_avg_bpm), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(0.9f))
+                        Text(stringResource(R.string.history_stats_col_week), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1.2f))
+                        Text(stringResource(R.string.history_stats_col_count), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.7f))
+                        Text(stringResource(R.string.history_stats_col_min), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.8f))
+                        Text(stringResource(R.string.history_stats_col_avg_bpm), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(0.9f))
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     weeklyData.forEach { week ->
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = AppTheme.spacing.xs),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 2.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(week.weekLabel, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.2f))
                             Text(
-                                if (week.sessionCount > 0) "${week.sessionCount}" else "—",
+                                if (week.sessionCount > 0) "${week.sessionCount}" else NO_VALUE,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(0.7f),
-                                color = if (week.sessionCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (week.sessionCount > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                if (week.totalDurationMin > 0) "${week.totalDurationMin}" else "—",
+                                if (week.totalDurationMin > 0) "${week.totalDurationMin}" else NO_VALUE,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(0.8f)
                             )
                             Text(
-                                week.avgBpm?.toString() ?: "—",
+                                week.avgBpm?.toString() ?: NO_VALUE,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.weight(0.9f)
                             )
@@ -492,7 +470,6 @@ private fun StatistikTab(
 
         if (trimpHistory.isNotEmpty()) {
             item {
-                Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.history_stats_trimp_history),
                     style = MaterialTheme.typography.titleMedium,
@@ -500,31 +477,14 @@ private fun StatistikTab(
                 )
             }
             items(trimpHistory, key = { it.sessionId }) { entry ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(entry.label, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                entry.startedAt.toDateString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            "TRIMP ${entry.trimp}",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                ListCard(
+                    title = entry.label,
+                    subtitle = formatDate(entry.startedAt, DateStyle.Date, locale, zone),
+                    trailing = { ListCardValue(formatDecimal(entry.trimp.toDouble(), 0, locale)) }
+                )
             }
         } else {
             item {
-                Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.history_stats_no_trimp),
                     style = MaterialTheme.typography.bodySmall,
@@ -533,7 +493,7 @@ private fun StatistikTab(
             }
         }
 
-        item { Spacer(Modifier.height(16.dp)) }
+        item { Spacer(Modifier.height(AppTheme.spacing.lg)) }
     }
 }
 
