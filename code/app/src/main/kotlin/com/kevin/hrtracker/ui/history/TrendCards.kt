@@ -20,8 +20,9 @@ import com.kevin.hrtracker.domain.ReadinessBlock
 import com.kevin.hrtracker.domain.ReadinessStatus
 import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
-import com.kevin.hrtracker.ui.shared.TrendChart
-import com.kevin.hrtracker.ui.shared.TrendSeries
+import com.kevin.shared.ui.chart.ChartDefaults
+import com.kevin.shared.ui.chart.TrendChart
+import com.kevin.shared.ui.chart.TrendSeries
 import com.kevin.shared.ui.theme.ConnectedGreen
 import com.kevin.shared.ui.theme.ErrorRed
 import com.kevin.shared.ui.theme.PrimaryPurple
@@ -115,14 +116,14 @@ fun LoadCard(
             if (state.days.isNotEmpty()) {
                 TrendChart(
                     series = listOf(
-                        TrendSeries(state.days.map { it.chronic.toFloat() }, SecondaryBlue),
-                        TrendSeries(state.days.map { it.acute.toFloat() }, PrimaryPurple)
+                        TrendSeries(state.days.map { it.chronic.toFloat() }, color = ChartDefaults.colors().secondaryLine),
+                        TrendSeries(state.days.map { it.acute.toFloat() }, highlightLast = true)
                     ),
                     modifier = Modifier.fillMaxWidth().height(110.dp)
                 )
                 Legend(
-                    stringResource(R.string.history_load_legend_acute) to PrimaryPurple,
-                    stringResource(R.string.history_load_legend_chronic) to SecondaryBlue
+                    stringResource(R.string.history_load_legend_acute) to MaterialTheme.colorScheme.primary,
+                    stringResource(R.string.history_load_legend_chronic) to ChartDefaults.colors().secondaryLine
                 )
                 Hint(pluralStringResource(R.plurals.history_load_chart_hint, state.days.size, state.days.size))
             }
@@ -191,8 +192,8 @@ private fun ReadinessCard(readiness: ReadinessSummary?) {
             }
             TrendChart(
                 series = listOf(
-                    TrendSeries(readiness.days.map { it.lnRmssd?.toFloat() }, PrimaryPurple.copy(alpha = 0.6f), lines = false, dots = true),
-                    TrendSeries(readiness.days.map { it.rolling7?.toFloat() }, PrimaryPurple)
+                    TrendSeries(readiness.days.map { it.lnRmssd?.toFloat() ?: Float.NaN }, color = ChartDefaults.colors().secondaryLine, lines = false, dots = true),
+                    TrendSeries(readiness.days.map { it.rolling7?.toFloat() ?: Float.NaN }, highlightLast = true)
                 ),
                 band = if (readiness.normalLow != null && readiness.normalHigh != null)
                     readiness.normalLow.toFloat()..readiness.normalHigh.toFloat() else null,
@@ -270,7 +271,7 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 )
             }
             TrendChart(
-                series = listOf(TrendSeries(trend.points.map { it.second.toFloat() }, PrimaryPurple, dots = true)),
+                series = listOf(TrendSeries(trend.points.map { it.second.toFloat() }, dots = true, highlightLast = true)),
                 referenceY = cur?.toFloat(),
                 modifier = Modifier.fillMaxWidth().height(90.dp)
             )
