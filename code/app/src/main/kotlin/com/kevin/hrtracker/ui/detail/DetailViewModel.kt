@@ -26,6 +26,7 @@ import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.hrtracker.domain.TrimpCalculator
 import com.kevin.hrtracker.domain.ZoneBounds
 import com.kevin.hrtracker.export.SessionExporter
+import com.kevin.shared.ui.chart.LineSeries
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -170,6 +171,18 @@ class DetailViewModel @Inject constructor(
             ((sample.timestampMs - startedAt).toFloat() / durationMs).coerceIn(0f, 1f)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Wall-clock span in seconds that [sampleFractions]/[gapFractions] are relative to. */
+    private val totalSecondsFlow: Flow<Float> = combine(session, samples) { sess, list ->
+        if (sess == null || list.isEmpty()) 0f
+        else ((sess.endedAt ?: list.maxOf { it.timestampMs }) - sess.startedAt).coerceAtLeast(1L) / 1000f
+    }
+
+    /** Detail chart line: x = wall-clock seconds, NaN breaks at connection gaps (D4). */
+    val chartSeries: StateFlow<LineSeries> =
+        combine(bpmHistory, sampleFractions, gapFractions, totalSecondsFlow) { b, f, g, t ->
+            detailChartSeries(b, f, g.map { it.first..it.second }, t)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LineSeries(emptyList()))
 
     /** Milestones with atSeconds mapped from active time to wall-clock time. */
     val chartMilestones: StateFlow<List<Milestone>> = combine(session, samples, milestones) { sess, list, msList ->
