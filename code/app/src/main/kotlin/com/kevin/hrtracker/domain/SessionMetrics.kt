@@ -17,13 +17,15 @@ data class SessionMetrics(
     val hrr60: Int?,
     val rmssd: Int?,
     val rmssdValidBeats: Int?,
-    val rmssdArtefactPct: Double?
+    val rmssdArtefactPct: Double?,
+    val zoneSeconds: String? = null
 ) {
     companion object {
         const val VERSION = 2
 
         fun compute(
-            samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false
+            samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false,
+            zones: List<ZoneBounds>? = null
         ): SessionMetrics {
             val hrv = HrvCalculator.analyze(samples, HrvQuality.discardMsFor(isHrvMeasurement))
             return SessionMetrics(
@@ -33,8 +35,20 @@ data class SessionMetrics(
                 hrr60 = HrRecovery.computeHrRecovery(samples.sortedBy { it.timestampMs }, maxHr)?.hrr60,
                 rmssd = hrv?.rmssd,
                 rmssdValidBeats = hrv?.validBeats,
-                rmssdArtefactPct = hrv?.artefactPct
+                rmssdArtefactPct = hrv?.artefactPct,
+                zoneSeconds = zones?.let { encodeZoneSeconds(HrZoneCalculator.aggregateTimeInZone(samples, it), it.size) }
             )
+        }
+
+        /** "s1,…,sN" in whole seconds, zone 1 first; missing zones are 0. */
+        fun encodeZoneSeconds(timeInZone: Map<Int, Long>, zoneCount: Int): String =
+            (1..zoneCount).joinToString(",") { z -> (timeInZone[z] ?: 0L).toString() }
+
+        /** Inverse of [encodeZoneSeconds]; null for null/blank/malformed/negative input (UI then hides the bar). */
+        fun decodeZoneSeconds(csv: String?): List<Long>? {
+            if (csv.isNullOrBlank()) return null
+            val values = csv.split(',').map { it.trim().toLongOrNull() ?: return null }
+            return values.takeIf { v -> v.isNotEmpty() && v.all { it >= 0 } }
         }
     }
 }
