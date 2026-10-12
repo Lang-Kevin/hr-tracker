@@ -44,18 +44,17 @@ import androidx.compose.material.icons.filled.ZoomInMap
 import androidx.compose.material.icons.filled.ZoomOutMap
 import androidx.compose.ui.draw.scale
 import com.kevin.shared.ui.chart.ChartToggleButton
-import com.kevin.shared.ui.theme.ZoneColors
 import com.kevin.shared.ui.theme.AppTheme
 import com.kevin.shared.ui.components.Metric
 import androidx.compose.ui.unit.dp
 import com.kevin.shared.ui.session.LeaveSessionDialog
 import com.kevin.shared.ui.zone.TargetZoneDialog
-import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
+import com.kevin.shared.ui.overlay.TutorialSpotlight
 import kotlin.math.roundToInt
-import com.kevin.hrtracker.ui.tutorial.TutorialStep
+import com.kevin.shared.ui.overlay.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
-import com.kevin.hrtracker.ui.tutorial.rememberTutorialAnchors
-import com.kevin.hrtracker.ui.tutorial.tutorialAnchor
+import com.kevin.shared.ui.overlay.rememberTutorialAnchors
+import com.kevin.shared.ui.overlay.tutorialAnchor
 
 @Composable
 fun LiveScreen(
@@ -122,8 +121,7 @@ fun LiveScreen(
             targetZone = targetZone,
             onSelect = { viewModel.setTargetZone(it); showTargetZoneDialog = false },
             onDismiss = { showTargetZoneDialog = false },
-            zoneCount = 5,
-            zoneColors = ZoneColors
+            zoneCount = 5
         )
     }
 
@@ -372,7 +370,7 @@ fun LiveScreen(
             }
         }
 
-        TutorialOverlay(
+        TutorialSpotlight(
             steps = listOf(
                 TutorialStep("live_chart", stringResource(R.string.live_tutorial_chart_title), stringResource(R.string.live_tutorial_chart_text)),
                 TutorialStep("live_zone_stat", stringResource(R.string.live_tutorial_zone_title), stringResource(R.string.live_tutorial_zone_text)),
@@ -382,7 +380,10 @@ fun LiveScreen(
             ),
             anchors = tutorialAnchors,
             visible = tutorialSeen == false,
-            onFinish = { tutorialViewModel.markSeen("live") }
+            onFinish = { tutorialViewModel.markSeen("live") },
+            skipLabel = stringResource(R.string.common_tutorial_skip),
+            nextLabel = { n, m -> stringResource(R.string.common_tutorial_next_progress, n, m) },
+            doneLabel = stringResource(R.string.common_tutorial_done),
         )
     }
 }
