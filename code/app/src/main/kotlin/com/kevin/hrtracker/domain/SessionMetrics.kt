@@ -21,7 +21,7 @@ data class SessionMetrics(
     val zoneSeconds: String? = null
 ) {
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
 
         fun compute(
             samples: List<HrSample>, maxHr: Int, restingHr: Int?, isHrvMeasurement: Boolean = false,
