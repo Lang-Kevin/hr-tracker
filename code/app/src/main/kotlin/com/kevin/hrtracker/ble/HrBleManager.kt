@@ -345,6 +345,7 @@ class HrBleManager @Inject constructor(
         ) {
             if (gatt != bluetoothGatt) return
             if (descriptor.uuid != BleConstants.CCCD_UUID) return
+            if (descriptor.characteristic.uuid != HR_MEASUREMENT_UUID) return // battery CCCD: best effort
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "CCCD write confirmed — HR notifications active")
                 _connectionState.value = ConnectionState.Ready
@@ -385,6 +386,7 @@ class HrBleManager @Inject constructor(
                 return
             }
             if (characteristic.uuid == HR_MEASUREMENT_UUID) handleHrData(value)
+            else if (characteristic.uuid == BATTERY_LEVEL_UUID) _batteryLevel.value = BatteryLevelParser.parse(value)
         }
 
         // API < 33
@@ -400,6 +402,8 @@ class HrBleManager @Inject constructor(
                 }
                 if (characteristic.uuid == HR_MEASUREMENT_UUID) {
                     handleHrData(characteristic.value ?: return)
+                } else if (characteristic.uuid == BATTERY_LEVEL_UUID) {
+                    _batteryLevel.value = BatteryLevelParser.parse(characteristic.value)
                 }
             }
         }
@@ -417,6 +421,23 @@ class HrBleManager @Inject constructor(
         if (gatt.device.address != lastDevice?.address) return
         if (status != BluetoothGatt.GATT_SUCCESS || uuid != BATTERY_LEVEL_UUID) return
         _batteryLevel.value = BatteryLevelParser.parse(value)
+        enableBatteryNotify(gatt) // read finished, so no GATT operation is in flight
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableBatteryNotify(gatt: BluetoothGatt) {
+        val ch = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return
+        if (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY == 0) return
+        val cccd = ch.getDescriptor(BleConstants.CCCD_UUID) ?: return
+        gatt.setCharacteristicNotification(ch, true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        } else {
+            @Suppress("DEPRECATION")
+            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            @Suppress("DEPRECATION")
+            gatt.writeDescriptor(cccd)
+        }
     }
 
     private fun handleHrData(value: ByteArray) {

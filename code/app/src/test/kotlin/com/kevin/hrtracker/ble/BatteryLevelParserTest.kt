@@ -16,9 +16,9 @@ class BatteryLevelParserTest {
         assertEquals(100, BatteryLevelParser.parse(byteArrayOf(100)))
     }
 
-    @Test fun `out of range is null`() {
-        assertNull(BatteryLevelParser.parse(byteArrayOf(101)))
-        assertNull(BatteryLevelParser.parse(byteArrayOf(0xFF.toByte())))
+    @Test fun `out of range clamps to 100`() {
+        assertEquals(100, BatteryLevelParser.parse(byteArrayOf(101)))
+        assertEquals(100, BatteryLevelParser.parse(byteArrayOf(0xFF.toByte())))
     }
 
     @Test fun `trailing bytes ignored`() {

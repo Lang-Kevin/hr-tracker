@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.kevin.hrtracker.R
-import com.kevin.shared.format.formatPercent
 import com.kevin.shared.ui.components.ListCard
 import com.kevin.shared.ui.components.TextActionButton
 import com.kevin.shared.ui.theme.AppTheme
@@ -47,9 +46,7 @@ fun DeviceStatusCard(
     ) {
         ListCard(
             title = deviceName?.let { stringResource(R.string.scan_status_title, it, statusText) } ?: statusText,
-            subtitle = batteryLevel?.let {
-                stringResource(R.string.scan_battery, formatPercent(it / 100f, locale))
-            },
+            subtitle = batteryLevel?.let { stringResource(R.string.scan_battery, it) },
             modifier = Modifier.weight(1f),
             leading = {
                 Box(
