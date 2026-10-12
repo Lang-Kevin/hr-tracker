@@ -8,11 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ZoomInMap
 import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material.icons.filled.ZoomOutMap
@@ -27,7 +25,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -52,15 +49,24 @@ import com.kevin.shared.ui.chart.chartZoomPan
 import com.kevin.shared.ui.chart.plotFraction
 import com.kevin.hrtracker.domain.HrvQuality
 import com.kevin.hrtracker.domain.HrvUnreliableReason
-import com.kevin.shared.ui.StatItem
 import com.kevin.shared.ui.chart.ChartToggleButton
-import com.kevin.shared.ui.theme.BackgroundDark
-import com.kevin.shared.ui.theme.OnPrimary
-import com.kevin.shared.ui.theme.PrimaryPurple
-import com.kevin.shared.ui.session.durationString
 import com.kevin.shared.ui.LabelPickerDialog
-import java.text.SimpleDateFormat
-import java.util.Date
+import androidx.compose.foundation.shape.CircleShape
+import java.time.ZoneId
+import com.kevin.hrtracker.domain.HrrRating
+import com.kevin.shared.format.DateStyle
+import com.kevin.shared.format.NO_VALUE
+import com.kevin.shared.format.formatDate
+import com.kevin.shared.format.formatDecimal
+import com.kevin.shared.ui.chart.ChartDefaults
+import com.kevin.shared.ui.components.ListCard
+import com.kevin.shared.ui.components.Metric
+import com.kevin.shared.ui.components.PrimaryButton
+import com.kevin.shared.ui.components.SecondaryButton
+import com.kevin.shared.ui.components.StatCell
+import com.kevin.shared.ui.components.StatGrid
+import com.kevin.shared.ui.components.TextActionButton
+import com.kevin.shared.ui.theme.AppTheme
 
 @Composable
 fun DetailScreen(
@@ -208,92 +214,98 @@ fun DetailScreen(
         )
     }
 
+    val locale = Locale.getDefault()
+    val zone = ZoneId.systemDefault()
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundDark)
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = AppTheme.spacing.lg, vertical = AppTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
     ) {
-        // Header: tappable label + date
+        // Header: tappable label + date/duration meta, training-zone tag
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.clickable { showEditDialog = true }) {
+            Column(modifier = Modifier.weight(1f).clickable { showEditDialog = true }) {
                 Text(
                     text = session?.label?.uppercase() ?: stringResource(R.string.detail_label_fallback),
-                    color = PrimaryPurple,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.headlineSmall
                 )
+                session?.let { s ->
+                    Text(
+                        text = stringResource(
+                            R.string.detail_header_meta,
+                            formatDate(s.startedAt, DateStyle.ShortDate, locale, zone),
+                            activeSeconds?.let { formatElapsed(it, DurationStyle.Compact) } ?: NO_VALUE
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            session?.let { s ->
+            dominantZone.let { zoneNo -> // ponytail: VM default is 3, never null; same value feeds LineChart
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        SimpleDateFormat("dd.MM.yy", LocalConfiguration.current.locales[0]).format(Date(s.startedAt)),
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall
+                        text = stringResource(R.string.detail_training_zone),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    s.endedAt?.let { end ->
+                    Surface(
+                        shape = AppTheme.pillShape,
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, AppTheme.colors.zones[zoneNo - 1])
+                    ) {
                         Text(
-                            durationString((end - s.startedAt) / 1000),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
+                            "Z$zoneNo",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.md, vertical = AppTheme.spacing.xs)
                         )
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        // BPM Zone Chart Header with Toggle
+        // Chart toolbar: visible range + reset zoom, scale toggle
         val totalSessionSeconds = session?.endedAt?.let { end ->
             ((end - (session?.startedAt ?: end)) / 1000L)
         }
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = stringResource(R.string.detail_training_zone),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!viewport.isFull) {
-                    // Zeitbereich des sichtbaren Ausschnitts + Zurücksetzen
-                    if (totalSessionSeconds != null && totalSessionSeconds > 0) {
-                        val fromSec = (viewport.start * totalSessionSeconds).toLong()
-                        val toSec = (viewport.end * totalSessionSeconds).toLong()
-                        Text(
-                            text = "${formatElapsed(fromSec, DurationStyle.Compact)} – ${formatElapsed(toSec, DurationStyle.Compact)}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = { viewport = ChartViewport.Full }) {
-                        Icon(
-                            Icons.Default.ZoomOut,
-                            contentDescription = stringResource(R.string.detail_zoom_reset),
-                            tint = PrimaryPurple
-                        )
-                    }
+            if (!viewport.isFull) {
+                // Zeitbereich des sichtbaren Ausschnitts + Zurücksetzen
+                if (totalSessionSeconds != null && totalSessionSeconds > 0) {
+                    val fromSec = (viewport.start * totalSessionSeconds).toLong()
+                    val toSec = (viewport.end * totalSessionSeconds).toLong()
+                    Text(
+                        text = "${formatElapsed(fromSec, DurationStyle.Compact)} – ${formatElapsed(toSec, DurationStyle.Compact)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                ChartToggleButton(
-                    checked = dynamicScale,
-                    onCheckedChange = { dynamicScaleOverride = it },
-                    icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
-                    contentDescription = if (dynamicScale)
-                        stringResource(R.string.detail_scale_dynamic) else
-                        stringResource(R.string.detail_scale_static),
-                    contentColor = PrimaryPurple
-                )
+                IconButton(onClick = { viewport = ChartViewport.Full }) {
+                    Icon(
+                        Icons.Default.ZoomOut,
+                        contentDescription = stringResource(R.string.detail_zoom_reset),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            ChartToggleButton(
+                checked = dynamicScale,
+                onCheckedChange = { dynamicScaleOverride = it },
+                icon = if (dynamicScale) Icons.Default.ZoomInMap else Icons.Default.ZoomOutMap,
+                contentDescription = if (dynamicScale)
+                    stringResource(R.string.detail_scale_dynamic) else
+                    stringResource(R.string.detail_scale_static),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         // BPM Zone Chart
@@ -302,7 +314,6 @@ fun DetailScreen(
         val minSpan = if (totalSeconds > 20f) 20f / totalSeconds else 0.05f
         var scrubX by remember { mutableStateOf<Float?>(null) }
         val haptic = LocalHapticFeedback.current
-        val locale = Locale.getDefault()
         val zoneLabelFmt = stringResource(R.string.live_chart_zone_label)
         val meanFmt = stringResource(R.string.detail_chart_mean)
         val scrubFmt = stringResource(R.string.live_chart_scrub_label)
@@ -347,67 +358,32 @@ fun DetailScreen(
             }
         )
 
-        Spacer(Modifier.height(12.dp))
-
         // Meilensteine
         if (milestones.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.detail_milestones),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    milestones.forEach { milestone ->
-                        val timeStr = formatElapsed(milestone.atSeconds, DurationStyle.Hms)
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    editingMilestoneId = milestone.id
-                                    editingMilestoneLabel = milestone.label
-                                },
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text(
-                                        text = milestone.label.ifBlank { stringResource(R.string.detail_milestone_fallback) },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = timeStr,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Icon(
-                                    Icons.Default.Edit,
-                                    contentDescription = stringResource(R.string.detail_edit),
-                                    tint = PrimaryPurple,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
+            Text(
+                text = stringResource(R.string.detail_milestones),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val markerColor = ChartDefaults.colors().marker
+            Column(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+                milestones.forEachIndexed { i, milestone ->
+                    ListCard(
+                        title = stringResource(
+                            R.string.detail_milestone_title,
+                            i + 1,
+                            milestone.label.ifBlank { stringResource(R.string.detail_milestone_fallback) }
+                        ),
+                        subtitle = formatElapsed(milestone.atSeconds, DurationStyle.Compact),
+                        onClick = {
+                            editingMilestoneId = milestone.id
+                            editingMilestoneLabel = milestone.label
+                        },
+                        leading = { Box(Modifier.size(8.dp).background(markerColor, CircleShape)) }
+                    )
                 }
             }
         }
-
-        Spacer(Modifier.height(12.dp))
 
         // Zeit in Zone
         TimeInZoneSection(
@@ -420,28 +396,26 @@ fun DetailScreen(
             )
         )
 
-        Spacer(Modifier.height(12.dp))
-
-        // Stats Row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem(stringResource(R.string.detail_stat_avg_bpm), stats?.avgBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem(stringResource(R.string.detail_stat_active), activeSeconds?.let { durationString(it) } ?: "—", Modifier.weight(1f))
-            StatItem(stringResource(R.string.detail_stat_max_bpm), stats?.maxBpm?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Analytics Row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem(
-                "RMSSD",
-                hrv?.rmssd?.let { "${it}ms" } ?: "—",
-                Modifier.weight(1f),
-                valueColor = if (hrvReason != null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
-            )
-            StatItem("TRIMP", trimp?.toString() ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
-            StatItem(stringResource(R.string.detail_stat_min_bpm), stats?.minBpm?.toString() ?: "—", Modifier.weight(1f))
-        }
+        // Stats grid 3x3
+        StatGrid(
+            cells = listOf(
+                StatCell(stringResource(R.string.detail_stat_avg_bpm), stats?.avgBpm?.toString() ?: NO_VALUE, "bpm"),
+                StatCell(stringResource(R.string.detail_stat_active), activeSeconds?.let { formatElapsed(it, DurationStyle.Hms) } ?: NO_VALUE),
+                StatCell(stringResource(R.string.detail_stat_max_bpm), stats?.maxBpm?.toString() ?: NO_VALUE, "bpm"),
+                StatCell(
+                    "RMSSD",
+                    hrv?.rmssd?.let { formatDecimal(it.toDouble(), 0, locale) } ?: NO_VALUE,
+                    "ms",
+                    valueColor = if (hrvReason != null) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified
+                ),
+                StatCell("TRIMP", trimp?.toString() ?: NO_VALUE),
+                StatCell(stringResource(R.string.detail_stat_min_bpm), stats?.minBpm?.toString() ?: NO_VALUE, "bpm"),
+                StatCell(stringResource(R.string.detail_stat_calories), calories?.toString() ?: NO_VALUE, "kcal"),
+                StatCell("HRMAX", session?.maxHrUsed?.toString() ?: NO_VALUE, "bpm"),
+                StatCell(stringResource(R.string.detail_stat_resting_hr), session?.restingHr?.toString() ?: NO_VALUE, "bpm"),
+            ),
+            columns = 3
+        )
 
         val hrvResult = hrv
         if (session?.isHrvMeasurement == true && hrvResult != null) {
@@ -455,23 +429,8 @@ fun DetailScreen(
                         stringResource(R.string.detail_hrv_unreliable_too_many_artefacts, hrvResult.artefactPct, HrvQuality.MAX_ARTEFACT_PCT.toInt())
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        // Kalorien + Zonen-Basis
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem(
-                stringResource(R.string.detail_stat_calories),
-                calories?.let { "$it kcal" } ?: "—",
-                Modifier.weight(1f),
-                valueColor = PrimaryPurple
-            )
-            StatItem("HRMAX", session?.maxHrUsed?.toString() ?: "—", Modifier.weight(1f))
-            StatItem(stringResource(R.string.detail_stat_resting_hr), session?.restingHr?.toString() ?: "—", Modifier.weight(1f))
         }
 
         if (calories == null && session?.endedAt != null) {
@@ -479,212 +438,140 @@ fun DetailScreen(
                 if (bodyDataMissing) stringResource(R.string.detail_calories_body_data_missing)
                 else stringResource(R.string.detail_calories_not_enough_data),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
-        // Subjektive Belastung (Session-RPE)
-        if (session?.isHrvMeasurement == false) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth().clickable { showRpeDialog = true },
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.detail_rpe_title),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        val rpe = session?.rpe
-                        Text(
-                            if (rpe == null) stringResource(R.string.detail_rpe_rate)
-                            else srpeLoad?.let { stringResource(R.string.detail_rpe_value_with_load, rpe, stringResource(rpeLabelRes(rpe)), it) }
-                                ?: stringResource(R.string.detail_rpe_value, rpe, stringResource(rpeLabelRes(rpe))),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (rpe == null) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
-                        )
-                    }
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = stringResource(R.string.detail_rpe_rate_description),
-                        tint = PrimaryPurple,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Heart Rate Recovery Card
-        recovery?.let { hrr ->
-            val ratingColor = when (hrr.rating) {
-                com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> MaterialTheme.colorScheme.errorContainer
-                com.kevin.hrtracker.domain.HrrRating.NORMAL -> MaterialTheme.colorScheme.tertiary
-                com.kevin.hrtracker.domain.HrrRating.GUT -> MaterialTheme.colorScheme.primary
-                com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> MaterialTheme.colorScheme.primary
-            }
-            val ratingText = stringResource(
-                when (hrr.rating) {
-                    com.kevin.hrtracker.domain.HrrRating.NIEDRIG -> R.string.detail_hrr_rating_low
-                    com.kevin.hrtracker.domain.HrrRating.NORMAL -> R.string.detail_hrr_rating_normal
-                    com.kevin.hrtracker.domain.HrrRating.GUT -> R.string.detail_hrr_rating_good
-                    com.kevin.hrtracker.domain.HrrRating.SEHR_GUT -> R.string.detail_hrr_rating_very_good
-                }
-            )
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+        // RPE (session-RPE) + HRR60
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)
+        ) {
+            if (session?.isHrvMeasurement == false) {
+                val rpe = session?.rpe
+                DetailCard(Modifier.weight(1f).fillMaxHeight()) {
+                    Metric("RPE", rpe?.toString() ?: NO_VALUE)
                     Text(
-                        stringResource(R.string.detail_hrr_title),
-                        style = MaterialTheme.typography.labelSmall,
+                        if (rpe == null) stringResource(R.string.detail_rpe_rate)
+                        else srpeLoad?.let { stringResource(R.string.detail_rpe_value_with_load, rpe, stringResource(rpeLabelRes(rpe)), it) }
+                            ?: stringResource(R.string.detail_rpe_value, rpe, stringResource(rpeLabelRes(rpe))),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    TextActionButton(stringResource(R.string.detail_rpe_rate_description), { showRpeDialog = true })
+                }
+            }
+            DetailCard(Modifier.weight(1f).fillMaxHeight()) {
+                val hrr = recovery
+                Metric("HRR60", hrr?.hrr60?.toString() ?: NO_VALUE, unit = "bpm")
+                if (hrr != null) {
+                    val good = hrr.rating == HrrRating.GUT || hrr.rating == HrrRating.SEHR_GUT
+                    val tagColor = if (good) AppTheme.colors.success else MaterialTheme.colorScheme.onSurfaceVariant
+                    Surface(
+                        shape = AppTheme.pillShape,
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, tagColor)
                     ) {
                         Text(
-                            "${hrr.hrr60} bpm",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color.White
+                            stringResource(
+                                when (hrr.rating) {
+                                    HrrRating.NIEDRIG -> R.string.detail_hrr_rating_low
+                                    HrrRating.NORMAL -> R.string.detail_hrr_rating_normal
+                                    HrrRating.GUT -> R.string.detail_hrr_rating_good
+                                    HrrRating.SEHR_GUT -> R.string.detail_hrr_rating_very_good
+                                }
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = tagColor,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.md, vertical = AppTheme.spacing.xs)
                         )
-                        Surface(
-                            color = ratingColor,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                ratingText,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
                     }
-                    Spacer(Modifier.height(8.dp))
                     if (hrr.recoveredToTarget && hrr.secondsToTarget != null) {
                         Text(
                             stringResource(R.string.detail_hrr_recovered_after, hrr.secondsToTarget),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(Modifier.height(6.dp))
                     }
                     Text(
                         stringResource(R.string.detail_hrr_peak, hrr.peakBpm, hrr.hrAt60s),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-            }
-        } ?: OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    stringResource(R.string.detail_hrr_title),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(8.dp))
-                Text("—", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.detail_hrr_not_enough_data),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Note field
-        val noteText = session?.note
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth().clickable { showNoteDialog = true },
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+                } else {
                     Text(
-                        stringResource(R.string.detail_note_title),
-                        style = MaterialTheme.typography.labelSmall,
+                        stringResource(R.string.detail_hrr_not_enough_data),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Text(
-                        text = if (noteText.isNullOrBlank()) stringResource(R.string.detail_note_add) else noteText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (noteText.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.White
-                    )
                 }
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.detail_note_edit),
-                    tint = PrimaryPurple,
-                    modifier = Modifier.size(18.dp)
-                )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        // Note
+        val noteText = session?.note
+        DetailCard(Modifier.fillMaxWidth()) {
+            Text(
+                stringResource(R.string.detail_note_title),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (noteText.isNullOrBlank()) stringResource(R.string.detail_note_add) else noteText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (noteText.isNullOrBlank()) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified
+            )
+            TextActionButton(stringResource(R.string.detail_note_edit), { showNoteDialog = true })
+        }
 
-        // Action buttons
+        // Actions
         val exportJsonChooser = stringResource(R.string.detail_export_json)
         val exportCsvChooser = stringResource(R.string.detail_export_csv_chooser)
-        Button(
-            onClick = {
-                scope.launch {
-                    val intent = viewModel.export(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, exportJsonChooser))
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = PrimaryPurple,
-                contentColor = OnPrimary
+        PrimaryButton(
+            stringResource(R.string.detail_generate_report),
+            { reportJson = viewModel.generateReport() },
+            Modifier.fillMaxWidth()
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+            SecondaryButton(
+                stringResource(R.string.detail_export_json),
+                {
+                    scope.launch {
+                        val intent = viewModel.export(context) ?: return@launch
+                        context.startActivity(Intent.createChooser(intent, exportJsonChooser))
+                    }
+                },
+                Modifier.weight(1f)
             )
-        ) { Text(stringResource(R.string.detail_export_json)) }
-        Spacer(Modifier.height(6.dp))
-        OutlinedButton(
-            onClick = {
-                scope.launch {
-                    val intent = viewModel.exportCsv(context) ?: return@launch
-                    context.startActivity(Intent.createChooser(intent, exportCsvChooser))
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            border = BorderStroke(1.dp, PrimaryPurple),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
-        ) { Text(stringResource(R.string.detail_export_csv_button)) }
-        Spacer(Modifier.height(6.dp))
-        OutlinedButton(
-            onClick = {
-                val json = viewModel.generateReport()
-                reportJson = json
-            },
-            modifier = Modifier.fillMaxWidth(),
-            border = BorderStroke(1.dp, PrimaryPurple),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryPurple)
-        ) { Text(stringResource(R.string.detail_generate_report)) }
+            SecondaryButton(
+                stringResource(R.string.detail_export_csv_button),
+                {
+                    scope.launch {
+                        val intent = viewModel.exportCsv(context) ?: return@launch
+                        context.startActivity(Intent.createChooser(intent, exportCsvChooser))
+                    }
+                },
+                Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+/** Bordered surface card used by the RPE / HRR60 / note blocks. */
+@Composable
+private fun DetailCard(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Column(
+            modifier = Modifier.padding(AppTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content
+        )
     }
 }
 
