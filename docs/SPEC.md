@@ -262,7 +262,7 @@ Quelle: Shared Lib (SP1–SP4) und Mockups `00-final-screens.html`. Alle Screens
 
 - **Strikter Checker:** `tools/check_design_tokens.py` der Lib läuft in der CI ohne `--warn`; Funde lassen den Build scheitern.
 - **Escape-Hatch:** `// design-ignore: <Grund>`, nur für das PiP-Fenster (D9: kleinere Schrift als `labelSmall`).
-- **Battery Service 0x180F / 0x2A19:** einmal Lesen nach erfolgreichem CCCD-Write pro (Re-)Connect (D12); die Scan-Karte zeigt nur den Gerätenamen, wenn der Service fehlt (`DeviceStatusCard`, D3).
+- **Battery Service 0x180F / 0x2A19:** einmal Lesen nach erfolgreichem CCCD-Write pro (Re-)Connect (D12), danach Notifications aktivieren, sofern das Characteristic Notify unterstützt; Fehler beim Lesen/Aktivieren werden geloggt (Log.w). Wert `0xFF` = unbekannt (→ `null`), `101..254` wird auf 100 gekappt. Die Scan-Karte zeigt nur den Gerätenamen, wenn der Service fehlt (`DeviceStatusCard`, D3).
 - **History-Filter:** Datumsgrenzen sind inklusive lokale `LocalDate`s.
 - **Zahlen-/Datumsformat:** System-Locale (`Locale.getDefault()`, D6); Dauern über `formatElapsed` (Hms/Compact/Clock).
 - **Mockup-Abweichungen (D8):** (a) Statistik-Trend nur ACWR-Linie mit Band 0,8–1,3; (b) Form-Baseline = exp(Mitte von ln Normalbereich), „Baseline 44 ms · +9 %“; (c) History behält Label- und Datumsfilter, keine „Workouts/HRV“-Chips; (d) Ruhepuls-Delta = aktuell − `restingHr7`, ausgeblendet wenn einer fehlt; (e) Wochenlabel EN „W36“, DE „KW 36“; (f) Statistik behält 6-Wochen-Tabelle und TRIMP-Verlauf.

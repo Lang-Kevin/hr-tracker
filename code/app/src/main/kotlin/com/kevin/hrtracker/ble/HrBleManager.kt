@@ -419,7 +419,11 @@ class HrBleManager @Inject constructor(
     private fun handleBatteryRead(gatt: BluetoothGatt, uuid: UUID, value: ByteArray?, status: Int) {
         if (gatt != bluetoothGatt) return
         if (gatt.device.address != lastDevice?.address) return
-        if (status != BluetoothGatt.GATT_SUCCESS || uuid != BATTERY_LEVEL_UUID) return
+        if (uuid != BATTERY_LEVEL_UUID) return
+        if (status != BluetoothGatt.GATT_SUCCESS) {
+            Log.w(TAG, "Battery level read failed: status=$status")
+            return
+        }
         _batteryLevel.value = BatteryLevelParser.parse(value)
         enableBatteryNotify(gatt) // read finished, so no GATT operation is in flight
     }
@@ -430,14 +434,15 @@ class HrBleManager @Inject constructor(
         if (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY == 0) return
         val cccd = ch.getDescriptor(BleConstants.CCCD_UUID) ?: return
         gatt.setCharacteristicNotification(ch, true)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        val started = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == BluetoothStatusCodes.SUCCESS
         } else {
             @Suppress("DEPRECATION")
             cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
             @Suppress("DEPRECATION")
             gatt.writeDescriptor(cccd)
         }
+        if (!started) Log.w(TAG, "Battery level notify enable not started")
     }
 
     private fun handleHrData(value: ByteArray) {

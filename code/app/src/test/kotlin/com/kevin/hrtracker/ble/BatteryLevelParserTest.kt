@@ -18,7 +18,11 @@ class BatteryLevelParserTest {
 
     @Test fun `out of range clamps to 100`() {
         assertEquals(100, BatteryLevelParser.parse(byteArrayOf(101)))
-        assertEquals(100, BatteryLevelParser.parse(byteArrayOf(0xFF.toByte())))
+        assertEquals(100, BatteryLevelParser.parse(byteArrayOf(0xFE.toByte())))
+    }
+
+    @Test fun `0xFF is unknown sentinel`() {
+        assertNull(BatteryLevelParser.parse(byteArrayOf(0xFF.toByte())))
     }
 
     @Test fun `trailing bytes ignored`() {
