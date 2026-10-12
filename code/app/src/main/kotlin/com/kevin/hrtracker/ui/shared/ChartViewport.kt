@@ -2,8 +2,6 @@ package com.kevin.hrtracker.ui.shared
 
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
@@ -85,67 +83,4 @@ fun nearestIndex(fraction: Float, range: IntRange): Int? {
     val f = fraction.coerceIn(0f, 1f)
     val idx = range.first + (f * (range.last - range.first)).roundToInt()
     return idx.coerceIn(range.first, range.last)
-}
-
-/**
- * Live-Fenster in Sekunden/Samples (1 Sample ≈ 1 s). [windowSeconds] ist die (Float-)Breite,
- * [anchorEnd] der absolute Index (in die Verlaufsliste) des rechten Rands, wenn zurückgescrollt;
- * null = folgt dem neuesten Sample. Da der Anker absolut ist, bleibt die Ansicht beim Anhängen
- * neuer Samples stehen, und viele kleine Pan-/Zoom-Schritte verlieren keine Sub-Sample-Präzision.
- */
-data class LiveWindow(val windowSeconds: Float = DEFAULT.toFloat(), val anchorEnd: Float? = null) {
-
-    val isFollowing: Boolean get() = anchorEnd == null
-
-    /** Sichtbare Sample-Indizes bei [total] Samples; leer wenn total <= 0. */
-    fun visibleRange(total: Int): IntRange {
-        if (total <= 0) return IntRange.EMPTY
-        val w = windowSeconds.roundToInt().coerceIn(1, max(1, total))
-        val end = if (anchorEnd == null) total - 1
-        else anchorEnd.roundToInt().coerceIn(min(w - 1, total - 1), total - 1)
-        val start = (end - w + 1).coerceAtLeast(0)
-        return start..end
-    }
-
-    /**
-     * Zoomt um [factor] (>1 = hinein) mit [anchor] (0..1) in der sichtbaren Breite; das Sample
-     * unter dem Anker bleibt fest. Ist alles sichtbar, wird nur die gespeicherte Breite geändert.
-     */
-    fun zoomBy(factor: Float, anchor: Float, total: Int): LiveWindow {
-        if (factor <= 0f || factor.isNaN() || factor.isInfinite()) return this
-        val a = anchor.coerceIn(0f, 1f)
-        val effW = min(windowSeconds, total.toFloat()).coerceAtLeast(1f)
-        val newW = (effW / factor).coerceAtLeast(MIN.toFloat())
-        if (newW >= total) {
-            return copy(windowSeconds = max(newW, windowSeconds).coerceAtMost(MAX_WINDOW))
-        }
-        val lastIdx = total - 1f
-        val currentEnd = (anchorEnd ?: lastIdx).coerceIn(min(effW - 1f, lastIdx), lastIdx)
-        val anchorSample = currentEnd - (1f - a) * (effW - 1f)
-        val newEnd = anchorSample + (1f - a) * (newW - 1f)
-        return when {
-            isFollowing && a >= 0.999f -> LiveWindow(newW, null)
-            newEnd >= lastIdx -> LiveWindow(newW, null)
-            else -> LiveWindow(newW, newEnd.coerceAtLeast(min(newW - 1f, lastIdx)))
-        }
-    }
-
-    /** Verschiebt um [deltaSeconds]; positiv = weiter in die Vergangenheit. */
-    fun panBy(deltaSeconds: Float, total: Int): LiveWindow {
-        if (total <= 0 || deltaSeconds.isNaN()) return this
-        val effW = min(windowSeconds, total.toFloat()).coerceAtLeast(1f)
-        val lastIdx = total - 1f
-        val base = anchorEnd ?: lastIdx
-        val newEnd = (base - deltaSeconds).coerceAtLeast(min(effW - 1f, lastIdx))
-        // Nur beim Zurückscrollen Richtung live einrasten; beim Wegscrollen vom Live-Rand müssen
-        // viele kleine Schritte (< 0.5 s) sich aufsummieren können.
-        return if (newEnd >= lastIdx || (deltaSeconds <= 0f && newEnd >= lastIdx - 0.5f)) copy(anchorEnd = null)
-        else copy(anchorEnd = newEnd)
-    }
-
-    companion object {
-        const val DEFAULT = 120
-        const val MIN = 30
-        const val MAX_WINDOW = 21600f
-    }
 }
