@@ -28,7 +28,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import java.util.Locale
+import com.kevin.hrtracker.ui.currentLocale
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -207,7 +207,7 @@ fun DetailScreen(
         )
     }
 
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
     val zone = ZoneId.systemDefault()
     Column(
         modifier = Modifier

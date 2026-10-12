@@ -35,7 +35,7 @@ import com.kevin.shared.ui.overlay.TutorialStep
 import com.kevin.shared.ui.overlay.rememberTutorialAnchors
 import com.kevin.shared.ui.overlay.tutorialAnchor
 import com.kevin.shared.ui.theme.AppTheme
-import java.util.Locale
+import com.kevin.hrtracker.ui.currentLocale
 
 @Composable
 fun SettingsScreen(
@@ -408,7 +408,7 @@ fun SettingsScreen(
 private fun SettingsGroup(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
         Text(
-            title.uppercase(Locale.getDefault()),
+            title.uppercase(currentLocale()),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

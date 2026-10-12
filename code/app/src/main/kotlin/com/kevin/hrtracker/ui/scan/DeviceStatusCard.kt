@@ -21,7 +21,7 @@ import com.kevin.shared.format.formatPercent
 import com.kevin.shared.ui.components.ListCard
 import com.kevin.shared.ui.components.TextActionButton
 import com.kevin.shared.ui.theme.AppTheme
-import java.util.Locale
+import com.kevin.hrtracker.ui.currentLocale
 
 /**
  * Spec §7.2 Scan: "<name> · <status>" plus "Battery n %" when the Battery Service answered;
@@ -39,7 +39,7 @@ fun DeviceStatusCard(
     onToggleAutoConnect: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,

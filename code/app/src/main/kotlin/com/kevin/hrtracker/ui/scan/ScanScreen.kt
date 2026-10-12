@@ -62,6 +62,7 @@ import com.kevin.shared.ui.overlay.tutorialAnchor
 import com.kevin.shared.ui.scan.DiscoveredDeviceItem
 import com.kevin.shared.ui.scan.SavedDeviceItem
 import com.kevin.shared.ui.theme.AppTheme
+import com.kevin.hrtracker.ui.currentLocale
 import java.util.Locale
 import com.kevin.shared.R as SharedR
 
@@ -126,7 +127,7 @@ fun ScanScreen(
     var requestedOnce by rememberSaveable { mutableStateOf(false) }
     val permissionState = rememberMultiplePermissionsState(requiredPermissions) { requestedOnce = true }
     val context = LocalContext.current
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
 
     LaunchedEffect(permissionState.allPermissionsGranted) {
         if (permissionState.allPermissionsGranted) viewModel.startScan()

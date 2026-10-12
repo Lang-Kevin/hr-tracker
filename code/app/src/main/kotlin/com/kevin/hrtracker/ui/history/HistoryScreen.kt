@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import java.time.ZoneId
+import com.kevin.hrtracker.ui.currentLocale
 import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.R
@@ -90,7 +91,7 @@ fun HistoryScreen(
     val autoRestingHr by viewModel.autoRestingHr.collectAsStateWithLifecycle()
     var pendingDeleteIds by remember { mutableStateOf<List<Long>?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
     val zone = ZoneId.systemDefault()
 
     SoftDeleteConfirmationDialog(
@@ -396,7 +397,7 @@ private fun StatistikTab(
     loadMetric: LoadMetric,
     onLoadMetricChange: (LoadMetric) -> Unit
 ) {
-    val locale = Locale.getDefault()
+    val locale = currentLocale()
     val zone = ZoneId.systemDefault()
     LazyColumn(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
         item { LoadCard(loadState, loadMetric, onLoadMetricChange) }

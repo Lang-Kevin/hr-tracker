@@ -27,7 +27,7 @@ import com.kevin.shared.ui.chart.TimeInZoneSection
 import com.kevin.shared.ui.chart.plotFraction
 import com.kevin.shared.format.DurationStyle
 import com.kevin.shared.format.formatElapsed
-import java.util.Locale
+import com.kevin.hrtracker.ui.currentLocale
 import com.kevin.shared.ui.chart.chartZoomPan
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -144,7 +144,7 @@ fun LiveScreen(
         ) {
             Column {
                 Text(
-                    text = (sessionLabel ?: stringResource(R.string.live_title_default)).uppercase(Locale.getDefault()),
+                    text = (sessionLabel ?: stringResource(R.string.live_title_default)).uppercase(currentLocale()),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -230,7 +230,7 @@ fun LiveScreen(
 
         // BPM Zone Chart
         val total = bpmHistory.size
-        val locale = Locale.getDefault()
+        val locale = currentLocale()
         val zoneLabelFmt = stringResource(R.string.live_chart_zone_label)
         val bpmFmt = stringResource(R.string.live_chart_current_bpm)
         val scrubFmt = stringResource(R.string.live_chart_scrub_label)

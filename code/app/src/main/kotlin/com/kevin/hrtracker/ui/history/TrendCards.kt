@@ -31,6 +31,7 @@ import com.kevin.shared.ui.components.Metric
 import com.kevin.shared.ui.components.SecondaryButton
 import com.kevin.shared.ui.components.SegmentedControl
 import com.kevin.shared.ui.theme.AppTheme
+import com.kevin.hrtracker.ui.currentLocale
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt
@@ -57,7 +58,7 @@ fun LoadCard(
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
-            val locale = Locale.getDefault()
+            val locale = currentLocale()
             Text(
                 stringResource(R.string.history_load_title).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
@@ -188,7 +189,7 @@ fun FormTab(
 private fun ReadinessCard(readiness: ReadinessSummary?) {
     Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
-            val locale = Locale.getDefault()
+            val locale = currentLocale()
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.history_readiness_title).uppercase(),
