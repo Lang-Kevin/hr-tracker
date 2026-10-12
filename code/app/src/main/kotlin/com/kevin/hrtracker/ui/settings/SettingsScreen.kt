@@ -15,7 +15,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.kevin.hrtracker.R
@@ -24,6 +25,7 @@ import com.kevin.hrtracker.domain.WidgetVariant
 import com.kevin.hrtracker.domain.ZoneModel
 import com.kevin.hrtracker.domain.Sex
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
+import com.kevin.shared.ui.components.SegmentedControl
 import com.kevin.shared.ui.input.NumberField
 import com.kevin.shared.ui.input.NumberInput
 import com.kevin.shared.ui.input.isError
@@ -169,20 +171,12 @@ fun SettingsScreen(
                 error = stringResource(R.string.settings_weight_error),
                 onCommit = { viewModel.setWeightKg(it) }
             )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                val sexOptions = listOf(Sex.MALE, Sex.FEMALE)
-                sexOptions.forEachIndexed { index, value ->
-                    SegmentedButton(
-                        selected = settings.sex == value,
-                        onClick = { viewModel.setSex(if (settings.sex == value) null else value) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = sexOptions.size),
-                        // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
-                        icon = {}
-                    ) {
-                        Text(stringResource(value.labelRes), maxLines = 1, softWrap = false)
-                    }
-                }
-            }
+            val sexOptions = listOf(Sex.MALE, Sex.FEMALE)
+            SegmentedControl(
+                options = sexOptions.map { stringResource(it.labelRes) },
+                selectedIndex = sexOptions.indexOf(settings.sex),
+                onSelect = { viewModel.setSex(if (settings.sex == sexOptions[it]) null else sexOptions[it]) },
+            )
             if (settings.sex == null || settings.weightKg == null) {
                 Text(
                     stringResource(R.string.settings_calories_hint),
@@ -193,19 +187,11 @@ fun SettingsScreen(
 
         SettingsGroup(stringResource(R.string.settings_section_target_zone), Modifier.tutorialAnchor(tutorialAnchors, "settings_zones")) {
             Text(stringResource(R.string.settings_zone_model), style = MaterialTheme.typography.titleSmall)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                val zoneModelOptions = listOf(ZoneModel.HR_MAX to "%HRmax", ZoneModel.KARVONEN to "Karvonen")
-                zoneModelOptions.forEachIndexed { index, (value, label) ->
-                    SegmentedButton(
-                        selected = settings.zoneModel == value,
-                        onClick = { viewModel.setZoneModel(value) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = zoneModelOptions.size),
-                        icon = {}
-                    ) {
-                        Text(label, maxLines = 1, softWrap = false)
-                    }
-                }
-            }
+            SegmentedControl(
+                options = listOf("%HRmax", "Karvonen"), // i18n-ignore: method names
+                selectedIndex = settings.zoneModel.ordinal,
+                onSelect = { viewModel.setZoneModel(ZoneModel.entries[it]) },
+            )
             if (settings.zoneModel == ZoneModel.KARVONEN && settings.restingHr == null) {
                 Text(
                     stringResource(R.string.settings_zone_model_no_resting_hr),
@@ -220,27 +206,11 @@ fun SettingsScreen(
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                (1..5).forEach { z ->
-                    val selected = settings.targetZone == z
-                    val zoneColor = AppTheme.colors.zones.getOrElse(z - 1) { MaterialTheme.colorScheme.primary }
-                    val contentColor = if (zoneColor.luminance() > 0.5f)
-                        MaterialTheme.colorScheme.onSurface
-                    else
-                        AppTheme.colors.onMedia
-                    SegmentedButton(
-                        selected = selected,
-                        onClick = { viewModel.setTargetZone(z) },
-                        shape = SegmentedButtonDefaults.itemShape(index = z - 1, count = 5),
-                        colors = SegmentedButtonDefaults.colors(
-                            activeContainerColor = zoneColor,
-                            activeContentColor = contentColor
-                        )
-                    ) {
-                        Text("Z$z")
-                    }
-                }
-            }
+            SegmentedControl(
+                options = (1..5).map { "Z$it" },
+                selectedIndex = settings.targetZone - 1,
+                onSelect = { viewModel.setTargetZone(it + 1) },
+            )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Row(
@@ -345,24 +315,19 @@ fun SettingsScreen(
                 ) { Text(stringResource(R.string.settings_save)) }
             } else {
                 settings.effectiveZones.forEach { z ->
+                    val isTarget = z.zone == settings.targetZone
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        Modifier
+                            .fillMaxWidth()
+                            .then(if (isTarget) Modifier.background(AppTheme.colors.accentTint, MaterialTheme.shapes.small) else Modifier)
+                            .padding(horizontal = AppTheme.spacing.sm, vertical = AppTheme.spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
-                        ) {
-                            val zoneColor = AppTheme.colors.zones.getOrElse(z.zone - 1) { MaterialTheme.colorScheme.primary }
-                            Surface(
-                                color = zoneColor,
-                                shape = MaterialTheme.shapes.extraSmall,
-                                modifier = Modifier.size(16.dp)
-                            ) {}
-                            Text("Z${z.zone}", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        Text("${z.lo} – ${z.hi} BPM", style = MaterialTheme.typography.bodyMedium) // i18n-ignore: unit/acronym, same in every language
+                        Box(Modifier.size(8.dp).background(AppTheme.colors.zones[z.zone - 1], CircleShape))
+                        Spacer(Modifier.width(AppTheme.spacing.sm))
+                        Text("Z${z.zone}" + if (isTarget) " " + stringResource(R.string.settings_zone_target_suffix) else "", style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.weight(1f))
+                        Text(stringResource(R.string.settings_zone_range, z.lo, z.hi), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -396,19 +361,11 @@ fun SettingsScreen(
                 WidgetVariant.ZONE to R.string.settings_widget_zone,
                 WidgetVariant.TIMER to R.string.settings_widget_time
             )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                variants.forEachIndexed { index, (variant, label) ->
-                    SegmentedButton(
-                        selected = settings.widgetVariant == variant,
-                        onClick = { viewModel.setWidgetVariant(variant) },
-                        shape = SegmentedButtonDefaults.itemShape(index = index, count = variants.size),
-                        // ponytail: kein Check-Icon — frisst ~28dp und laesst Label umbrechen
-                        icon = {}
-                    ) {
-                        Text(stringResource(label), maxLines = 1, softWrap = false)
-                    }
-                }
-            }
+            SegmentedControl(
+                options = variants.map { stringResource(it.second) },
+                selectedIndex = variants.indexOfFirst { it.first == settings.widgetVariant },
+                onSelect = { viewModel.setWidgetVariant(variants[it].first) },
+            )
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
             Row(
                 modifier = Modifier.fillMaxWidth(),

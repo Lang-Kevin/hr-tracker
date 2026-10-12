@@ -49,4 +49,6 @@
     <string name="settings_zone_desc_3">Aerobic — moderate training, endurance building</string>
     <string name="settings_zone_desc_4">Anaerobic — intense load, lactate threshold</string>
     <string name="settings_zone_desc_5">VO₂max — maximum intensity, short intervals</string>
+    <string name="settings_zone_range">%1$d – %2$d BPM</string>
+    <string name="settings_zone_target_suffix">· target</string>
 </resources>
