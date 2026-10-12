@@ -38,4 +38,8 @@
     <string name="scan_battery">Akku %1$s</string>
     <string name="scan_auto_connect">Auto</string>
     <string name="scan_disconnect">Trennen</string>
+    <string name="scan_permission_title">Bluetooth-Zugriff nötig</string>
+    <string name="scan_permission_message">HR Tracker braucht die Bluetooth-Berechtigung, um deinen Brustgurt zu finden und zu verbinden.</string>
+    <string name="scan_permission_grant">Erlauben</string>
+    <string name="scan_permission_settings">Einstellungen öffnen</string>
 </resources>
