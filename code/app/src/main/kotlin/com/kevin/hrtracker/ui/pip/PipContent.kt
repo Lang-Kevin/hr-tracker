@@ -15,26 +15,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.R
 import com.kevin.hrtracker.domain.WidgetVariant
-import com.kevin.shared.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.AppTheme
 
 @Composable
 fun PipContent(viewModel: PipViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val fallback = MaterialTheme.colorScheme.onSurfaceVariant
-    val accent: Color = state.zone?.let { ZoneColors.getOrElse(it - 1) { fallback } } ?: fallback
+    val accent: Color = state.zone?.let { AppTheme.colors.zones.getOrElse(it - 1) { fallback } } ?: fallback
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = AppTheme.spacing.sm, vertical = AppTheme.spacing.xs),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -49,21 +48,21 @@ fun PipContent(viewModel: PipViewModel = hiltViewModel()) {
 
 @Composable
 private fun MinimalLayout(state: PipUiState, accent: Color) {
-    BpmRow(state.bpm, accent, valueSize = 48.sp, iconSize = 30.dp)
+    BpmRow(state.bpm, accent, valueStyle = MaterialTheme.typography.displayMedium, iconSize = 30.dp)
     if (state.paused) PauseLine()
 }
 
 @Composable
 private fun StandardLayout(state: PipUiState, accent: Color) {
-    BpmRow(state.bpm, accent, valueSize = 34.sp, iconSize = 24.dp)
+    BpmRow(state.bpm, accent, valueStyle = MaterialTheme.typography.headlineLarge, iconSize = 24.dp)
     Text(
         text = state.zone?.let { stringResource(R.string.pip_zone_value, it) } ?: stringResource(R.string.pip_zone_none),
-        fontSize = 14.sp,
+        style = MaterialTheme.typography.bodyMedium,
         color = accent
     )
     Text(
         text = if (state.paused) stringResource(R.string.pip_paused) else state.elapsedText,
-        fontSize = 14.sp,
+        style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
@@ -72,16 +71,16 @@ private fun StandardLayout(state: PipUiState, accent: Color) {
 private fun ZoneLayout(state: PipUiState, accent: Color) {
     Text(
         text = state.zone?.toString() ?: "--",
-        fontSize = 48.sp,
+        style = MaterialTheme.typography.displayMedium,
         fontWeight = FontWeight.Bold,
         color = accent
     )
     Text(
         text = stringResource(R.string.pip_zone_caption),
-        fontSize = 12.sp,
+        style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    BpmRow(state.bpm, accent, valueSize = 18.sp, iconSize = 14.dp)
+    BpmRow(state.bpm, accent, valueStyle = MaterialTheme.typography.titleMedium, iconSize = 14.dp)
     if (state.paused) PauseLine()
 }
 
@@ -89,33 +88,33 @@ private fun ZoneLayout(state: PipUiState, accent: Color) {
 private fun TimerLayout(state: PipUiState, accent: Color) {
     Text(
         text = if (state.paused) stringResource(R.string.pip_paused) else state.elapsedText,
-        fontSize = 34.sp,
+        style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface
     )
-    BpmRow(state.bpm, accent, valueSize = 18.sp, iconSize = 14.dp)
+    BpmRow(state.bpm, accent, valueStyle = MaterialTheme.typography.titleMedium, iconSize = 14.dp)
 }
 
 @Composable
-private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: Dp) {
+private fun BpmRow(bpm: Int?, accent: Color, valueStyle: TextStyle, iconSize: Dp) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = Icons.Default.Favorite,
             contentDescription = null,
-            tint = accent,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(iconSize)
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(AppTheme.spacing.sm))
         Text(
             text = bpm?.toString() ?: "--",
-            fontSize = valueSize,
+            style = valueStyle,
             fontWeight = FontWeight.Bold,
-            color = accent
+            color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(AppTheme.spacing.xs))
         Text(
             text = stringResource(R.string.pip_bpm_label),
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -125,7 +124,7 @@ private fun BpmRow(bpm: Int?, accent: Color, valueSize: TextUnit, iconSize: Dp) 
 private fun PauseLine() {
     Text(
         text = stringResource(R.string.pip_paused),
-        fontSize = 14.sp,
+        style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

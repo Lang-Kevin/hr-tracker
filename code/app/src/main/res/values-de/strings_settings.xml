@@ -3,7 +3,6 @@
     <string name="settings_title">Einstellungen</string>
     <string name="settings_zone_info_title">Was bedeuten die Zonen?</string>
     <string name="settings_close">Schließen</string>
-    <string name="settings_ok">OK</string>
     <string name="settings_section_heart_rate">Herzfrequenz</string>
     <string name="settings_age">Alter</string>
     <string name="settings_age_error">Alter muss zwischen 10 und 99 liegen</string>
@@ -32,6 +31,7 @@
     <string name="settings_max_bpm">Max BPM</string>
     <string name="settings_save">Speichern</string>
     <string name="settings_chart_dynamic_scale">Diagramm: dynamische Skalierung (Standard)</string>
+    <string name="settings_section_display">Anzeige</string>
     <string name="settings_section_widget">Widget-Anzeige</string>
     <string name="settings_widget_hint">Gilt für das PiP-Fenster und die Benachrichtigung während der Aufzeichnung</string>
     <string name="settings_widget_bpm">BPM</string>
@@ -49,4 +49,6 @@
     <string name="settings_zone_desc_3">Aerob — moderates Training, Ausdaueraufbau</string>
     <string name="settings_zone_desc_4">Anaerob — intensive Belastung, Laktatschwelle</string>
     <string name="settings_zone_desc_5">VO₂max — maximale Intensität, kurze Intervalle</string>
+    <string name="settings_zone_range">%1$d – %2$d BPM</string>
+    <string name="settings_zone_target_suffix">· Ziel</string>
 </resources>

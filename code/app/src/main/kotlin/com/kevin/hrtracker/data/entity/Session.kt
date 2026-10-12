@@ -36,7 +36,9 @@ data class Session(
     /** Anzahl gültiger Schläge der RMSSD-Auswertung, DB v7, aus SessionMetrics. */
     val rmssdValidBeats: Int? = null,
     /** Körperhaltung (HrvPosture.name), DB v7, nur HRV-Messungen. */
-    val posture: String? = null
+    val posture: String? = null,
+    /** Sekunden je Zone als CSV "s1,…,sN", DB v8, Cache aus SessionMetrics. */
+    val zoneSeconds: String? = null
 ) : SoftDeletable
 
 /** Ruhe-HRV-Messung statt Training — zählt nicht in Trainings-Statistiken und Last. */

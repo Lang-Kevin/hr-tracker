@@ -1,5 +1,6 @@
 package com.kevin.hrtracker.ui.history
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -20,19 +21,22 @@ import com.kevin.hrtracker.domain.ReadinessBlock
 import com.kevin.hrtracker.domain.ReadinessStatus
 import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
-import com.kevin.hrtracker.ui.shared.TrendChart
-import com.kevin.hrtracker.ui.shared.TrendSeries
-import com.kevin.shared.ui.theme.ConnectedGreen
-import com.kevin.shared.ui.theme.ErrorRed
-import com.kevin.shared.ui.theme.PrimaryPurple
-import com.kevin.shared.ui.theme.SecondaryBlue
+import com.kevin.shared.format.NO_VALUE
+import com.kevin.shared.format.formatDecimal
+import com.kevin.shared.format.formatMeasure
+import com.kevin.shared.ui.chart.ChartDefaults
+import com.kevin.shared.ui.chart.TrendChart
+import com.kevin.shared.ui.chart.TrendSeries
+import com.kevin.shared.ui.components.Metric
+import com.kevin.shared.ui.components.SecondaryButton
+import com.kevin.shared.ui.components.SegmentedControl
+import com.kevin.shared.ui.theme.AppTheme
+import com.kevin.hrtracker.ui.currentLocale
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt
 
-private val CautionOrange = Color(0xFFFFB74D)
-
-private fun Double.fmt(decimals: Int) = String.format(Locale.getDefault(), "%.${decimals}f", this)
+private fun Double.fmt(decimals: Int, locale: Locale) = String.format(locale, "%.${decimals}f", this)
 
 @Composable
 private fun CardTitle(text: String) {
@@ -44,21 +48,6 @@ private fun Hint(text: String, color: Color = MaterialTheme.colorScheme.onSurfac
     Text(text, style = MaterialTheme.typography.bodySmall, color = color)
 }
 
-@Composable
-private fun Metric(label: String, value: String, modifier: Modifier = Modifier, color: Color = Color.White) {
-    Column(modifier) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleMedium, color = color, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun Legend(vararg entries: Pair<String, Color>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        entries.forEach { (label, color) -> Text("● $label", style = MaterialTheme.typography.labelSmall, color = color) }
-    }
-}
-
 // --- Trainingslast ---
 
 @Composable
@@ -68,36 +57,70 @@ fun LoadCard(
     onMetricChange: (LoadMetric) -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) { CardTitle(stringResource(R.string.history_load_title)) }
-                FilterChip(
-                    selected = metric == LoadMetric.TRIMP,
-                    onClick = { onMetricChange(LoadMetric.TRIMP) },
-                    label = { Text("TRIMP") } // i18n-ignore: unit/acronym, same in every language
-                )
-                Spacer(Modifier.width(6.dp))
-                FilterChip(
-                    selected = metric == LoadMetric.SRPE,
-                    onClick = { onMetricChange(LoadMetric.SRPE) },
-                    label = { Text("sRPE") } // i18n-ignore: unit/acronym, same in every language
-                )
-            }
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+            val locale = currentLocale()
+            Text(
+                stringResource(R.string.history_load_title).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            SegmentedControl(
+                listOf("TRIMP", "sRPE"), // i18n-ignore: unit/acronym, same in every language
+                selectedIndex = metric.ordinal,
+                onSelect = { onMetricChange(LoadMetric.entries[it]) }
+            )
 
             val today = state.days.lastOrNull()
             val acwr = today?.acwr
             val zone = acwr?.let { TrainingLoad.zoneOf(it) }
             val zoneColor = when (zone) {
-                AcwrZone.LOW -> SecondaryBlue
-                AcwrZone.OPTIMAL -> ConnectedGreen
-                AcwrZone.CAUTION -> CautionOrange
-                AcwrZone.HIGH -> ErrorRed
-                null -> Color.White
+                AcwrZone.LOW -> MaterialTheme.colorScheme.onSurfaceVariant
+                AcwrZone.OPTIMAL -> AppTheme.colors.success
+                AcwrZone.CAUTION -> AppTheme.colors.warning
+                AcwrZone.HIGH -> MaterialTheme.colorScheme.error
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
             }
-            Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_load_acute), today?.acute?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric(stringResource(R.string.history_load_chronic), today?.chronic?.roundToInt()?.toString() ?: "—", Modifier.weight(1f), SecondaryBlue)
-                Metric("ACWR", acwr?.fmt(2) ?: "—", Modifier.weight(0.7f), zoneColor)
+            val divider = MaterialTheme.colorScheme.outline
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                Metric(
+                    stringResource(R.string.history_load_acute),
+                    today?.let { formatDecimal(it.acute, 0, locale) } ?: NO_VALUE,
+                    Modifier.weight(1f)
+                )
+                VerticalDivider(color = divider)
+                Metric(
+                    stringResource(R.string.history_load_chronic),
+                    today?.let { formatDecimal(it.chronic, 0, locale) } ?: NO_VALUE,
+                    Modifier.weight(1f)
+                )
+                VerticalDivider(color = divider)
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Metric(
+                        "ACWR", // i18n-ignore: acronym, same in every language
+                        acwr?.let { formatDecimal(it, 2, locale, minDecimals = 2) } ?: NO_VALUE
+                    )
+                    if (zone != null) {
+                        Surface(
+                            shape = AppTheme.pillShape,
+                            border = BorderStroke(1.dp, zoneColor),
+                            color = Color.Transparent
+                        ) {
+                            Text(
+                                stringResource(
+                                    when (zone) {
+                                        AcwrZone.LOW -> R.string.stats_acwr_low
+                                        AcwrZone.OPTIMAL -> R.string.stats_acwr_optimal
+                                        AcwrZone.CAUTION -> R.string.stats_acwr_caution
+                                        AcwrZone.HIGH -> R.string.stats_acwr_high
+                                    }
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = zoneColor,
+                                modifier = Modifier.padding(horizontal = AppTheme.spacing.sm, vertical = AppTheme.spacing.xs)
+                            )
+                        }
+                    }
+                }
             }
             Hint(
                 stringResource(
@@ -109,20 +132,19 @@ fun LoadCard(
                         null -> R.string.history_load_zone_none
                     }
                 ),
-                zoneColor.takeIf { zone != null } ?: MaterialTheme.colorScheme.onSurfaceVariant
+                zoneColor
             )
 
             if (state.days.isNotEmpty()) {
+                // Band = AcwrZone.OPTIMAL range, see TrainingLoad.zoneOf (0.8..1.3).
                 TrendChart(
-                    series = listOf(
-                        TrendSeries(state.days.map { it.chronic.toFloat() }, SecondaryBlue),
-                        TrendSeries(state.days.map { it.acute.toFloat() }, PrimaryPurple)
-                    ),
+                    series = listOf(TrendSeries(acwrSeries(state.days.map { it.acwr }), highlightLast = true)),
+                    band = 0.8f..1.3f,
+                    bandLabel = "${formatDecimal(0.8, 1, locale)} – ${formatDecimal(1.3, 1, locale)}",
+                    xLabels = state.days.map { stringResource(R.string.stats_week_short, isoWeek(it.date)) },
+                    maxXLabels = 4,
+                    contentDescription = stringResource(R.string.stats_acwr_cd),
                     modifier = Modifier.fillMaxWidth().height(110.dp)
-                )
-                Legend(
-                    stringResource(R.string.history_load_legend_acute) to PrimaryPurple,
-                    stringResource(R.string.history_load_legend_chronic) to SecondaryBlue
                 )
                 Hint(pluralStringResource(R.plurals.history_load_chart_hint, state.days.size, state.days.size))
             }
@@ -146,43 +168,81 @@ fun FormTab(
     currentRestingHr: Int?,
     autoRestingHr: Boolean,
     onAutoRestingHrChange: (Boolean) -> Unit,
-    onApplyRestingHr: () -> Unit
+    onApplyRestingHr: () -> Unit,
+    onMeasureHrv: () -> Unit
 ) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
         item { ReadinessCard(readiness) }
-        item { RestingHrCard(readiness, currentRestingHr, autoRestingHr, onAutoRestingHrChange, onApplyRestingHr) }
+        item {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
+                RestingHrCard(readiness, currentRestingHr, autoRestingHr, onAutoRestingHrChange, onApplyRestingHr, Modifier.weight(1f).fillMaxHeight())
+                HrrCard(hrrTrend, Modifier.weight(1f).fillMaxHeight())
+            }
+        }
         item { HrrTrendCard(hrrTrend) }
-        item { Spacer(Modifier.height(16.dp)) }
+        item { SecondaryButton(stringResource(R.string.scan_measure_hrv), onMeasureHrv, Modifier.fillMaxWidth()) }
+        item { Spacer(Modifier.height(AppTheme.spacing.lg)) }
     }
 }
 
 @Composable
 private fun ReadinessCard(readiness: ReadinessSummary?) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardTitle(stringResource(R.string.history_readiness_title))
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+            val locale = currentLocale()
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.history_readiness_title).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                val ready = readiness?.status?.let { it != ReadinessStatus.BELOW }
+                if (ready != null) {
+                    Surface(
+                        shape = AppTheme.pillShape,
+                        color = if (ready) AppTheme.colors.accentSoft else Color.Transparent,
+                        border = if (ready) null else BorderStroke(1.dp, AppTheme.colors.warning)
+                    ) {
+                        Text(
+                            stringResource(if (ready) R.string.form_ready else R.string.form_recover),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (ready) MaterialTheme.colorScheme.primary else AppTheme.colors.warning,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.sm, vertical = AppTheme.spacing.xs)
+                        )
+                    }
+                }
+            }
             if (readiness == null) {
                 Hint(stringResource(R.string.history_readiness_empty))
                 return@Column
             }
-            val (statusText, statusColor) = when (readiness.status) {
-                ReadinessStatus.BELOW -> stringResource(R.string.history_readiness_below) to CautionOrange
-                ReadinessStatus.NORMAL -> stringResource(R.string.history_readiness_normal) to ConnectedGreen
-                ReadinessStatus.ABOVE -> stringResource(R.string.history_readiness_above) to SecondaryBlue
-                null -> when (readiness.block) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+                Text(
+                    readiness.rmssd7?.let { formatDecimal(it.toDouble(), 0, locale) } ?: NO_VALUE,
+                    style = MaterialTheme.typography.displayMedium
+                )
+                Text(
+                    "ms RMSSD", // i18n-ignore: unit/acronym, same in every language
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = AppTheme.spacing.sm)
+                )
+            }
+            baselineDelta(readiness.rmssd7?.toDouble(), readiness.normalLow, readiness.normalHigh)?.let { (b, d) ->
+                Hint(stringResource(R.string.form_baseline, formatMeasure(b, "ms", 0, locale), signedPercent(d, locale)))
+            }
+            if (readiness.status == null) {
+                val msg = when (readiness.block) {
                     ReadinessBlock.TOO_FEW_RECENT -> stringResource(
                         R.string.history_readiness_too_few_recent, readiness.measurementsLast7, Readiness.MIN_ROLLING
                     )
                     else -> stringResource(
                         R.string.history_readiness_baseline_building, readiness.baselineCount, Readiness.MIN_BASELINE
                     )
-                } to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Hint(msg)
             }
-            Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_readiness_rmssd_7d), readiness.rmssd7?.let { "$it ms" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric(stringResource(R.string.history_readiness_readings_7d), readiness.measurementsLast7.toString(), Modifier.weight(1f))
-            }
-            Text(statusText, style = MaterialTheme.typography.bodyMedium, color = statusColor)
             when (readiness.posture) {
                 HrvPosture.LYING -> Hint(stringResource(R.string.history_readiness_posture_lying))
                 HrvPosture.SITTING -> Hint(stringResource(R.string.history_readiness_posture_sitting))
@@ -191,8 +251,8 @@ private fun ReadinessCard(readiness: ReadinessSummary?) {
             }
             TrendChart(
                 series = listOf(
-                    TrendSeries(readiness.days.map { it.lnRmssd?.toFloat() }, PrimaryPurple.copy(alpha = 0.6f), lines = false, dots = true),
-                    TrendSeries(readiness.days.map { it.rolling7?.toFloat() }, PrimaryPurple)
+                    TrendSeries(readiness.days.map { it.lnRmssd?.toFloat() ?: Float.NaN }, color = ChartDefaults.colors().secondaryLine, lines = false, dots = true),
+                    TrendSeries(readiness.days.map { it.rolling7?.toFloat() ?: Float.NaN }, highlightLast = true)
                 ),
                 band = if (readiness.normalLow != null && readiness.normalHigh != null)
                     readiness.normalLow.toFloat()..readiness.normalHigh.toFloat() else null,
@@ -213,15 +273,19 @@ private fun RestingHrCard(
     currentRestingHr: Int?,
     autoRestingHr: Boolean,
     onAutoRestingHrChange: (Boolean) -> Unit,
-    onApply: () -> Unit
+    onApply: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CardTitle(stringResource(R.string.history_resting_hr_title))
+    Card(modifier = modifier) {
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
             val measured = readiness?.restingHr7
-            Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_resting_hr_measured), measured?.let { "$it bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric(stringResource(R.string.history_resting_hr_configured), currentRestingHr?.let { "$it bpm" } ?: "—", Modifier.weight(1f))
+            Metric(
+                stringResource(R.string.history_resting_hr_title),
+                currentRestingHr?.toString() ?: NO_VALUE,
+                unit = "bpm" // i18n-ignore: unit, same in every language
+            )
+            restingDelta(currentRestingHr, measured?.toDouble())?.let {
+                Hint(stringResource(R.string.form_resting_delta, signedInt(it)))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -240,17 +304,32 @@ private fun RestingHrCard(
 }
 
 @Composable
+private fun HrrCard(trend: HistoryViewModel.HrrTrend, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+            Metric(
+                "HRR60", // i18n-ignore: acronym, same in every language
+                trend.points.lastOrNull()?.let { formatDecimal(it.second.toDouble(), 0, currentLocale()) } ?: NO_VALUE,
+                unit = "bpm" // i18n-ignore: unit, same in every language
+            )
+            Hint(stringResource(R.string.form_hrr_last))
+        }
+    }
+}
+
+@Composable
 private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val locale = currentLocale()
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
             CardTitle(stringResource(R.string.history_hrr_title))
             if (trend.points.isEmpty()) {
                 Hint(stringResource(R.string.history_hrr_empty))
                 return@Column
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), PrimaryPurple)
-                Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f))
+                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1, locale)} bpm" } ?: "—", Modifier.weight(1f), valueColor = MaterialTheme.colorScheme.primary)
+                Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1, locale)} bpm" } ?: "—", Modifier.weight(1f))
             }
             val cur = trend.avgLast4Weeks
             val prev = trend.avgPrev4Weeks
@@ -258,19 +337,19 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 val delta = cur - prev
                 Hint(
                     when {
-                        delta >= 1.0 -> stringResource(R.string.history_hrr_faster, delta.fmt(1))
-                        delta <= -1.0 -> stringResource(R.string.history_hrr_slower, (-delta).fmt(1))
+                        delta >= 1.0 -> stringResource(R.string.history_hrr_faster, delta.fmt(1, locale))
+                        delta <= -1.0 -> stringResource(R.string.history_hrr_slower, (-delta).fmt(1, locale))
                         else -> stringResource(R.string.history_hrr_stable)
                     },
                     when {
-                        delta >= 1.0 -> ConnectedGreen
-                        delta <= -1.0 -> CautionOrange
+                        delta >= 1.0 -> AppTheme.colors.success
+                        delta <= -1.0 -> AppTheme.colors.warning
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 )
             }
             TrendChart(
-                series = listOf(TrendSeries(trend.points.map { it.second.toFloat() }, PrimaryPurple, dots = true)),
+                series = listOf(TrendSeries(trend.points.map { it.second.toFloat() }, dots = true, highlightLast = true)),
                 referenceY = cur?.toFloat(),
                 modifier = Modifier.fillMaxWidth().height(90.dp)
             )

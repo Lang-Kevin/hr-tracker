@@ -22,7 +22,7 @@ Referenzdokument. Wird **nicht automatisch** in jede Claude-Code-Session geladen
 | Async         | Coroutines + Flow     |
 | Datenbank     | Room                  |
 | BLE           | Nordic Kotlin BLE     |
-| Charts        | Compose Canvas (eigen) |
+| Charts        | Shared Lib `LineChart` (Compose Canvas) |
 | DI            | Hilt                  |
 | Serialization | kotlinx.serialization |
 
@@ -46,11 +46,11 @@ UserSettings(age, hrMaxOverride, restingHr, zoneModel, targetZone,
 
 Vordefinierte Labels: Volleyball, Beach, Krafttraining, Cardio, Trainingbike.
 
-DB-Version 7 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`; bestehende HRV-Messungen erhalten `posture = SITTING`). `SessionMetrics.VERSION` 2: HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
+DB-Version 8 (Migration 1→2 `zoneSnapshotJson`; 4→5 Tabelle `milestones` + Index auf `sessionId`; 5→6 Kennzahl-Spalten + `rpe`; 6→7 HRV-Qualität + Haltung: `rmssdArtefactPct`, `rmssdValidBeats`, `posture`; bestehende HRV-Messungen erhalten `posture = SITTING`; 7→8 additiv `zoneSeconds TEXT` nullable, nie destruktiv). `SessionMetrics.VERSION` 3: Backfill füllt zusätzlich `zoneSeconds`; HRV-Sessions verwerfen die ersten 60 s (aktive Zeit) und cachen zusätzlich `rmssdValidBeats`/`rmssdArtefactPct`. **Gecachte Session-Kennzahlen** (`activeMs`, `avgBpm`, `trimp`, `hrr60`, `rmssd`) berechnet `SessionMetrics.compute` aus den Samples und dem Zonen-Snapshot der Session (nicht aus aktuellen Settings) — nach `stopSession` im Repository-Scope, und beim App-Start für alle Sessions mit `metricsVersion < SessionMetrics.VERSION` (Backfill nach Update bzw. Formeländerung: VERSION erhöhen). Fehler beim Nachrechnen werden pro Session gefangen und geloggt (kein App-Crash beim Start; die Session wird beim nächsten Start erneut versucht). History, Trainingslast und Form-Tab lesen nur diese Spalten; der Detail-Screen rechnet weiterhin live aus den Samples. **UserSettings (Alter, Ruhepuls, HRmax-Override, Zonenmodell, Zielzone, Diagramm-Skalierung, Widget-Variante, Körperdaten) sind DataStore-basiert, nicht in Room persistiert. Kalorien werden auf Basis von `weightKg` und `sex` on-read berechnet und nicht persistiert.**
 
 ### Meilensteine
 
-Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Meilensteine werden unmittelbar beim Hinzufügen persistiert (Session-ID = aktive Session, Default-Label `M{i+1}`), überstehen VM/Activity-Zerstörung und Force-Kill; das Verwerfen einer Session löscht deren Meilensteine. Detail-Screen listet die Marker (`formatDuration`), Label klickbar editierbar. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
+Live-FAB markiert den aktuellen Sekundenstand als Meilenstein (vertikale Linie im Live-Chart). Meilensteine werden unmittelbar beim Hinzufügen persistiert (Session-ID = aktive Session, Default-Label `M{i+1}`), überstehen VM/Activity-Zerstörung und Force-Kill; das Verwerfen einer Session löscht deren Meilensteine. Detail-Screen listet die Marker (`formatElapsed(seconds, DurationStyle.Hms)`), Label klickbar editierbar. Im Detail-Chart gilt eine Zeitbasis: Wanduhr seit `startedAt` für Achse, Linie, Lücken, Scrubber und Marker; `atSeconds` (aktive Zeit ohne Pausen) wird dafür über `SampleIntervals.activeToWallMs` auf Wanduhrzeit abgebildet, die Liste zeigt weiter die aktive Zeit.
 
 ## BLE-Flow
 
@@ -83,9 +83,9 @@ Pflicht während aktiver Session. Type: `connectedDevice`. Aufgaben:
 
 - BLE-Verbindung halten
 - Samples inkrementell speichern
-- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatDuration`, immer `HH:MM:SS`)
+- BPM + Laufzeit in der Notification anzeigen (über zentrale `formatElapsed(seconds, DurationStyle.Hms)`, immer `HH:MM:SS`)
 
-Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `ui.Format.formatDuration(totalSeconds: Long): String` als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
+Dauer-Anzeigen (Live-Timer, Zone-Zeit, Notification) rendern einheitlich über `formatElapsed(seconds, DurationStyle.Hms)` (shared lib) als `HH:MM:SS`, um Overflow über 60 Minuten zu vermeiden.
 
 Nach App-Kill offen gebliebene Sessions werden beim nächsten Start mit dem Zeitstempel des letzten Samples geschlossen (ohne Samples: startedAt).
 
@@ -132,7 +132,7 @@ beziehen Samples direkt aus `HrBleManager.hrSamples` bzw. `HrBleManager.lastHr`.
 - Pro Session als JSON-Snapshot persistieren (`Session.zoneSnapshotJson`), damit historische Sessions mit ihren Original-Zonengrenzen angezeigt werden, auch wenn HRrest, HRmax oder das Zonen-Modell später geändert werden — ein Default-Wechsel (z. B. `HR_MAX` → `KARVONEN`) bewertet vergangene Sessions dadurch nicht rückwirkend neu. Der Snapshot existiert allerdings nur für Sessions ab DB v2 — `MIGRATION_1_2` hat die Spalte ohne Backfill hinzugefügt, v1-Sessions haben dauerhaft `zoneSnapshotJson == null`.
 - `HrZoneCalculator.resolveZones` bewertet genau diese Alt-Sessions nach der **Legacy-Regel** weiter (KARVONEN wenn `restingHr` gesetzt ist, sonst HR_MAX) — nicht nach dem neuen Default. Sonst würden sich die Zonengrenzen alter Sessions rückwirkend verschieben.
 
-Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe Design-System).
+Zone-Farben (Z1–Z5): Graphit-zu-Akzent-Rampe (`AppTheme.colors.zones`, lib `ZoneMix`); Z5 = Akzentfarbe (siehe Design-System).
 
 Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder. Beim Ändern einer Grenze werden Nachbargrenzen automatisch kaskadiert, sodass die Reihenfolge stets streng aufsteigend (30–220 BPM) bleibt. "Was bedeuten die Zonen?" öffnet sich über ein Fragezeichen-Icon als Dialog in der Zonen-Vorschau (ersetzt den bisherigen Inline-Hinweis).
 
@@ -147,7 +147,7 @@ Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder
 | Settings | Alter, HRmax-Override, Ruhepuls, Körperdaten (Gewicht, Geschlecht), Zonenmodell, Labels, Ziel-Zone, Diagramm-Standard, HR-Quelle (nur Debug) |
 | Onboarding | 3-Step-Dialog (Willkommen, Alter, Ruhepuls) für Pflichtdaten der Zonenberechnung, jederzeit überspringbar |
 
-Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (`TutorialOverlay.kt`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, schneidet per `BlendMode.Clear` ein Loch um das Element, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Erklärkarte flippt zwischen oben/unten ausgerichtet (`BoxWithConstraints`), um das hervorgehobene Element nicht zu verdecken. Das Overlay ist **modal** (konsumiert alle Touches, nichts dahinter bedienbar); das Spotlight-Rect wird pro Schritt **eingefroren** statt live gelesen, off-screen-Ziele werden per `BringIntoViewRequester` automatisch in den sichtbaren Bereich gescrollt; das History-Tutorial startet erst bei mindestens einem vorhandenen Training und aktivem Verlauf-Tab.
+Tutorial-Overlay: Pro Screen (Scan, Live, History, Settings) ein Spotlight-Overlay (lib `TutorialSpotlight`), das beim ersten Besuch einzelne UI-Elemente nacheinander hervorhebt (dimmt Hintergrund, hebt das Element hervor, zeigt Erklärkarte mit Weiter/Überspringen). Gesehen-Status pro Screen in DataStore (`tutorial_seen_screens`, `SettingsRepository`). Platzierung, Modalität (nichts dahinter bedienbar), Rect-Handling und Scrollen off-screen-Ziele übernimmt die lib-Komponente. Das History-Tutorial startet erst bei mindestens einem vorhandenen Training und aktivem Verlauf-Tab.
 
 Session-Beenden: Sowohl der Stop-Button im Live-Screen als auch die System-Back-Geste öffnen bei aktiver Session **denselben** 3-Wege-Dialog `LeaveSessionDialog` (Speichern / Verwerfen / Weiter messen). Bei Speichern wird die Session beendet, der Foreground Service gestoppt und direkt zum Detail-Screen der Session navigiert (`popUpTo(Route.SCAN)`, `launchSingleTop`); Back-Geste vom Report landet auf Scan-Screen. Scan-Screen hat keinen eigenen Session-Zweig: bei aktiver Session navigiert `LaunchedEffect(activeSessionId)` in `MainActivity` immer zu Live; Stoppen/Verwerfen nur über Live.
 
@@ -157,7 +157,7 @@ Belastung (Session-RPE): Nach „Speichern“ im Live-Screen öffnet der Detail-
 
 Live-Screen Ziel-Zone/Chart: Klick auf **ZIEL-ZONE**-Stat öffnet Zonen-Picker (Z1–Z5), setzt `targetZone`. Ziel-Band + "ZIEL"-Badge im Chart bleiben immer sichtbar.
 
-History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via `DateRangePicker`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich wird TZ-korrekt behandelt: UTC-Mitternacht-Millis aus dem Picker werden in `HistoryViewModel.setDateRange` auf die geräte-lokale Zeitzone re-ankert. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Trainings (ohne HRV-Messungen); Dauern sind aktive Zeit (`activeMs`, Fallback Wanduhr bis zum Backfill), Ø-BPM ist mit der aktiven Zeit gewichtet.
+History-Filter: Label-Filter (Mehrfachauswahl) und Datumsbereich-Filter (Einzeltag oder Zeitraum via lib `DateRangeFilterDialog`) werden UND-verknüpft. Der Label-Filter ist hinter einem FilterChip-Button (FilterList-Icon) versteckt; Klick öffnet ein `ModalBottomSheet` mit der Chip-Auswahl. Der Datumsbereich besteht aus inklusiven lokalen `LocalDate`s (Ende inklusive), gefiltert über `inDateRange` (`HistoryFilters.kt`); keine UTC-Umrechnung. Die Summary-Card (Ø-BPM, Gesamtdauer, Sessionanzahl) reagiert auf beide Filter: Kennzahlen beziehen sich immer nur auf die aktuell gefilterten Trainings (ohne HRV-Messungen); Dauern sind aktive Zeit (`activeMs`, Fallback Wanduhr bis zum Backfill), Ø-BPM ist mit der aktiven Zeit gewichtet.
 
 ### Trainingslast (History → Statistik)
 
@@ -175,7 +175,7 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 
 - **Trigger:** gegated auf `SessionRepository.activeSessionId != null`. API 31+: `PictureInPictureParams.Builder().setAutoEnterEnabled(true)`, nahtlos beim Home-Swipe. API 26–30: kein Auto-Enter verfügbar, Fallback über `onUserLeaveHint()` — bei Gesten-Navigation nicht immer zuverlässig (Best Effort).
 - **Aspect Ratio:** 4:3.
-- **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
+- **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (Design-Token `headlineLarge`), "Zone N" in Akzentfarbe (`bodyMedium`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
 - **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr`, `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
@@ -208,13 +208,14 @@ PiP-Fenster und Notification teilen sich eine Einstellung ("Widget-Anzeige" im S
 - Zonenverteilung über Snapshot-Grenzen via `HrZoneCalculator.resolveZones(zoneSnapshotJson, maxHr, restingHr)`: Snapshot bevorzugt, Fallback auf Neuberechnung bei fehlendem oder ungültigem JSON — stellt Custom-Zonen-Konsistenz in der Statistik sicher.
 - **Lücken-Ausschluss:** Eine gemeinsame Regel für alle sample-basierten Kennzahlen (`SampleIntervals.MAX_GAP_MS`). Intervalle mit Δt > 5 000 ms zwischen zwei aufeinanderfolgenden Samples (BLE-Dropout) fließen nicht in die Zonenverweildauer ein (`HrZoneCalculator.aggregateTimeInZone`).
 - **Millisekunden-genaue Akkumulation:** `aggregateTimeInZone` summiert pro Zone Millisekunden und rundet erst am Ende auf Sekunden — kein Sub-Sekunden-Verlust pro Intervall bei kurzen/unregelmäßigen BLE-Samples.
-- **Lücken-Visualisierung:** Der Detail-Chart markiert erkannte Dropout-Lücken als rote gestrichelte Linie auf avg-BPM-Höhe (display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
+- **Lücken-Visualisierung:** Der Detail-Chart zeigt erkannte Dropout-Lücken als Linienbruch (NaN-Punkte, display-only). Lücken-Quelle: `HrZoneCalculator.detectGaps`.
 
-## Charts / Visualisierung (BpmZoneChart)
+## Charts / Visualisierung (Shared-Lib `LineChart`)
 
-BpmZoneChart auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
+Der Chart (Lib `LineChart`) auf Live- und Detail-Screen unterstützt zwei Anzeigemodi, umschaltbar via IconToggleButton:
 
-- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >300 Punkte werden via shared-android-lib `aggregateByChunks` downgesampled.
+- **Dynamic (Standard):** Y-Achse auto-scaled zu gemessenen Min/Max-BPM ±10% Padding; nur Zonen mit `timeInZone>0` werden gezeichnet. BPM-Serien >600 Punkte werden von der Lib per Chunk-Mittel dezimiert (D5: Spitzen werden geglättet; Max-BPM steht weiter im Statistik-Raster).
+- **Mittellinie (D4):** Detail zeigt eine volle Breite gestrichelte Akzentlinie `Ø n` (`ChartReferenceLine`); Lücken erscheinen als Linienbrüche (NaN).
 - **Static:** Legacy-Verhalten — Y-Range fest auf `[min-8, max+8]`, alle Zonen sichtbar.
 
 **Diagramm-Standard (Setting):** `UserSettings.chartDynamicScale: Boolean` (DataStore, Default `true`) steuert den initialen Modus auf **Live- und Detail-Screen**. Beide Screens halten einen lokalen `dynamicScaleOverride: Boolean?` (`null` = Setting gilt); der IconToggleButton setzt nur diesen Override, gültig für die aktuelle Screen-Instanz. Screens dürfen den Modus nicht hartkodiert initialisieren.
@@ -257,21 +258,18 @@ Immer: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_CONNECTED_DEVICE`, `POST_NOTIFI
 
 ## Design-System
 
-Quelle: `.claude/designs/` (Home, Live-Training, Verlauf, Einstellungen — HTML-Mockups).
+Quelle: Shared Lib (SP1–SP4) und Mockups `00-final-screens.html`. Alle Screens nutzen die **Night Drive**-Tokens der Lib (`MaterialTheme.colorScheme`, `AppTheme.colors/spacing`, `MaterialTheme.typography/shapes`, `AppTheme.pillShape`); keine eigenen Farben, dp/sp-Rohwerte oder Glows. Akzent (rot) nur für Primary-Buttons, selektierte Segmente/Tabs/Karten, Status-Punkt, Auto-Schalter, GOAL-Band und letzten Punkt/Herz.
 
-| Token         | Hex         | Verwendung              |
-| ------------- | ----------- | ----------------------- |
-| PrimaryPurple | `#B6A6F2`   | Primary, Buttons        |
-| SecondaryBlue | `#5BA9E6`   | Zone 1, Secondary       |
-| TertiaryPink  | `#F4738E`   | Zone 5, Tertiary        |
-| ErrorRed      | `#EF4444`   | Abbrechen, Error        |
-| BackgroundDark| `#1D1B20`   | App-Hintergrund         |
-| SurfaceDark   | `#252330`   | Cards, Surfaces         |
-| LightPurple   | `#CBBCFF`   | Zone 3, onSurface       |
+- **Strikter Checker:** `tools/check_design_tokens.py` der Lib läuft in der CI ohne `--warn`; Funde lassen den Build scheitern.
+- **Escape-Hatch:** `// design-ignore: <Grund>`, nur für das PiP-Fenster (D9: kleinere Schrift als `labelSmall`).
+- **Battery Service 0x180F / 0x2A19:** einmal Lesen nach erfolgreichem CCCD-Write pro (Re-)Connect (D12), danach Notifications aktivieren, sofern das Characteristic Notify unterstützt; Fehler beim Lesen/Aktivieren werden geloggt (Log.w). Wert `0xFF` = unbekannt (→ `null`), `101..254` wird auf 100 gekappt. Die Scan-Karte zeigt nur den Gerätenamen, wenn der Service fehlt (`DeviceStatusCard`, D3).
+- **History-Filter:** Datumsgrenzen sind inklusive lokale `LocalDate`s.
+- **Zahlen-/Datumsformat:** System-Locale (`Locale.getDefault()`, D6); Dauern über `formatElapsed` (Hms/Compact/Clock).
+- **Mockup-Abweichungen (D8):** (a) Statistik-Trend nur ACWR-Linie mit Band 0,8–1,3; (b) Form-Baseline = exp(Mitte von ln Normalbereich), „Baseline 44 ms · +9 %“; (c) History behält Label- und Datumsfilter, keine „Workouts/HRV“-Chips; (d) Ruhepuls-Delta = aktuell − `restingHr7`, ausgeblendet wenn einer fehlt; (e) Wochenlabel EN „W36“, DE „KW 36“; (f) Statistik behält 6-Wochen-Tabelle und TRIMP-Verlauf.
+- **Form „Messen“ (D10):** Button navigiert zum Scan (dort HRV-Dialog).
+- **Room v8 (D2):** `Session.zoneSeconds` cached Zonensekunden für die Mini-Zonenleiste in History; `null` → keine Leiste.
 
-Font: **Space Grotesk** (via `ui-text-google-fonts`). Theme, Farbschema und Typografie kommen aus der Shared Library (`AppTheme`, `AppTypography`).
-
-Statistik-Kachel-Werte (`StatItem`, `ui/shared/TrainingUi.kt`): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
+Statistik-Kachel-Werte (`StatItem`, Shared Lib): immer einzeilig (`maxLines = 1`), `autoSize = TextAutoSize.StepBased` schrumpft bis 14sp bei Überlänge, wächst aber nie über `headlineSmall` hinaus.
 
 ## Build & Release
 

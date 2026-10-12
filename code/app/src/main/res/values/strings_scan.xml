@@ -5,7 +5,6 @@
     <string name="scan_label_picker_add">New type</string>
     <string name="scan_history">History</string>
     <string name="scan_settings_cd">Settings</string>
-    <string name="scan_grant_permission">Grant Bluetooth permission</string>
     <string name="scan_starting">Starting…</string>
     <string name="scan_start_workout">Start workout</string>
     <string name="scan_measure_hrv">Measure HRV</string>
@@ -34,4 +33,12 @@
     <string name="scan_hrv_minutes">%1$d min</string>
     <string name="scan_hrv_option">%1$s · %2$s</string>
     <string name="scan_cancel">Cancel</string>
+    <string name="scan_status_title">%1$s · %2$s</string>
+    <string name="scan_battery">Battery %1$d%%</string>
+    <string name="scan_auto_connect">Auto</string>
+    <string name="scan_disconnect">Disconnect</string>
+    <string name="scan_permission_title">Bluetooth access needed</string>
+    <string name="scan_permission_message">HR Tracker needs Bluetooth permission to find and connect to your heart rate strap.</string>
+    <string name="scan_permission_grant">Allow</string>
+    <string name="scan_permission_settings">Open settings</string>
 </resources>

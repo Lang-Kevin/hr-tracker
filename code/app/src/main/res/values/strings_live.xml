@@ -4,7 +4,8 @@
     <string name="live_title_default">LIVE WORKOUT</string>
     <string name="live_bpm_label">BPM</string>
     <string name="live_heartbeat_cd">Heartbeat</string>
-    <string name="live_chip_live">LIVE</string>
+    <string name="live_tag_live">Live</string>
+    <string name="live_window">Window %1$s</string>
     <string name="live_scale_dynamic_cd">Dynamic scaling</string>
     <string name="live_scale_static_cd">Static scaling</string>
     <string name="live_stat_avg_bpm">AVG BPM</string>

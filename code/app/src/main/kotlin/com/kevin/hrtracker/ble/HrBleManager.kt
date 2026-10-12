@@ -41,6 +41,8 @@ class HrBleManager @Inject constructor(
         private const val TAG = "HRTracker"
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180D-0000-1000-8000-00805F9B34FB")
         val HR_MEASUREMENT_UUID: UUID = UUID.fromString("00002A37-0000-1000-8000-00805F9B34FB")
+        val BATTERY_SERVICE_UUID: UUID = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
+        val BATTERY_LEVEL_UUID: UUID = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
         // Backoff delays between reconnect attempts: 3s, 5s, 10s, 30s (cap).
         // For attempts beyond the list, use the last value (30s) indefinitely.
         private val RECONNECT_DELAYS_MS = listOf(3_000L, 5_000L, 10_000L, 30_000L)
@@ -57,6 +59,14 @@ class HrBleManager @Inject constructor(
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    private val _batteryLevel = MutableStateFlow<Int?>(null)
+    /** Last Battery Level read (0..100); null = unknown or no Battery Service (UI shows the name only). */
+    val batteryLevel: StateFlow<Int?> = _batteryLevel.asStateFlow()
+
+    private val _deviceAddress = MutableStateFlow<String?>(null)
+    /** Address of the device being connected or connected; null after an explicit disconnect. */
+    val deviceAddress: StateFlow<String?> = _deviceAddress.asStateFlow()
 
     private val _hrSamples = MutableSharedFlow<ParsedHr>(replay = 0, extraBufferCapacity = 256)
     val hrSamples: SharedFlow<ParsedHr> = _hrSamples.asSharedFlow()
@@ -131,6 +141,8 @@ class HrBleManager @Inject constructor(
             fakeDropoutUntilMs = 0L
             reconnectJob?.cancel()
             closeGatt()
+            _batteryLevel.value = null
+            _deviceAddress.value = BleConstants.FAKE_DEVICE_ADDRESS
             reconnectEnabled = true
             startConnectionLoop { fakeAttempt() }
         }
@@ -163,6 +175,8 @@ class HrBleManager @Inject constructor(
             reconnectJob?.cancel()
             closeGatt()
             lastDevice = device
+            _batteryLevel.value = null
+            _deviceAddress.value = device.address
             reconnectEnabled = true
             startConnectionLoop { device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE) }
         }
@@ -181,6 +195,8 @@ class HrBleManager @Inject constructor(
             reconnectJob = null
             closeGatt()
         }
+        _batteryLevel.value = null
+        _deviceAddress.value = null
         _connectionState.value = ConnectionState.Disconnected
         Log.d(TAG, "Disconnected (user-initiated)")
     }
@@ -278,6 +294,7 @@ class HrBleManager @Inject constructor(
                     Log.d(TAG, "GATT disconnected (status=$status)")
                     gatt.close()
                     bluetoothGatt = null
+                    _batteryLevel.value = null
                     if (reconnectEnabled) _connectionState.value = ConnectionState.Reconnecting
                 }
             }
@@ -328,13 +345,30 @@ class HrBleManager @Inject constructor(
         ) {
             if (gatt != bluetoothGatt) return
             if (descriptor.uuid != BleConstants.CCCD_UUID) return
+            if (descriptor.characteristic.uuid != HR_MEASUREMENT_UUID) return // battery CCCD: best effort
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "CCCD write confirmed — HR notifications active")
                 _connectionState.value = ConnectionState.Ready
+                requestBatteryLevel(gatt)
             } else {
                 Log.e(TAG, "CCCD write failed: status=$status")
                 _connectionState.value = ConnectionState.Error("HR-Benachrichtigungen konnten nicht aktiviert werden (CCCD-Fehler $status)")
                 gatt.disconnect()
+            }
+        }
+
+        // API 33+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray, status: Int
+        ) = handleBatteryRead(gatt, characteristic.uuid, value, status)
+
+        // API < 33
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int
+        ) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                handleBatteryRead(gatt, characteristic.uuid, characteristic.value, status)
             }
         }
 
@@ -352,6 +386,7 @@ class HrBleManager @Inject constructor(
                 return
             }
             if (characteristic.uuid == HR_MEASUREMENT_UUID) handleHrData(value)
+            else if (characteristic.uuid == BATTERY_LEVEL_UUID) _batteryLevel.value = BatteryLevelParser.parse(value)
         }
 
         // API < 33
@@ -367,9 +402,47 @@ class HrBleManager @Inject constructor(
                 }
                 if (characteristic.uuid == HR_MEASUREMENT_UUID) {
                     handleHrData(characteristic.value ?: return)
+                } else if (characteristic.uuid == BATTERY_LEVEL_UUID) {
+                    _batteryLevel.value = BatteryLevelParser.parse(characteristic.value)
                 }
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun requestBatteryLevel(gatt: BluetoothGatt) {
+        // Runs after the CCCD write completed, so no other GATT operation is in flight.
+        val ch = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return
+        if (!gatt.readCharacteristic(ch)) Log.w(TAG, "Battery level read not started")
+    }
+
+    private fun handleBatteryRead(gatt: BluetoothGatt, uuid: UUID, value: ByteArray?, status: Int) {
+        if (gatt != bluetoothGatt) return
+        if (gatt.device.address != lastDevice?.address) return
+        if (uuid != BATTERY_LEVEL_UUID) return
+        if (status != BluetoothGatt.GATT_SUCCESS) {
+            Log.w(TAG, "Battery level read failed: status=$status")
+            return
+        }
+        _batteryLevel.value = BatteryLevelParser.parse(value)
+        enableBatteryNotify(gatt) // read finished, so no GATT operation is in flight
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableBatteryNotify(gatt: BluetoothGatt) {
+        val ch = gatt.getService(BATTERY_SERVICE_UUID)?.getCharacteristic(BATTERY_LEVEL_UUID) ?: return
+        if (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY == 0) return
+        val cccd = ch.getDescriptor(BleConstants.CCCD_UUID) ?: return
+        gatt.setCharacteristicNotification(ch, true)
+        val started = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            gatt.writeDescriptor(cccd, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE) == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            cccd.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            @Suppress("DEPRECATION")
+            gatt.writeDescriptor(cccd)
+        }
+        if (!started) Log.w(TAG, "Battery level notify enable not started")
     }
 
     private fun handleHrData(value: ByteArray) {

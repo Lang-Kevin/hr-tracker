@@ -2,7 +2,6 @@
 <resources>
     <string name="detail_change_type_title">Change workout type</string>
     <string name="detail_save">Save</string>
-    <string name="detail_cancel">Cancel</string>
     <string name="detail_report_title">Report</string>
     <string name="detail_report_copied">Report copied</string>
     <string name="detail_report_copy">Copy</string>
@@ -16,7 +15,6 @@
     <string name="detail_scale_static">Static scale</string>
     <string name="detail_milestones">Milestones</string>
     <string name="detail_milestone_fallback">Milestone</string>
-    <string name="detail_edit">Edit</string>
     <string name="detail_stat_avg_bpm">AVG BPM</string>
     <string name="detail_stat_active">ACTIVE</string>
     <string name="detail_stat_max_bpm">MAX BPM</string>
@@ -25,12 +23,10 @@
     <string name="detail_stat_resting_hr">RESTING HR</string>
     <string name="detail_calories_body_data_missing">Calories: add weight and sex in Settings.</string>
     <string name="detail_calories_not_enough_data">Calories: not enough data in this session.</string>
-    <string name="detail_rpe_title">Effort (RPE 0–10)</string>
     <string name="detail_rpe_rate">Rate…</string>
     <string name="detail_rpe_value">%1$d · %2$s</string>
     <string name="detail_rpe_value_with_load">"%1$d · %2$s  ·  Load %3$d"</string>
     <string name="detail_rpe_rate_description">Rate effort</string>
-    <string name="detail_hrr_title">Heart rate recovery (1 min)</string>
     <string name="detail_hrr_rating_low">Low</string>
     <string name="detail_hrr_rating_normal">Normal</string>
     <string name="detail_hrr_rating_good">Good</string>
@@ -63,4 +59,7 @@
     <string name="detail_hrv_unreliable_too_short">Not reliable: too short (3 min needed after 1 min settling)</string>
     <string name="detail_hrv_unreliable_too_few_beats">Not reliable: too few clean beats (%1$d/%2$d)</string>
     <string name="detail_hrv_unreliable_too_many_artefacts">Not reliable: too many artefacts (%1$.1f%%, max %2$d%%)</string>
+    <string name="detail_chart_mean">Ø %1$d</string>
+    <string name="detail_header_meta">%1$s · %2$s</string>
+    <string name="detail_milestone_title">M%1$d · %2$s</string>
 </resources>
