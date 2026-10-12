@@ -1,9 +1,11 @@
 package com.kevin.hrtracker.ui.live
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -11,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -28,8 +29,6 @@ import com.kevin.shared.format.DurationStyle
 import com.kevin.shared.format.formatElapsed
 import java.util.Locale
 import com.kevin.shared.ui.chart.chartZoomPan
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,22 +42,15 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomInMap
 import androidx.compose.material.icons.filled.ZoomOutMap
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.draw.scale
 import com.kevin.shared.ui.chart.ChartToggleButton
-import com.kevin.shared.ui.StatItem
-import com.kevin.hrtracker.ui.formatDuration
-import com.kevin.shared.ui.theme.BackgroundDark
-import com.kevin.shared.ui.theme.OnPrimary
-import com.kevin.shared.ui.theme.PrimaryPurple
-import com.kevin.shared.ui.theme.TertiaryPink
 import com.kevin.shared.ui.theme.ZoneColors
+import com.kevin.shared.ui.theme.AppTheme
+import com.kevin.shared.ui.components.Metric
+import androidx.compose.ui.unit.dp
 import com.kevin.shared.ui.session.LeaveSessionDialog
 import com.kevin.shared.ui.zone.TargetZoneDialog
 import com.kevin.hrtracker.ui.tutorial.TutorialOverlay
-import kotlin.math.min
 import kotlin.math.roundToInt
 import com.kevin.hrtracker.ui.tutorial.TutorialStep
 import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
@@ -135,9 +127,6 @@ fun LiveScreen(
         )
     }
 
-    val mm = elapsed / 60
-    val ss = elapsed % 60
-
     val tutorialViewModel: TutorialViewModel = hiltViewModel()
     val tutorialAnchors = rememberTutorialAnchors()
     val tutorialSeen by tutorialViewModel.seenState("live").collectAsStateWithLifecycle()
@@ -146,8 +135,8 @@ fun LiveScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = AppTheme.spacing.lg, vertical = AppTheme.spacing.md)
     ) {
         // Header
         Row(
@@ -155,40 +144,46 @@ fun LiveScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = sessionLabel?.uppercase() ?: stringResource(R.string.live_title_default),
-                color = PrimaryPurple,
-                style = MaterialTheme.typography.titleLarge
-            )
+            Column {
+                Text(
+                    text = (sessionLabel ?: stringResource(R.string.live_title_default)).uppercase(Locale.getDefault()),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = formatElapsed(elapsed, DurationStyle.Hms),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = stringResource(R.string.live_bpm_label),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = stringResource(R.string.live_heartbeat_cd),
-                        tint = TertiaryPink,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(20.dp)
                             .scale(pulseScale.value)
                     )
                     Text(
                         text = currentBpm?.toString() ?: "—",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(AppTheme.spacing.sm))
 
         // Chart header with scale toggle
         Row(
@@ -201,25 +196,27 @@ fun LiveScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!window.isFollowing) {
-                    AssistChip(
-                        onClick = { window = window.copy(anchorEnd = null) },
-                        label = { Text(stringResource(R.string.live_chip_live)) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    )
+                    Surface(
+                        onClick = { window = LiveWindow(window.windowSeconds) },
+                        shape = AppTheme.pillShape,
+                        color = AppTheme.colors.accentSoft
+                    ) {
+                        Text(
+                            text = stringResource(R.string.live_tag_live),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.md, vertical = AppTheme.spacing.xs)
+                        )
+                    }
                 }
                 if (window.windowSeconds.roundToInt() != LiveWindow.DEFAULT) {
-                    val ws = min(window.windowSeconds.roundToInt(), bpmHistory.size.coerceAtLeast(1))
                     Text(
-                        text = "%d:%02d".format(ws / 60, ws % 60),
+                        text = stringResource(
+                            R.string.live_window,
+                            formatElapsed(window.windowSeconds.toLong(), DurationStyle.Clock)
+                        ),
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier.padding(start = 8.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = AppTheme.spacing.sm)
                     )
                 }
             }
@@ -281,7 +278,7 @@ fun LiveScreen(
             }
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.spacing.md))
 
         // Zeit in Zone
         TimeInZoneSection(
@@ -294,77 +291,83 @@ fun LiveScreen(
             )
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.spacing.md))
 
         // Stats Row
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatItem(stringResource(R.string.live_stat_avg_bpm), averageBpm?.toString() ?: "—", Modifier.weight(1f))
-            StatItem(
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+            Metric(stringResource(R.string.live_stat_avg_bpm), averageBpm?.toString() ?: "—", Modifier.weight(1f))
+            VerticalDivider(color = MaterialTheme.colorScheme.outline)
+            Metric(
                 stringResource(R.string.live_stat_target_zone),
                 stringResource(R.string.live_zone_value, targetZone),
-                Modifier.weight(1f).tutorialAnchor(tutorialAnchors, "live_zone_stat"),
-                valueColor = PrimaryPurple,
-                onClick = { showTargetZoneDialog = true }
+                Modifier
+                    .weight(1f)
+                    .tutorialAnchor(tutorialAnchors, "live_zone_stat")
+                    .clickable { showTargetZoneDialog = true }
             )
+            VerticalDivider(color = MaterialTheme.colorScheme.outline)
             if (hrvCountdown != null) {
                 val cr = hrvCountdown ?: 0
-                StatItem(
+                Metric(
                     stringResource(R.string.live_stat_remaining),
                     "%02d:%02d".format(cr / 60, cr % 60),
                     Modifier.weight(1f),
-                    valueColor = TertiaryPink
+                    valueColor = MaterialTheme.colorScheme.primary
                 )
             } else {
-                StatItem(stringResource(R.string.live_stat_total_time), formatDuration(elapsed), Modifier.weight(1f))
+                Metric(stringResource(R.string.live_stat_total_time), formatElapsed(elapsed, DurationStyle.Hms), Modifier.weight(1f))
             }
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(AppTheme.spacing.lg))
 
         // Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            FilledTonalIconButton(
+            val outline = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            IconButton(
                 onClick = { viewModel.togglePause() },
-                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_pause")
+                modifier = Modifier.size(48.dp).border(outline, CircleShape).tutorialAnchor(tutorialAnchors, "live_pause")
             ) {
                 Icon(
                     if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                     contentDescription = if (isPaused) stringResource(R.string.live_resume_cd) else stringResource(R.string.live_pause_cd)
                 )
             }
-            FilledTonalIconButton(
+            IconButton(
                 onClick = { viewModel.addMilestone() },
-                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_milestone")
+                modifier = Modifier.size(48.dp).border(outline, CircleShape).tutorialAnchor(tutorialAnchors, "live_milestone")
             ) {
                 Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.live_milestone_cd))
             }
-            FilledIconButton(
+            IconButton(
                 onClick = { showLeaveDialog = true },
-                modifier = Modifier.size(56.dp).tutorialAnchor(tutorialAnchors, "live_stop"),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
+                modifier = Modifier
+                    .size(48.dp)
+                    .border(BorderStroke(1.dp, MaterialTheme.colorScheme.primary), CircleShape)
+                    .tutorialAnchor(tutorialAnchors, "live_stop")
             ) {
-                Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.live_finish_cd))
+                Icon(Icons.Default.Stop, contentDescription = stringResource(R.string.live_finish_cd), tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
 
         if (connectionLost) {
             Surface(
-                color = MaterialTheme.colorScheme.errorContainer,
-                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.small,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp, vertical = 80.dp)
+                    .padding(horizontal = AppTheme.spacing.lg, vertical = AppTheme.spacing.xxl)
                     .fillMaxWidth()
             ) {
                 Text(
                     text = stringResource(R.string.live_connection_lost),
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = AppTheme.colors.warning,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = AppTheme.spacing.lg, vertical = AppTheme.spacing.md)
                 )
             }
         }
