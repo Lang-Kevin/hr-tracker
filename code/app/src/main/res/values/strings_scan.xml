@@ -5,7 +5,6 @@
     <string name="scan_label_picker_add">New type</string>
     <string name="scan_history">History</string>
     <string name="scan_settings_cd">Settings</string>
-    <string name="scan_grant_permission">Grant Bluetooth permission</string>
     <string name="scan_starting">Starting…</string>
     <string name="scan_start_workout">Start workout</string>
     <string name="scan_measure_hrv">Measure HRV</string>

@@ -5,7 +5,6 @@
     <string name="scan_label_picker_add">Neue Art</string>
     <string name="scan_history">Verlauf</string>
     <string name="scan_settings_cd">Einstellungen</string>
-    <string name="scan_grant_permission">Bluetooth-Berechtigung gewähren</string>
     <string name="scan_starting">Starte…</string>
     <string name="scan_start_workout">Training starten</string>
     <string name="scan_measure_hrv">HRV messen</string>

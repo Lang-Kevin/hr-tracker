@@ -2,7 +2,6 @@
 <resources>
     <string name="detail_change_type_title">Trainingstyp ändern</string>
     <string name="detail_save">Speichern</string>
-    <string name="detail_cancel">Abbrechen</string>
     <string name="detail_report_title">Report</string>
     <string name="detail_report_copied">Report kopiert</string>
     <string name="detail_report_copy">Kopieren</string>
@@ -16,7 +15,6 @@
     <string name="detail_scale_static">Statische Skalierung</string>
     <string name="detail_milestones">Meilensteine</string>
     <string name="detail_milestone_fallback">Meilenstein</string>
-    <string name="detail_edit">Bearbeiten</string>
     <string name="detail_stat_avg_bpm">BPM Ø</string>
     <string name="detail_stat_active">AKTIV</string>
     <string name="detail_stat_max_bpm">MAX BPM</string>
@@ -25,12 +23,10 @@
     <string name="detail_stat_resting_hr">RUHEPULS</string>
     <string name="detail_calories_body_data_missing">Kalorien: Gewicht und Geschlecht in den Einstellungen hinterlegen.</string>
     <string name="detail_calories_not_enough_data">Kalorien: Zu wenig Messdaten in dieser Session.</string>
-    <string name="detail_rpe_title">Belastung (RPE 0–10)</string>
     <string name="detail_rpe_rate">Bewerten…</string>
     <string name="detail_rpe_value">%1$d · %2$s</string>
     <string name="detail_rpe_value_with_load">"%1$d · %2$s  ·  Last %3$d"</string>
     <string name="detail_rpe_rate_description">Belastung bewerten</string>
-    <string name="detail_hrr_title">Herzfrequenz-Erholung (1 min)</string>
     <string name="detail_hrr_rating_low">Niedrig</string>
     <string name="detail_hrr_rating_normal">Normal</string>
     <string name="detail_hrr_rating_good">Gut</string>
