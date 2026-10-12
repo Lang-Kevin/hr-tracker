@@ -36,7 +36,7 @@ import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt
 
-private fun Double.fmt(decimals: Int) = String.format(Locale.getDefault(), "%.${decimals}f", this)
+private fun Double.fmt(decimals: Int, locale: Locale) = String.format(locale, "%.${decimals}f", this)
 
 @Composable
 private fun CardTitle(text: String) {
@@ -309,7 +309,7 @@ private fun HrrCard(trend: HistoryViewModel.HrrTrend, modifier: Modifier = Modif
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
             Metric(
                 "HRR60", // i18n-ignore: acronym, same in every language
-                trend.points.lastOrNull()?.let { formatDecimal(it.second.toDouble(), 0, Locale.getDefault()) } ?: NO_VALUE,
+                trend.points.lastOrNull()?.let { formatDecimal(it.second.toDouble(), 0, currentLocale()) } ?: NO_VALUE,
                 unit = "bpm" // i18n-ignore: unit, same in every language
             )
             Hint(stringResource(R.string.form_hrr_last))
@@ -320,6 +320,7 @@ private fun HrrCard(trend: HistoryViewModel.HrrTrend, modifier: Modifier = Modif
 @Composable
 private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
     Card(modifier = Modifier.fillMaxWidth()) {
+            val locale = currentLocale()
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
             CardTitle(stringResource(R.string.history_hrr_title))
             if (trend.points.isEmpty()) {
@@ -327,8 +328,8 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 return@Column
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), valueColor = MaterialTheme.colorScheme.primary)
-                Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f))
+                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1, locale)} bpm" } ?: "—", Modifier.weight(1f), valueColor = MaterialTheme.colorScheme.primary)
+                Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1, locale)} bpm" } ?: "—", Modifier.weight(1f))
             }
             val cur = trend.avgLast4Weeks
             val prev = trend.avgPrev4Weeks
@@ -336,8 +337,8 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 val delta = cur - prev
                 Hint(
                     when {
-                        delta >= 1.0 -> stringResource(R.string.history_hrr_faster, delta.fmt(1))
-                        delta <= -1.0 -> stringResource(R.string.history_hrr_slower, (-delta).fmt(1))
+                        delta >= 1.0 -> stringResource(R.string.history_hrr_faster, delta.fmt(1, locale))
+                        delta <= -1.0 -> stringResource(R.string.history_hrr_slower, (-delta).fmt(1, locale))
                         else -> stringResource(R.string.history_hrr_stable)
                     },
                     when {
