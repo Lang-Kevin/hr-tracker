@@ -66,6 +66,7 @@ import com.kevin.hrtracker.ui.tutorial.TutorialViewModel
 @Composable
 fun HistoryScreen(
     onSessionClick: (Long) -> Unit,
+    onMeasureHrv: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val sessions by viewModel.filteredSessions.collectAsStateWithLifecycle()
@@ -292,7 +293,8 @@ fun HistoryScreen(
                 currentRestingHr = currentRestingHr,
                 autoRestingHr = autoRestingHr,
                 onAutoRestingHrChange = { viewModel.setAutoRestingHr(it) },
-                onApplyRestingHr = { viewModel.applyRestingHrFromHrv() }
+                onApplyRestingHr = { viewModel.applyRestingHrFromHrv() },
+                onMeasureHrv = onMeasureHrv
             )
             3 -> {
                 val trashItems = remember(trashSessions) {

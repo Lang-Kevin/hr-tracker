@@ -28,6 +28,7 @@ import com.kevin.shared.ui.chart.ChartDefaults
 import com.kevin.shared.ui.chart.TrendChart
 import com.kevin.shared.ui.chart.TrendSeries
 import com.kevin.shared.ui.components.Metric
+import com.kevin.shared.ui.components.SecondaryButton
 import com.kevin.shared.ui.components.SegmentedControl
 import com.kevin.shared.ui.theme.AppTheme
 import java.util.Locale
@@ -166,7 +167,8 @@ fun FormTab(
     currentRestingHr: Int?,
     autoRestingHr: Boolean,
     onAutoRestingHrChange: (Boolean) -> Unit,
-    onApplyRestingHr: () -> Unit
+    onApplyRestingHr: () -> Unit,
+    onMeasureHrv: () -> Unit
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
         item { ReadinessCard(readiness) }
@@ -177,6 +179,7 @@ fun FormTab(
             }
         }
         item { HrrTrendCard(hrrTrend) }
+        item { SecondaryButton(stringResource(R.string.scan_measure_hrv), onMeasureHrv, Modifier.fillMaxWidth()) }
         item { Spacer(Modifier.height(AppTheme.spacing.lg)) }
     }
 }

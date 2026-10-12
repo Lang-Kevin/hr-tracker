@@ -220,7 +220,8 @@ class MainActivity : ComponentActivity() {
 
             composable(Route.HISTORY) {
                 HistoryScreen(
-                    onSessionClick = { id -> navController.navigate(Route.detail(id)) }
+                    onSessionClick = { id -> navController.navigate(Route.detail(id)) },
+                    onMeasureHrv = { navController.navigate(Route.SCAN) { popUpTo(Route.SCAN); launchSingleTop = true } }
                 )
             }
 
