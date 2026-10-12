@@ -23,13 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kevin.hrtracker.R
 import com.kevin.hrtracker.data.entity.Session
 import com.kevin.hrtracker.domain.LoadMetric
+import com.kevin.shared.format.DateStyle
+import com.kevin.shared.format.formatDateRange
+import com.kevin.shared.ui.dialog.DateRangeFilterDialog
 import com.kevin.shared.ui.theme.PrimaryPurple
 import com.kevin.shared.ui.selection.SelectionHeader
 import com.kevin.shared.ui.session.CategoryFilterRow
@@ -86,11 +87,13 @@ fun HistoryScreen(
 
     if (showDateRangePicker) {
         DateRangeFilterDialog(
-            onDismiss = { showDateRangePicker = false },
             onConfirm = { start, end ->
                 viewModel.setDateRange(start, end)
                 showDateRangePicker = false
-            }
+            },
+            onDismiss = { showDateRangePicker = false },
+            initialStart = dateRange?.first,
+            initialEnd = dateRange?.second
         )
     }
 
@@ -211,7 +214,7 @@ fun HistoryScreen(
                             InputChip(
                                 selected = true,
                                 onClick = { showDateRangePicker = true },
-                                label = { Text("${start.toShortDateString()} – ${end.toShortDateString()}") },
+                                label = { Text(formatDateRange(start, end, DateStyle.ShortDate, Locale.getDefault())) },
                                 trailingIcon = {
                                     IconButton(
                                         onClick = { viewModel.clearDateRange() }
@@ -333,40 +336,6 @@ fun HistoryScreen(
             anchors = tutorialAnchors,
             visible = tutorialSeen == false && sessions.isNotEmpty() && selectedTab == 0,
             onFinish = { tutorialViewModel.markSeen("history") }
-        )
-    }
-}
-
-private fun Long.toShortDateString(): String =
-    Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("dd.MM.yy"))
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DateRangeFilterDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (start: Long, end: Long) -> Unit
-) {
-    val state = rememberDateRangePickerState()
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val start = state.selectedStartDateMillis
-                    val end = state.selectedEndDateMillis
-                    if (start != null && end != null) onConfirm(start, end)
-                },
-                enabled = state.selectedStartDateMillis != null && state.selectedEndDateMillis != null
-            ) { Text(stringResource(R.string.history_date_picker_apply)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.history_date_picker_cancel)) }
-        }
-    ) {
-        DateRangePicker(
-            state = state,
-            title = { Text(stringResource(R.string.history_date_picker_title), modifier = Modifier.padding(16.dp)) }
         )
     }
 }

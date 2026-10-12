@@ -30,7 +30,6 @@ import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -53,23 +52,19 @@ class HistoryViewModel @Inject constructor(
         sessionList.map { it.label }.distinct().sorted()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    private val _dateRange = MutableStateFlow<Pair<Long, Long>?>(null)
-    val dateRange: StateFlow<Pair<Long, Long>?> = _dateRange.asStateFlow()
+    private val _dateRange = MutableStateFlow<Pair<LocalDate, LocalDate>?>(null)
+    val dateRange: StateFlow<Pair<LocalDate, LocalDate>?> = _dateRange.asStateFlow()
 
     val filteredSessions: StateFlow<List<Session>> = combine(
         sessions,
         _labelFilter,
         _dateRange
     ) { all, filter, range ->
-        var result = filter.apply(all) { it.label }
-        if (range != null) {
-            val (start, end) = range
-            val zone = ZoneId.systemDefault()
-            val endExclusive = Instant.ofEpochMilli(end).atZone(zone).toLocalDate()
-                .plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            result = result.filter { it.startedAt in start until endExclusive }
-        }
-        result
+        filter.apply(all) { it.label }.filter { inDateRange(it.startedAt, range, ZoneId.systemDefault()) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val groupedSessions: StateFlow<List<WeekGroup<Session>>> = filteredSessions.map {
+        groupByWeek(it, Session::startedAt, LocalDate.now(), ZoneId.systemDefault())
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val trashSessions: StateFlow<List<Session>> = sessionRepository.getTrashFlow()
@@ -214,19 +209,8 @@ class HistoryViewModel @Inject constructor(
         _labelFilter.update { it.toggle(label) }
     }
 
-    fun setDateRange(start: Long?, end: Long?) {
-        if (start == null || end == null) {
-            _dateRange.value = null
-            return
-        }
-        // DateRangePicker liefert UTC-Mitternacht-Millis; auf geräte-lokale Zeitzone re-ankern,
-        // damit das Filterfenster mit der lokalen Tages-Bucketing-Logik übereinstimmt.
-        val zone = ZoneId.systemDefault()
-        val localStart = Instant.ofEpochMilli(start).atZone(ZoneOffset.UTC).toLocalDate()
-            .atStartOfDay(zone).toInstant().toEpochMilli()
-        val localEnd = Instant.ofEpochMilli(end).atZone(ZoneOffset.UTC).toLocalDate()
-            .atStartOfDay(zone).toInstant().toEpochMilli()
-        _dateRange.value = localStart to localEnd
+    fun setDateRange(start: LocalDate, end: LocalDate) {
+        _dateRange.value = start to end
     }
 
     fun clearDateRange() {
