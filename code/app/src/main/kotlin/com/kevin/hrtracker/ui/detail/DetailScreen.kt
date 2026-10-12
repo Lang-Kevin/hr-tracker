@@ -66,6 +66,8 @@ import com.kevin.shared.ui.components.SecondaryButton
 import com.kevin.shared.ui.components.StatCell
 import com.kevin.shared.ui.components.StatGrid
 import com.kevin.shared.ui.components.TextActionButton
+import com.kevin.shared.ui.dialog.AppDialog
+import com.kevin.shared.ui.dialog.TextInputDialog
 import com.kevin.shared.ui.theme.AppTheme
 
 @Composable
@@ -153,64 +155,55 @@ fun DetailScreen(
     }
 
     if (showNoteDialog) {
-        EditNoteDialog(
-            current = session?.note ?: "",
-            onSave = { note ->
-                viewModel.updateNote(note)
+        TextInputDialog(
+            title = stringResource(R.string.detail_note_title),
+            initialValue = session?.note ?: "",
+            onConfirm = {
+                viewModel.updateNote(it)
                 showNoteDialog = false
             },
-            onDismiss = { showNoteDialog = false }
+            onDismiss = { showNoteDialog = false },
+            placeholder = stringResource(R.string.detail_note_placeholder),
+            singleLine = false,
+            allowEmpty = true,
         )
     }
 
     if (reportJson != null) {
         val clipboard = LocalClipboardManager.current
         val reportCopiedText = stringResource(R.string.detail_report_copied)
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { reportJson = null },
-            title = { Text(stringResource(R.string.detail_report_title)) },
-            text = {
-                SelectionContainer {
-                    Text(reportJson!!)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    clipboard.setText(AnnotatedString(reportJson!!))
-                    Toast.makeText(context, reportCopiedText, Toast.LENGTH_SHORT).show()
-                }) { Text(stringResource(R.string.detail_report_copy)) }
-            },
-            confirmButton = {
-                TextButton(onClick = { reportJson = null }) { Text(stringResource(R.string.detail_report_close)) }
+            title = stringResource(R.string.detail_report_title),
+            content = { SelectionContainer { Text(reportJson!!, style = MaterialTheme.typography.bodySmall) } },
+            actions = {
+                PrimaryButton(
+                    text = stringResource(R.string.detail_report_close),
+                    onClick = { reportJson = null },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                SecondaryButton(
+                    text = stringResource(R.string.detail_report_copy),
+                    onClick = {
+                        clipboard.setText(AnnotatedString(reportJson!!))
+                        Toast.makeText(context, reportCopiedText, Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         )
     }
 
     if (editingMilestoneId != null) {
-        AlertDialog(
-            onDismissRequest = { editingMilestoneId = null },
-            title = { Text(stringResource(R.string.detail_milestone_name_title)) },
-            text = {
-                OutlinedTextField(
-                    value = editingMilestoneLabel,
-                    onValueChange = { editingMilestoneLabel = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.detail_milestone_name_label)) },
-                    singleLine = true
-                )
+        TextInputDialog(
+            title = stringResource(R.string.detail_milestone_name_title),
+            initialValue = editingMilestoneLabel,
+            onConfirm = {
+                viewModel.updateMilestoneLabel(editingMilestoneId!!, it)
+                editingMilestoneId = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.updateMilestoneLabel(editingMilestoneId!!, editingMilestoneLabel)
-                        editingMilestoneId = null
-                    },
-                    enabled = editingMilestoneLabel.trim().isNotEmpty()
-                ) { Text(stringResource(R.string.detail_save)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingMilestoneId = null }) { Text(stringResource(R.string.detail_cancel)) }
-            }
+            onDismiss = { editingMilestoneId = null },
+            label = stringResource(R.string.detail_milestone_name_label),
         )
     }
 
@@ -575,31 +568,6 @@ private fun DetailCard(modifier: Modifier, content: @Composable ColumnScope.() -
     }
 }
 
-@Composable
-private fun EditNoteDialog(
-    current: String,
-    onSave: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var text by remember { mutableStateOf(current) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.detail_note_title)) },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(stringResource(R.string.detail_note_placeholder)) },
-                maxLines = 4
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(text.trim()) }) { Text(stringResource(R.string.detail_save)) }
-        }
-    )
-}
-
 /** Borg CR-10 Kurzlabels. */
 @StringRes
 private fun rpeLabelRes(rpe: Int): Int = when (rpe) {
@@ -613,6 +581,7 @@ private fun rpeLabelRes(rpe: Int): Int = when (rpe) {
     else -> R.string.detail_rpe_label_10
 }
 
+// Kept hr-side: SingleChoiceDialog cannot clear the RPE ("remove").
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RpeDialog(
@@ -621,37 +590,48 @@ private fun RpeDialog(
     onDismiss: () -> Unit
 ) {
     var selected by remember { mutableStateOf(current) }
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.detail_rpe_dialog_title)) },
-        text = {
-            Column {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    (0..10).forEach { value ->
-                        FilterChip(
-                            selected = selected == value,
-                            onClick = { selected = value },
-                            label = { Text("$value") }
-                        )
-                    }
+        title = stringResource(R.string.detail_rpe_dialog_title),
+        content = {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)
+            ) {
+                (0..10).forEach { value ->
+                    FilterChip(
+                        selected = selected == value,
+                        onClick = { selected = value },
+                        label = { Text("$value") }
+                    )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    stringResource(selected?.let { rpeLabelRes(it) } ?: R.string.detail_rpe_dialog_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
+            Text(
+                stringResource(selected?.let { rpeLabelRes(it) } ?: R.string.detail_rpe_dialog_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         },
-        confirmButton = {
-            TextButton(onClick = { onSave(selected) }, enabled = selected != null) { Text(stringResource(R.string.detail_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = if (current != null) ({ onSave(null) }) else onDismiss) {
-                Text(stringResource(if (current != null) R.string.detail_rpe_remove else R.string.detail_rpe_later))
+        actions = {
+            PrimaryButton(
+                text = stringResource(R.string.detail_save),
+                onClick = { onSave(selected) },
+                enabled = selected != null,
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (current != null) {
+                SecondaryButton(
+                    text = stringResource(R.string.detail_rpe_remove),
+                    onClick = { onSave(null) },
+                    destructive = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                TextActionButton(
+                    text = stringResource(R.string.detail_rpe_later),
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     )
