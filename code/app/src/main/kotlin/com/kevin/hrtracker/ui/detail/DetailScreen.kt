@@ -31,7 +31,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.platform.LocalDensity
+import java.util.Locale
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,15 +40,20 @@ import kotlinx.coroutines.launch
 import com.kevin.hrtracker.R
 import com.kevin.hrtracker.data.entity.Milestone
 import com.kevin.hrtracker.data.entity.isHrvMeasurement
-import com.kevin.hrtracker.ui.formatDuration
-import com.kevin.hrtracker.ui.shared.BpmZoneChart
-import com.kevin.hrtracker.ui.shared.ChartViewport
-import com.kevin.hrtracker.ui.shared.chartZoomPan
+import com.kevin.shared.format.DurationStyle
+import com.kevin.shared.format.formatElapsed
+import com.kevin.shared.ui.chart.ChartMarker
+import com.kevin.shared.ui.chart.ChartReferenceLine
+import com.kevin.shared.ui.chart.ChartViewport
+import com.kevin.shared.ui.chart.ChartZone
+import com.kevin.shared.ui.chart.LineChart
+import com.kevin.shared.ui.chart.TimeInZoneSection
+import com.kevin.shared.ui.chart.chartZoomPan
+import com.kevin.shared.ui.chart.plotFraction
 import com.kevin.hrtracker.domain.HrvQuality
 import com.kevin.hrtracker.domain.HrvUnreliableReason
 import com.kevin.shared.ui.StatItem
 import com.kevin.shared.ui.chart.ChartToggleButton
-import com.kevin.hrtracker.ui.shared.ZeitInZoneSection
 import com.kevin.shared.ui.theme.BackgroundDark
 import com.kevin.shared.ui.theme.OnPrimary
 import com.kevin.shared.ui.theme.PrimaryPurple
@@ -81,7 +87,7 @@ fun DetailScreen(
     val gapFractions by viewModel.gapFractions.collectAsStateWithLifecycle()
     val activeSeconds by viewModel.activeSeconds.collectAsStateWithLifecycle()
     val srpeLoad by viewModel.srpeLoad.collectAsStateWithLifecycle()
-    val sampleFractions by viewModel.sampleFractions.collectAsStateWithLifecycle()
+    val chartSeries by viewModel.chartSeries.collectAsStateWithLifecycle()
     val chartMilestones by viewModel.chartMilestones.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
@@ -96,8 +102,7 @@ fun DetailScreen(
             restore = { ChartViewport(it[0], it[1]) }
         )
     ) { mutableStateOf(ChartViewport.Full) }
-    var chartWidthPx by remember { mutableStateOf(0) }
-    val chartLeftPadPx = with(LocalDensity.current) { 54.dp.toPx() }
+    var chartWidthPx by remember { mutableFloatStateOf(0f) }
     var editingMilestoneId by remember { mutableStateOf<Long?>(null) }
     var editingMilestoneLabel by remember { mutableStateOf("") }
     var showRpeDialog by remember { mutableStateOf(false) }
@@ -122,9 +127,6 @@ fun DetailScreen(
             onDismiss = { showRpeDialog = false }
         )
     }
-
-    // ponytail: compute reachedZones from existing timeInZone map (zones with duration > 0)
-    val reachedZones = timeInZone.filter { it.value > 0 }.keys
 
     if (showEditDialog) {
         LabelPickerDialog(
@@ -269,7 +271,7 @@ fun DetailScreen(
                         val fromSec = (viewport.start * totalSessionSeconds).toLong()
                         val toSec = (viewport.end * totalSessionSeconds).toLong()
                         Text(
-                            text = "${formatChartTime(fromSec)} – ${formatChartTime(toSec)}",
+                            text = "${formatElapsed(fromSec, DurationStyle.Compact)} – ${formatElapsed(toSec, DurationStyle.Compact)}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -296,48 +298,53 @@ fun DetailScreen(
 
         // BPM Zone Chart
         // Mindest-Sichtbreite: 20 s (Fallback 5 %)
-        val minSpan = if (totalSessionSeconds != null && totalSessionSeconds > 20) 20f / totalSessionSeconds else 0.05f
-        val drawWidthPx = (chartWidthPx - chartLeftPadPx).coerceAtLeast(1f)
+        val totalSeconds = totalSessionSeconds?.toFloat() ?: 0f
+        val minSpan = if (totalSeconds > 20f) 20f / totalSeconds else 0.05f
         var scrubX by remember { mutableStateOf<Float?>(null) }
         val haptic = LocalHapticFeedback.current
-        BpmZoneChart(
-            bpmHistory = bpmHistory,
-            currentBpm = bpmHistory.lastOrNull(),
-            zoneBounds = zoneBounds,
-            targetZone = dominantZone,
+        val locale = Locale.getDefault()
+        val zoneLabelFmt = stringResource(R.string.live_chart_zone_label)
+        val meanFmt = stringResource(R.string.detail_chart_mean)
+        val scrubFmt = stringResource(R.string.live_chart_scrub_label)
+        val milestoneFmt = stringResource(R.string.live_chart_milestone_label)
+        LineChart(
+            series = chartSeries,
+            window = viewport.toWindow(totalSeconds),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp)
-                .onSizeChanged { chartWidthPx = it.width }
+                .onSizeChanged { chartWidthPx = it.width.toFloat() }
                 .chartZoomPan(
                     panEnabled = { !viewport.isFull },
-                    onZoom = { factor, anchorX ->
-                        val anchor = ((anchorX - chartLeftPadPx) / drawWidthPx).coerceIn(0f, 1f)
-                        viewport = viewport.zoomBy(factor, anchor, minSpan)
+                    onZoom = { factor, x ->
+                        viewport = viewport.zoomBy(factor, plotFraction(x, 0f, chartWidthPx), minSpan)
                     },
-                    onPan = { dxPx -> viewport = viewport.panBy(dxPx / drawWidthPx) },
+                    onPan = { dxPx -> viewport = viewport.panBy(dxPx / chartWidthPx.coerceAtLeast(1f)) },
                     onDoubleTap = { x ->
-                        viewport = if (!viewport.isFull) {
-                            ChartViewport.Full
-                        } else {
-                            val anchor = ((x - chartLeftPadPx) / drawWidthPx).coerceIn(0f, 1f)
-                            viewport.zoomBy(3f, anchor, minSpan)
-                        }
+                        viewport = if (!viewport.isFull) ChartViewport.Full
+                        else viewport.zoomBy(3f, plotFraction(x, 0f, chartWidthPx), minSpan)
                     },
                     onScrub = { x ->
                         if (scrubX == null && x != null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         scrubX = x
                     }
                 ),
+            zones = zoneBounds.map { z ->
+                ChartZone(z.zone, z.lo.toFloat(), z.hi.toFloat(), String.format(locale, zoneLabelFmt, z.zone, z.lo))
+            },
+            targetZone = dominantZone,
+            goalLabel = stringResource(R.string.live_chart_target_badge),
             dynamicScale = dynamicScale,
-            reachedZones = reachedZones,
-            detailMilestones = chartMilestones,
-            totalSessionSeconds = totalSessionSeconds,
-            gaps = gapFractions,
-            meanBpm = stats?.avgBpm,
-            viewport = viewport,
-            scrubX = { scrubX },
-            sampleFractions = sampleFractions
+            referenceLine = stats?.let {
+                ChartReferenceLine(it.avgBpm.toFloat(), String.format(locale, meanFmt, it.avgBpm))
+            },
+            markers = chartMilestones.mapIndexed { i, m ->
+                ChartMarker(m.atSeconds.toFloat(), String.format(locale, milestoneFmt, i + 1))
+            },
+            scrubFraction = scrubX?.let { plotFraction(it, 0f, chartWidthPx) },
+            scrubLabel = { x, y ->
+                String.format(locale, scrubFmt, y.roundToInt(), formatElapsed(x.toLong(), DurationStyle.Compact))
+            }
         )
 
         Spacer(Modifier.height(12.dp))
@@ -357,7 +364,7 @@ fun DetailScreen(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     milestones.forEach { milestone ->
-                        val timeStr = formatDuration(milestone.atSeconds)
+                        val timeStr = formatElapsed(milestone.atSeconds, DurationStyle.Hms)
                         OutlinedCard(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -403,10 +410,14 @@ fun DetailScreen(
         Spacer(Modifier.height(12.dp))
 
         // Zeit in Zone
-        ZeitInZoneSection(
-            timeInZone = timeInZone,
-            percentInTargetZone = percentInTargetZone,
-            targetZone = dominantZone
+        TimeInZoneSection(
+            durations = (1..5).map { timeInZone[it] ?: 0L },
+            durationText = { formatElapsed(it, DurationStyle.Clock) }, // timeInZone is in seconds
+            title = stringResource(R.string.common_time_in_zone_title),
+            targetZone = dominantZone,
+            targetSummary = stringResource(
+                R.string.common_time_in_zone_percent_in_target, ((percentInTargetZone ?: 0f) * 100).toInt()
+            )
         )
 
         Spacer(Modifier.height(12.dp))
@@ -701,11 +712,6 @@ private fun EditNoteDialog(
         }
     )
 }
-
-/** Zeitangabe für den Diagramm-Ausschnitt: mm:ss, ab einer Stunde h:mm:ss. */
-private fun formatChartTime(totalSeconds: Long): String =
-    if (totalSeconds >= 3600) formatDuration(totalSeconds)
-    else "%02d:%02d".format(totalSeconds / 60, totalSeconds % 60)
 
 /** Borg CR-10 Kurzlabels. */
 @StringRes
