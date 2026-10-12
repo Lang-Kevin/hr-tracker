@@ -110,4 +110,11 @@
     <string name="history_hrr_slower">▼ %1$s bpm langsamere Erholung als in den 4 Wochen davor.</string>
     <string name="history_hrr_stable">Erholung stabil gegenüber den 4 Wochen davor.</string>
     <string name="history_hrr_chart_hint">Je Training ein Punkt (letzte 8 Wochen), Linie: Ø letzte 4 Wochen. Höher = schnellere Erholung.</string>
+
+    <!-- Form tab: hero / compact cards -->
+    <string name="form_ready">Bereit</string>
+    <string name="form_recover">Erholen</string>
+    <string name="form_baseline">Basis %1$s · %2$s</string>
+    <string name="form_resting_delta">%1$s ggü. 7 Tagen</string>
+    <string name="form_hrr_last">Letztes Training</string>
 </resources>

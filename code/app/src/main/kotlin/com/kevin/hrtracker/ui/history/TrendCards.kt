@@ -23,15 +23,13 @@ import com.kevin.hrtracker.domain.ReadinessSummary
 import com.kevin.hrtracker.domain.TrainingLoad
 import com.kevin.shared.format.NO_VALUE
 import com.kevin.shared.format.formatDecimal
+import com.kevin.shared.format.formatMeasure
 import com.kevin.shared.ui.chart.ChartDefaults
 import com.kevin.shared.ui.chart.TrendChart
 import com.kevin.shared.ui.chart.TrendSeries
 import com.kevin.shared.ui.components.Metric
 import com.kevin.shared.ui.components.SegmentedControl
 import com.kevin.shared.ui.theme.AppTheme
-import com.kevin.shared.ui.theme.ConnectedGreen
-import com.kevin.shared.ui.theme.PrimaryPurple
-import com.kevin.shared.ui.theme.SecondaryBlue
 import java.util.Locale
 import kotlin.math.exp
 import kotlin.math.roundToInt
@@ -172,7 +170,12 @@ fun FormTab(
 ) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
         item { ReadinessCard(readiness) }
-        item { RestingHrCard(readiness, currentRestingHr, autoRestingHr, onAutoRestingHrChange, onApplyRestingHr) }
+        item {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.md)) {
+                RestingHrCard(readiness, currentRestingHr, autoRestingHr, onAutoRestingHrChange, onApplyRestingHr, Modifier.weight(1f).fillMaxHeight())
+                HrrCard(hrrTrend, Modifier.weight(1f).fillMaxHeight())
+            }
+        }
         item { HrrTrendCard(hrrTrend) }
         item { Spacer(Modifier.height(AppTheme.spacing.lg)) }
     }
@@ -180,31 +183,62 @@ fun FormTab(
 
 @Composable
 private fun ReadinessCard(readiness: ReadinessSummary?) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
-            CardTitle(stringResource(R.string.history_readiness_title))
+            val locale = Locale.getDefault()
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.history_readiness_title).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                val ready = readiness?.status?.let { it != ReadinessStatus.BELOW }
+                if (ready != null) {
+                    Surface(
+                        shape = AppTheme.pillShape,
+                        color = if (ready) AppTheme.colors.accentSoft else Color.Transparent,
+                        border = if (ready) null else BorderStroke(1.dp, AppTheme.colors.warning)
+                    ) {
+                        Text(
+                            stringResource(if (ready) R.string.form_ready else R.string.form_recover),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (ready) MaterialTheme.colorScheme.primary else AppTheme.colors.warning,
+                            modifier = Modifier.padding(horizontal = AppTheme.spacing.sm, vertical = AppTheme.spacing.xs)
+                        )
+                    }
+                }
+            }
             if (readiness == null) {
                 Hint(stringResource(R.string.history_readiness_empty))
                 return@Column
             }
-            val (statusText, statusColor) = when (readiness.status) {
-                ReadinessStatus.BELOW -> stringResource(R.string.history_readiness_below) to AppTheme.colors.warning
-                ReadinessStatus.NORMAL -> stringResource(R.string.history_readiness_normal) to ConnectedGreen
-                ReadinessStatus.ABOVE -> stringResource(R.string.history_readiness_above) to SecondaryBlue
-                null -> when (readiness.block) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+                Text(
+                    readiness.rmssd7?.let { formatDecimal(it.toDouble(), 0, locale) } ?: NO_VALUE,
+                    style = MaterialTheme.typography.displayMedium
+                )
+                Text(
+                    "ms RMSSD", // i18n-ignore: unit/acronym, same in every language
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = AppTheme.spacing.sm)
+                )
+            }
+            baselineDelta(readiness.rmssd7?.toDouble(), readiness.normalLow, readiness.normalHigh)?.let { (b, d) ->
+                Hint(stringResource(R.string.form_baseline, formatMeasure(b, "ms", 0, locale), signedPercent(d, locale)))
+            }
+            if (readiness.status == null) {
+                val msg = when (readiness.block) {
                     ReadinessBlock.TOO_FEW_RECENT -> stringResource(
                         R.string.history_readiness_too_few_recent, readiness.measurementsLast7, Readiness.MIN_ROLLING
                     )
                     else -> stringResource(
                         R.string.history_readiness_baseline_building, readiness.baselineCount, Readiness.MIN_BASELINE
                     )
-                } to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                Hint(msg)
             }
-            Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_readiness_rmssd_7d), readiness.rmssd7?.let { "$it ms" } ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
-                Metric(stringResource(R.string.history_readiness_readings_7d), readiness.measurementsLast7.toString(), Modifier.weight(1f))
-            }
-            Text(statusText, style = MaterialTheme.typography.bodyMedium, color = statusColor)
             when (readiness.posture) {
                 HrvPosture.LYING -> Hint(stringResource(R.string.history_readiness_posture_lying))
                 HrvPosture.SITTING -> Hint(stringResource(R.string.history_readiness_posture_sitting))
@@ -235,15 +269,19 @@ private fun RestingHrCard(
     currentRestingHr: Int?,
     autoRestingHr: Boolean,
     onAutoRestingHrChange: (Boolean) -> Unit,
-    onApply: () -> Unit
+    onApply: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = modifier) {
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
-            CardTitle(stringResource(R.string.history_resting_hr_title))
             val measured = readiness?.restingHr7
-            Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_resting_hr_measured), measured?.let { "$it bpm" } ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
-                Metric(stringResource(R.string.history_resting_hr_configured), currentRestingHr?.let { "$it bpm" } ?: "—", Modifier.weight(1f))
+            Metric(
+                stringResource(R.string.history_resting_hr_title),
+                currentRestingHr?.toString() ?: NO_VALUE,
+                unit = "bpm" // i18n-ignore: unit, same in every language
+            )
+            restingDelta(currentRestingHr, measured?.toDouble())?.let {
+                Hint(stringResource(R.string.form_resting_delta, signedInt(it)))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -262,6 +300,20 @@ private fun RestingHrCard(
 }
 
 @Composable
+private fun HrrCard(trend: HistoryViewModel.HrrTrend, modifier: Modifier = Modifier) {
+    Card(modifier = modifier) {
+        Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
+            Metric(
+                "HRR60", // i18n-ignore: acronym, same in every language
+                trend.points.lastOrNull()?.let { formatDecimal(it.second.toDouble(), 0, Locale.getDefault()) } ?: NO_VALUE,
+                unit = "bpm" // i18n-ignore: unit, same in every language
+            )
+            Hint(stringResource(R.string.form_hrr_last))
+        }
+    }
+}
+
+@Composable
 private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(AppTheme.spacing.md), verticalArrangement = Arrangement.spacedBy(AppTheme.spacing.sm)) {
@@ -271,7 +323,7 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                 return@Column
             }
             Row(Modifier.fillMaxWidth()) {
-                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), valueColor = PrimaryPurple)
+                Metric(stringResource(R.string.history_hrr_avg_last_4w), trend.avgLast4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f), valueColor = MaterialTheme.colorScheme.primary)
                 Metric(stringResource(R.string.history_hrr_avg_prev_4w), trend.avgPrev4Weeks?.let { "${it.fmt(1)} bpm" } ?: "—", Modifier.weight(1f))
             }
             val cur = trend.avgLast4Weeks
@@ -285,7 +337,7 @@ private fun HrrTrendCard(trend: HistoryViewModel.HrrTrend) {
                         else -> stringResource(R.string.history_hrr_stable)
                     },
                     when {
-                        delta >= 1.0 -> ConnectedGreen
+                        delta >= 1.0 -> AppTheme.colors.success
                         delta <= -1.0 -> AppTheme.colors.warning
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }

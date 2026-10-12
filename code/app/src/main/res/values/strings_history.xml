@@ -110,4 +110,11 @@
     <string name="history_hrr_slower">▼ %1$s bpm slower recovery than in the previous 4 weeks.</string>
     <string name="history_hrr_stable">Recovery stable compared with the previous 4 weeks.</string>
     <string name="history_hrr_chart_hint">One dot per workout (last 8 weeks), line: avg of the last 4 weeks. Higher = faster recovery.</string>
+
+    <!-- Form tab: hero / compact cards -->
+    <string name="form_ready">Ready</string>
+    <string name="form_recover">Recover</string>
+    <string name="form_baseline">Baseline %1$s · %2$s</string>
+    <string name="form_resting_delta">%1$s vs. 7 days</string>
+    <string name="form_hrr_last">Last workout</string>
 </resources>
