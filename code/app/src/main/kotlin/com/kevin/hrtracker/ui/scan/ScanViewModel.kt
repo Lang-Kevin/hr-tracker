@@ -60,6 +60,17 @@ class ScanViewModel @Inject constructor(
 
     private var pendingDeviceInfo: Pair<String, String>? = null
 
+    val connectedDeviceName: StateFlow<String?> =
+        combine(bleManager.deviceAddress, savedDevices, discoveredDevices) { address, saved, found ->
+            resolveDeviceName(
+                address,
+                saved.associate { it.address to it.name },
+                found.associate { it.address to it.displayName } + listOfNotNull(pendingDeviceInfo).toMap(),
+            )
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val batteryLevel: StateFlow<Int?> = bleManager.batteryLevel
+
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
