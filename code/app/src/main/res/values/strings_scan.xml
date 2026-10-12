@@ -34,4 +34,8 @@
     <string name="scan_hrv_minutes">%1$d min</string>
     <string name="scan_hrv_option">%1$s · %2$s</string>
     <string name="scan_cancel">Cancel</string>
+    <string name="scan_status_title">%1$s · %2$s</string>
+    <string name="scan_battery">Battery %1$s</string>
+    <string name="scan_auto_connect">Auto</string>
+    <string name="scan_disconnect">Disconnect</string>
 </resources>
