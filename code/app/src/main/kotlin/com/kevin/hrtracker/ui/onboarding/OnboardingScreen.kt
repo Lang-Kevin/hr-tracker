@@ -9,16 +9,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kevin.hrtracker.R
-import com.kevin.shared.ui.theme.BackgroundDark
-import com.kevin.shared.ui.theme.OnPrimary
-import com.kevin.shared.ui.theme.PrimaryPurple
-import com.kevin.shared.ui.theme.SurfaceDark
+import com.kevin.shared.ui.components.PrimaryButton
+import com.kevin.shared.ui.components.TextActionButton
+import com.kevin.shared.ui.theme.AppTheme
 
 @Composable
 fun OnboardingScreen(
@@ -39,46 +36,43 @@ fun OnboardingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundDark)
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .padding(AppTheme.spacing.xl)
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = AppTheme.spacing.xs),
                 horizontalArrangement = Arrangement.Center
             ) {
                 (0..lastStep).forEach { i ->
-                    val isActive = i <= step
-                    val isCurrent = i == step
+                    val isActive = i == step
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .size(10.dp)
+                            .padding(horizontal = AppTheme.spacing.xs)
+                            .size(AppTheme.spacing.sm)
                             .clip(CircleShape)
                             .background(
-                                when {
-                                    isCurrent -> PrimaryPurple
-                                    isActive  -> PrimaryPurple.copy(alpha = 0.5f)
-                                    else      -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
-                                }
+                                if (isActive) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline
                             )
                     )
                 }
             }
             if (step < lastStep) {
-                TextButton(
+                TextActionButton(
+                    text = stringResource(R.string.onboarding_skip),
                     onClick = {
                         viewModel.skip()
                         onComplete()
                     },
                     modifier = Modifier.align(Alignment.CenterEnd)
-                ) { Text(stringResource(R.string.onboarding_skip), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                )
             }
         }
 
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(AppTheme.spacing.xxl))
 
         when (step) {
             0 -> StepWelcome(onNext = { step = 1 })
@@ -109,21 +103,21 @@ fun OnboardingScreen(
 private fun ColumnScope.StepWelcome(onNext: () -> Unit) {
     Text(
         stringResource(R.string.onboarding_welcome_title),
-        style = MaterialTheme.typography.headlineMedium,
-        color = Color.White
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(AppTheme.spacing.sm))
     Text(
         stringResource(R.string.onboarding_welcome_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
     Spacer(Modifier.weight(1f))
-    Button(
+    PrimaryButton(
+        text = stringResource(R.string.onboarding_next),
         onClick = onNext,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text(stringResource(R.string.onboarding_next)) }
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -136,16 +130,16 @@ private fun ColumnScope.Step1(
 ) {
     Text(
         stringResource(R.string.onboarding_age_title),
-        style = MaterialTheme.typography.headlineMedium,
-        color = Color.White
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(AppTheme.spacing.sm))
     Text(
         stringResource(R.string.onboarding_age_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(AppTheme.spacing.xl))
     OutlinedTextField(
         value = ageText,
         onValueChange = onAgeChange,
@@ -159,27 +153,27 @@ private fun ColumnScope.Step1(
         } else null
     )
     computedMaxHr?.let {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(AppTheme.spacing.md))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = SurfaceDark)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(AppTheme.spacing.lg),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(stringResource(R.string.onboarding_max_hr), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("$it BPM", color = PrimaryPurple, style = MaterialTheme.typography.titleMedium) // i18n-ignore: unit/acronym, same in every language
+                Text("$it BPM", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium) // i18n-ignore: unit/acronym, same in every language
             }
         }
     }
     Spacer(Modifier.weight(1f))
-    Button(
+    PrimaryButton(
+        text = stringResource(R.string.onboarding_next),
         onClick = onNext,
         enabled = ageValid,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text(stringResource(R.string.onboarding_next)) }
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 @Composable
@@ -190,16 +184,16 @@ private fun ColumnScope.Step2(
 ) {
     Text(
         stringResource(R.string.onboarding_resting_hr_title),
-        style = MaterialTheme.typography.headlineMedium,
-        color = Color.White
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(AppTheme.spacing.sm))
     Text(
         stringResource(R.string.onboarding_resting_hr_text),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(AppTheme.spacing.xl))
     OutlinedTextField(
         value = restingHrText,
         onValueChange = onRestingHrChange,
@@ -209,9 +203,9 @@ private fun ColumnScope.Step2(
         singleLine = true
     )
     Spacer(Modifier.weight(1f))
-    Button(
+    PrimaryButton(
+        text = stringResource(R.string.onboarding_get_started),
         onClick = onComplete,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple, contentColor = OnPrimary)
-    ) { Text(stringResource(R.string.onboarding_get_started)) }
+        modifier = Modifier.fillMaxWidth()
+    )
 }
