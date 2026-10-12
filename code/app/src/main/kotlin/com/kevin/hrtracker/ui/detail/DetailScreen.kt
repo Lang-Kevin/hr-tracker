@@ -42,6 +42,7 @@ import com.kevin.shared.format.formatElapsed
 import com.kevin.shared.ui.chart.ChartMarker
 import com.kevin.shared.ui.chart.ChartReferenceLine
 import com.kevin.shared.ui.chart.ChartViewport
+import com.kevin.shared.ui.chart.DecimationMode
 import com.kevin.shared.ui.chart.ChartZone
 import com.kevin.shared.ui.chart.LineChart
 import com.kevin.shared.ui.chart.TimeInZoneSection
@@ -339,6 +340,7 @@ fun DetailScreen(
             targetZone = dominantZone,
             goalLabel = stringResource(R.string.live_chart_target_badge),
             dynamicScale = dynamicScale,
+            decimationMode = DecimationMode.Max,
             referenceLine = stats?.let {
                 ChartReferenceLine(it.avgBpm.toFloat(), String.format(locale, meanFmt, it.avgBpm))
             },
