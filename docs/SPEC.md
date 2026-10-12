@@ -132,7 +132,7 @@ beziehen Samples direkt aus `HrBleManager.hrSamples` bzw. `HrBleManager.lastHr`.
 - Pro Session als JSON-Snapshot persistieren (`Session.zoneSnapshotJson`), damit historische Sessions mit ihren Original-Zonengrenzen angezeigt werden, auch wenn HRrest, HRmax oder das Zonen-Modell später geändert werden — ein Default-Wechsel (z. B. `HR_MAX` → `KARVONEN`) bewertet vergangene Sessions dadurch nicht rückwirkend neu. Der Snapshot existiert allerdings nur für Sessions ab DB v2 — `MIGRATION_1_2` hat die Spalte ohne Backfill hinzugefügt, v1-Sessions haben dauerhaft `zoneSnapshotJson == null`.
 - `HrZoneCalculator.resolveZones` bewertet genau diese Alt-Sessions nach der **Legacy-Regel** weiter (KARVONEN wenn `restingHr` gesetzt ist, sonst HR_MAX) — nicht nach dem neuen Default. Sonst würden sich die Zonengrenzen alter Sessions rückwirkend verschieben.
 
-Zone-Farben (Z1–Z5): Blau → Hellblau → Lila → Pink-Lila → Pink (siehe Design-System).
+Zone-Farben (Z1–Z5): Graphit-zu-Akzent-Rampe (`AppTheme.colors.zones`, lib `ZoneMix`); Z5 = Akzentfarbe (siehe Design-System).
 
 Custom-Zonen-Editor: Leere Felder zeigen den berechneten Default als Placeholder. Beim Ändern einer Grenze werden Nachbargrenzen automatisch kaskadiert, sodass die Reihenfolge stets streng aufsteigend (30–220 BPM) bleibt. "Was bedeuten die Zonen?" öffnet sich über ein Fragezeichen-Icon als Dialog in der Zonen-Vorschau (ersetzt den bisherigen Inline-Hinweis).
 
@@ -175,7 +175,7 @@ Beim Minimieren während einer aktiven Session wechselt die App automatisch in n
 
 - **Trigger:** gegated auf `SessionRepository.activeSessionId != null`. API 31+: `PictureInPictureParams.Builder().setAutoEnterEnabled(true)`, nahtlos beim Home-Swipe. API 26–30: kein Auto-Enter verfügbar, Fallback über `onUserLeaveHint()` — bei Gesten-Navigation nicht immer zuverlässig (Best Effort).
 - **Aspect Ratio:** 4:3.
-- **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (34sp), "Zone N" in Zonenfarbe (`ZoneColors[zone - 1]`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
+- **Inhalt (`PipContent`), in `STANDARD`:** Herz-Icon + BPM (Design-Token `headlineLarge`), "Zone N" in Akzentfarbe (`bodyMedium`), Session-Dauer `HH:MM:SS`. Bei pausierter Session steht "PAUSE" statt der Zeit.
 - **Datenquelle:** `PipViewModel` kombiniert `HrBleManager.lastHr`, `SessionRepository.activeSession`, `SessionRepository.isPaused` und einen 1-Sekunden-Ticker.
 - **Bekannte Grenze:** Die angezeigte Dauer zieht Pausen nicht ab (die Pausen-Akkumulation `pausedAccumMs` lebt bisher nur im nav-scoped `LiveViewModel`, nicht prozessweit) — deshalb "PAUSE" statt einer falschen Zeit während der Pause.
 - **Nicht enthalten:** keine PiP-Actions (Pause/Stop-Buttons), kein Chart im PiP-Fenster, kein automatisches Schließen des Fensters bei Session-Ende.
