@@ -69,7 +69,7 @@ jobs:
       # ([[IgnoredVulns]] id = "GHSA-…", reason = "…").
       # --no-ignore: die Lockfiles stehen in .gitignore, osv-scanner würde sie sonst überspringen.
       - name: OSV-Scan
-        uses: google/osv-scanner-action/osv-scanner-action@v2.6.0
+        uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
         with:
           scan-args: |-
             --recursive
